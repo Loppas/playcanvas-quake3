@@ -1,0 +1,23 @@
+name: Feature
+description: Something Quake III Arena, or a mod, has that the port does not yet.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: What the port should do.
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Where it comes from
+      description: >-
+        Where Quake III Arena or the mod does it: ioquake3's source (`file.c:line`), the mod's
+        documentation, a demo. A feature of the port's own, say so.
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What it changes for a player.

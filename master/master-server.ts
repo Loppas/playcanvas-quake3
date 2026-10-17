@@ -1,0 +1,426 @@
+import type { LookupAddress } from 'node:dns';
+import { lookup } from 'node:dns/promises';
+import type { AddressInfo } from 'node:net';
+
+import { WebSocketServer } from 'ws';
+
+import type { WebSocketLike } from '../src/net/master-link';
+import {
+  decodeFrame,
+  encodeFrame,
+  type IceServer,
+  type MasterFrame
+} from '../src/net/master-protocol';
+import { MAX_MSGLEN } from '../src/net/msg';
+import {
+  adrToStringWithPort,
+  compareAdr,
+  formatIPv6,
+  isOutOfBand,
+  NA,
+  netadr,
+  parseIPv4,
+  parseIPv6,
+  type NetAdr
+} from '../src/net/net';
+import {
+  createPeerSocket,
+  type PeerConnectionFactory,
+  type PeerSignalling,
+  type SignallingLink
+} from '../src/net/peer-signalling';
+import type { PeerSocket } from '../src/net/peer-socket';
+import { rateLimit, type LeakyBucket } from '../src/server/connectionless';
+import { Throttle } from './clients';
+import { publicAddress } from './common';
+import { Messages } from './messages';
+import { MAX_SERVERS_PER_ADDRESS, ServerList } from './servers';
+
+/**
+ * The master: dpmaster's messages (`messages.ts`) on a WebSocket to each socket, and the port's own
+ * frames beside them (`master-protocol.ts`). It tells each socket the address it goes by, grants
+ * a server the port it asks for, looks a name up for a client, and passes signals and
+ * connectionless datagrams between sockets that have no data channel to each other.
+ *
+ * It has a socket of its own, as dpmaster has its UDP one: a heartbeat's `getinfo` goes down a
+ * data channel the master dials to the server, so a server is listed only once a channel to
+ * it opens. That socket's signals pass through the master as any socket's do, naming no address,
+ * as a frame to or from the master itself does.
+ */
+
+/** The ICE servers every greeting names: Cloudflare's free STUN. */
+export const ICE_SERVERS: IceServer[] = [{ urls: 'stun:stun.cloudflare.com:3478' }];
+
+/**
+ * How many ports up from its `net_port` a server's registration looks, as Quake 3's bind walks up
+ * when the port is taken (`net_ip.c:1394–1397`).
+ */
+export const REGISTER_PORTS = 10;
+
+/**
+ * The largest frame the master reads: a datagram of `MAX_MSGLEN`, which a `statusResponse` can
+ * reach, and the line that names its peer. A socket that sends more is closed.
+ */
+export const MAX_FRAME = MAX_MSGLEN + 64;
+
+/**
+ * Relayed and signalled frames per socket, on Quake 3's leaky bucket (`SVC_RateLimit`): a burst of
+ * this many, and one more every {@link RELAY_PERIOD} ms. A server answers ten queries a second at
+ * most, and one dial is a dozen signals or so.
+ */
+export const RELAY_BURST = 100;
+export const RELAY_PERIOD = 50;
+
+/** `WebSocket.OPEN`. */
+const OPEN = 1;
+
+export interface MasterServerOptions {
+  /** The peer connections of the master's own socket: node-datachannel's, or a test's. */
+  createPeerConnection: PeerConnectionFactory;
+  /** The ICE servers the greetings name, and the master's own socket gathers through. */
+  iceServers?: IceServer[];
+  /** `Sys_Milliseconds`. */
+  now?: () => number;
+  /** What challenges and the order of a list are drawn from. */
+  random?: () => number;
+  /** A name's every address: `getaddrinfo`, through Node's `dns.lookup`, or a test's. */
+  lookup?: (name: string) => Promise<LookupAddress[]>;
+  /** A line for the console. */
+  print?: (line: string) => void;
+}
+
+/** One socket's WebSocket at the master. */
+interface Connection {
+  ws: WebSocketLike;
+  /** Where it came from: its IP and its connection's source port. */
+  source: NetAdr;
+  /** The address the master names it by: the port it registered, or else its source's. */
+  address: NetAdr;
+  registered: boolean;
+  /** Its relayed and signalled frames. */
+  bucket: LeakyBucket;
+}
+
+export class MasterServer {
+  private readonly iceServers: IceServer[];
+  private readonly now: () => number;
+  private readonly lookup: (name: string) => Promise<LookupAddress[]>;
+  private readonly print: (line: string) => void;
+  /** By the address each goes by. */
+  private readonly connections = new Map<string, Connection>();
+  private readonly servers: ServerList;
+  private readonly messages: Messages;
+  /** The master's own socket, which dials a heartbeating server. */
+  private readonly own: { socket: PeerSocket; signalling: PeerSignalling; link: SignallingLink };
+
+  constructor(options: MasterServerOptions) {
+    this.iceServers = options.iceServers ?? ICE_SERVERS;
+    this.now = options.now ?? (() => performance.now());
+    this.lookup = options.lookup ?? ((name) => lookup(name, { all: true }));
+    this.print = options.print ?? console.log;
+    const random = options.random ?? Math.random;
+
+    // The master names itself as a program names itself: the loopback, which no peer is.
+    const link: SignallingLink = {
+      master: netadr(NA.LOOPBACK),
+      iceServers: this.iceServers,
+      onFrame: null,
+      send: (frame) => this.fromOwn(frame)
+    };
+    const { socket, signalling } = createPeerSocket({
+      links: [link],
+      createPeerConnection: options.createPeerConnection,
+      dials: true,
+      relays: false,
+      now: this.now
+    });
+    this.own = { socket, signalling, link };
+
+    this.servers = new ServerList(this.print);
+    this.messages = new Messages({
+      servers: this.servers,
+      throttle: new Throttle(),
+      now: () => Math.floor(this.now() / 1000),
+      random,
+      sendGetInfo: (to, data) => socket.send(data, to),
+      registered: () =>
+        [...this.connections.values()].filter((c) => c.registered).map((c) => c.address),
+      print: this.print
+    });
+  }
+
+  /**
+   * A socket's WebSocket, open: greeted with the address it goes by, and its frames read from now
+   * on. One from an address the master cannot read is closed.
+   *
+   * @param ip - The address its connection comes from, as Node writes it.
+   * @param port - Its connection's source port.
+   */
+  connect(ws: WebSocketLike, ip: string, port: number): void {
+    const source = connectionAddress(ip, port);
+    if (source === null) {
+      ws.close();
+      return;
+    }
+    const connection: Connection = {
+      ws,
+      source,
+      address: this.unclaimed(source),
+      registered: false,
+      bucket: { lastTime: 0, burst: 0 }
+    };
+    this.connections.set(adrToStringWithPort(connection.address), connection);
+
+    ws.binaryType = 'arraybuffer';
+    ws.addEventListener('message', (event) => this.receive(connection, event.data));
+    ws.addEventListener('close', () => this.disconnect(connection));
+    this.send(connection, {
+      kind: 'greeting',
+      address: connection.address,
+      iceServers: this.iceServers
+    });
+  }
+
+  /**
+   * What reached the master's own socket: whatever servers sent down the channels it dialled,
+   * their `infoResponse`s among it. Reading it is also what closes a channel gone idle.
+   */
+  frame(): void {
+    const { socket } = this.own;
+    for (let packet; (packet = socket.receive()) !== null; ) {
+      const { from } = packet;
+      this.messages.handle(packet.data, from, (reply) => socket.send(reply, from));
+    }
+  }
+
+  /** Every connection and every channel, closed. */
+  close(): void {
+    this.own.signalling.close();
+    for (const connection of [...this.connections.values()]) connection.ws.close();
+  }
+
+  private receive(connection: Connection, data: unknown): void {
+    if (!(data instanceof ArrayBuffer)) return;
+    if (data.byteLength > MAX_FRAME) {
+      connection.ws.close();
+      return;
+    }
+    const frame = decodeFrame(new Uint8Array(data));
+    if (frame === null) return;
+
+    switch (frame.kind) {
+      case 'datagram': {
+        const reply = (data: Uint8Array) => {
+          this.send(connection, { kind: 'datagram', data: data as Uint8Array<ArrayBuffer> });
+        };
+        this.messages.handle(frame.data, connection.address, reply);
+        return;
+      }
+      case 'register':
+        this.register(connection, frame.port);
+        return;
+      case 'resolve':
+        if (this.overLimit(connection)) return;
+        void this.resolve(connection, frame.name, frame.port);
+        return;
+      case 'signal': {
+        if (this.overLimit(connection)) return;
+        const { signal } = frame;
+        const passed: MasterFrame = { kind: 'signal', peer: connection.address, signal };
+        if (frame.peer === null) this.own.link.onFrame?.(passed);
+        else this.sendTo(frame.peer, passed);
+        return;
+      }
+      case 'relay':
+        // Connectionless datagrams only: the game itself goes down a channel.
+        if (!isOutOfBand(frame.data) || this.overLimit(connection)) return;
+        this.sendTo(frame.peer, { kind: 'relay', peer: connection.address, data: frame.data });
+        return;
+    }
+  }
+
+  /**
+   * A server's claim to its `net_port`: that port on its IP, or the next free one within
+   * {@link REGISTER_PORTS}, granted with a `registerResponse`. With none free, or its public
+   * address over dpmaster's quota of servers, it is granted nothing.
+   */
+  private register(connection: Connection, port: number): void {
+    const quota = publicAddress(connection.source);
+    const name = adrToStringWithPort(connection.source);
+    const same = [...this.connections.values()].filter(
+      (c) => c.registered && c !== connection && publicAddress(c.address) === quota
+    );
+    if (same.length >= MAX_SERVERS_PER_ADDRESS) {
+      this.print(`> WARNING: can't register ${name} (max number of servers for this address)`);
+      return;
+    }
+
+    for (let p = port; p < port + REGISTER_PORTS && p <= 0xffff; p++) {
+      const address = { ...connection.source, port: p };
+      const holder = this.connections.get(adrToStringWithPort(address));
+      if (holder !== undefined && holder !== connection) continue;
+
+      this.readdress(connection, address);
+      connection.registered = true;
+      this.send(connection, { kind: 'registerResponse', address });
+      this.print(`> ${name} registered as ${adrToStringWithPort(address)}`);
+      return;
+    }
+    const last = port + REGISTER_PORTS - 1;
+    this.print(`> WARNING: can't register ${name} (ports ${port} to ${last} are taken)`);
+  }
+
+  /**
+   * A name looked up for a client, as Quake 3's client looks one up itself with `getaddrinfo`, and
+   * answered with every address it has: those a server is registered at first, then IPv4 before
+   * IPv6, as ioquake3's client picks when a name has both (`net_enabled` 3). A lookup that fails
+   * is answered with why.
+   */
+  private async resolve(connection: Connection, name: string, port: number): Promise<void> {
+    let found: LookupAddress[];
+    try {
+      found = await this.lookup(name);
+    } catch (err) {
+      const error = lookupError(err);
+      this.send(connection, { kind: 'resolveResponse', name, port, addresses: [], error });
+      return;
+    }
+    const addresses = found.flatMap(({ address }) => connectionAddress(address, port) ?? []);
+    const rank = (adr: NetAdr) => {
+      const registered = this.connections.get(adrToStringWithPort(adr))?.registered === true;
+      return (registered ? 0 : 2) + (adr.type === NA.IP ? 0 : 1);
+    };
+    addresses.sort((a, b) => rank(a) - rank(b));
+    this.send(connection, { kind: 'resolveResponse', name, port, addresses, error: null });
+  }
+
+  /** A connection gone: its address free, and its server off the list. */
+  private disconnect(connection: Connection): void {
+    const key = adrToStringWithPort(connection.address);
+    if (this.connections.get(key) === connection) this.connections.delete(key);
+    this.servers.remove(connection.address);
+  }
+
+  /** A connection's new address; a server listed under the old one is listed no more. */
+  private readdress(connection: Connection, address: NetAdr): void {
+    if (compareAdr(connection.address, address)) return;
+    this.connections.delete(adrToStringWithPort(connection.address));
+    this.servers.remove(connection.address);
+    connection.address = address;
+    this.connections.set(adrToStringWithPort(address), connection);
+  }
+
+  /**
+   * An address for a new connection: its source, or the next port up that no live connection
+   * goes by, so that a server registered on that port keeps it.
+   */
+  private unclaimed(source: NetAdr): NetAdr {
+    let address = source;
+    while (this.connections.has(adrToStringWithPort(address))) {
+      address = { ...address, port: address.port === 0xffff ? 1 : address.port + 1 };
+    }
+    return address;
+  }
+
+  /** A frame the master's own socket sends: a signal to a server it has dialled. */
+  private fromOwn(frame: MasterFrame): void {
+    if (frame.kind !== 'signal' || frame.peer === null) return;
+    this.sendTo(frame.peer, { kind: 'signal', peer: null, signal: frame.signal });
+  }
+
+  private sendTo(peer: NetAdr, frame: MasterFrame): void {
+    const connection = this.connections.get(adrToStringWithPort(peer));
+    if (connection !== undefined) this.send(connection, frame);
+  }
+
+  private send(connection: Connection, frame: MasterFrame): void {
+    if (connection.ws.readyState === OPEN) connection.ws.send(encodeFrame(frame));
+  }
+
+  private overLimit(connection: Connection): boolean {
+    return rateLimit(connection.bucket, RELAY_BURST, RELAY_PERIOD, Math.floor(this.now()));
+  }
+}
+
+/**
+ * An address as Node writes one — a connection's, or a name's — as the master names it: IPv4 as
+ * it is, IPv6 in its one spelling, and IPv4 mapped into IPv6, `::ffff:a.b.c.d`, as IPv4 again.
+ *
+ * @returns the address, or null for one with a scope or none at all
+ */
+export function connectionAddress(ip: string, port: number): NetAdr | null {
+  if (parseIPv4(ip) !== null) return netadr(NA.IP, ip, port);
+  const ip6 = parseIPv6(ip);
+  if (ip6 === null) return null;
+  const mapped = ip6.subarray(0, 12).every((byte, i) => byte === (i < 10 ? 0 : 0xff));
+  if (mapped) return netadr(NA.IP, ip6.subarray(12).join('.'), port);
+  return netadr(NA.IP6, formatIPv6(ip6), port);
+}
+
+/** Why a lookup failed: Node's code for `getaddrinfo`'s error, as `ENOTFOUND`, or its message. */
+function lookupError(err: unknown): string {
+  const code = (err as { code?: unknown } | null)?.code;
+  if (typeof code === 'string') return code;
+  return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * The master on a WebSocket server of `ws`'s, on both families where the machine has both: each
+ * connection handed over with its IP and source port, and a frame past {@link MAX_FRAME} refused
+ * by closing its socket before it is read.
+ */
+export function listen(master: MasterServer, port: number): Promise<WebSocketServer> {
+  return new Promise((resolve, reject) => {
+    const server = new WebSocketServer({ port, maxPayload: MAX_FRAME });
+    server.on('connection', (ws, request) => {
+      // A frame past the limit, or any other fault, closes the socket, and the error is only the
+      // reason why; unheard, Node would throw it.
+      ws.on('error', () => {});
+      const { remoteAddress, remotePort } = request.socket;
+      if (remoteAddress === undefined || remotePort === undefined) ws.close();
+      else master.connect(ws, remoteAddress, remotePort);
+    });
+    server.once('listening', () => resolve(server));
+    server.once('error', reject);
+  });
+}
+
+/** A master listening, for the program it runs in to drive. */
+export interface RunningMaster {
+  /** The port it listens on: the one asked for, or the system's pick for 0. */
+  readonly port: number;
+  /** Read what came down the channels the master dialled. */
+  frame(): void;
+  /** Stop listening, and close every connection. */
+  close(): void;
+}
+
+/**
+ * A master on a port, as its own program runs one and as a dedicated server runs one inside
+ * itself: the same master either way.
+ *
+ * @throws what `listen` met, as a port already taken
+ */
+export async function startMaster(
+  options: MasterServerOptions & { port: number }
+): Promise<RunningMaster> {
+  const print = options.print ?? console.log;
+  const master = new MasterServer({ ...options, print });
+  let server: WebSocketServer;
+  try {
+    server = await listen(master, options.port);
+  } catch (err) {
+    master.close();
+    throw err;
+  }
+  const { port } = server.address() as AddressInfo;
+  print(`> Listening on port ${port}`);
+  return {
+    port,
+    frame: () => master.frame(),
+    close: () => {
+      master.close();
+      server.close();
+    }
+  };
+}

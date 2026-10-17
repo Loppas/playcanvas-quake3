@@ -1,0 +1,159 @@
+{
+  "_pcq_bake": "--voxel-size 0.25 --voxel-external-fill 0.125 --voxel-carve 0.75,0.125 --seed-pos 0.03125,-1.15625,0.03125 --collision-mesh smooth",
+  "_pcq_splat_transform": "3.1.6",
+  "input": "garage_cats.sog",
+  "voxel_units": 8,
+  "carve_box_units": [
+    24.0,
+    40.0
+  ],
+  "fill_units": 8,
+  "fill_seals_under_units": 16,
+  "fill_search": [
+    {
+      "fill_units": 32,
+      "seals_under_units": 64,
+      "leaked": false,
+      "seconds": 21.7
+    },
+    {
+      "fill_units": 16,
+      "seals_under_units": 32,
+      "leaked": false,
+      "seconds": 20.5
+    },
+    {
+      "fill_units": 8,
+      "seals_under_units": 16,
+      "leaked": false,
+      "seconds": 20.9
+    }
+  ],
+  "seed_sim": [
+    -1.0,
+    -1.0,
+    37.0
+  ],
+  "seed_from": "garage_cats.ent's first spawn spot",
+  "seed_octree": [
+    0.03125,
+    -1.15625,
+    0.03125
+  ],
+  "seconds": 20.9,
+  "peak_memory": "3.01 GB CPU, 885.7 MB GPU",
+  "grid_voxels": [
+    72,
+    52,
+    124
+  ],
+  "open_voxels": 205936,
+  "nodes": {
+    "interior": 788,
+    "mixed": 1619,
+    "solid": 1771
+  },
+  "bytes": {
+    "voxel.json": 580,
+    "voxel.bin": 29664,
+    "collision.glb": 230480
+  },
+  "glb": {
+    "triangles": 12778,
+    "min": [
+      -9.125,
+      -12.125,
+      -16.125
+    ],
+    "max": [
+      8.875,
+      0.875,
+      14.875
+    ]
+  },
+  "spawns": [
+    {
+      "origin": [
+        -1.0,
+        -1.0,
+        32.0
+      ],
+      "solid_voxels": 0,
+      "drop": 9.0,
+      "landing": "silent"
+    },
+    {
+      "origin": [
+        -16.0,
+        -343.0,
+        136.0
+      ],
+      "solid_voxels": 0,
+      "drop": 9.0,
+      "landing": "silent"
+    },
+    {
+      "origin": [
+        -5.0,
+        -121.0,
+        32.0
+      ],
+      "solid_voxels": 0,
+      "drop": 9.0,
+      "landing": "silent"
+    },
+    {
+      "origin": [
+        -17.0,
+        420.0,
+        32.0
+      ],
+      "solid_voxels": 0,
+      "drop": 9.0,
+      "landing": "silent"
+    }
+  ],
+  "floor": {
+    "columns": 4791,
+    "area_m2": 299.4,
+    "height_units": {
+      "p5": 8.0,
+      "median": 8.0,
+      "p95": 40.0
+    },
+    "neighbour_pairs": 10759,
+    "flat": 10075,
+    "quiet": 0,
+    "steps": 413,
+    "walls": 271,
+    "step_ups_per_100_units": 0.24,
+    "units_climbed_per_100_units": 2.45,
+    "step_events": {
+      "EV_STEP_4": 0,
+      "EV_STEP_8": 298,
+      "EV_STEP_12": 0,
+      "EV_STEP_16": 115
+    }
+  },
+  "reach": {
+    "positions": 151039,
+    "box_voxels": [
+      4,
+      4,
+      5
+    ],
+    "feet_min": 8.0,
+    "feet_max": 304.0,
+    "x": [
+      -248.0,
+      208.0
+    ],
+    "y": [
+      -448.0,
+      424.0
+    ],
+    "under_floor": 0
+  },
+  "errors": [],
+  "warnings": []
+}

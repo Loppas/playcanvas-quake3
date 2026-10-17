@@ -1,0 +1,10 @@
+# The working data and source media, made per capture, and the map editor.
+/data/
+/videos/
+/editor/
+
+# A machine's own tool paths.
+/scripts/windows/settings.local.bat
+
+__pycache__/
+*.pyc

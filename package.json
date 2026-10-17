@@ -1,0 +1,63 @@
+{
+  "name": "playcanvas-quake3",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Quake III Arena, ported from ioquake3 to TypeScript on the PlayCanvas engine, for the browser and the desktop. Bring your own Quake III Arena.",
+  "license": "GPL-2.0-or-later",
+  "author": "Brandon Eberlin",
+  "homepage": "https://github.com/Loppas/playcanvas-quake3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Loppas/playcanvas-quake3.git"
+  },
+  "type": "module",
+  "main": "electron/main.mjs",
+  "scripts": {
+    "predev": "node ./scripts/ensure-node-version.cjs",
+    "dev": "vite",
+    "preplay": "node ./scripts/ensure-node-version.cjs",
+    "play": "vite --mode release",
+    "preshell": "node ./scripts/ensure-node-version.cjs",
+    "shell": "node ./scripts/shell-dev.mjs",
+    "shell:build": "tsc --noEmit -p electron && npm run build && electron-builder --config electron-builder.config.mjs",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p electron",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prerecord": "node ./scripts/ensure-node-version.cjs",
+    "record": "node ./scripts/record.mjs",
+    "preprobe:layout": "node ./scripts/ensure-node-version.cjs",
+    "probe:layout": "node ./scripts/layout-probe.mjs",
+    "prereference": "node ./scripts/ensure-node-version.cjs",
+    "reference": "node ./scripts/q3-reference.mjs",
+    "preq3-play": "node ./scripts/ensure-node-version.cjs",
+    "q3-play": "node ./scripts/q3-play.mjs",
+    "build": "tsc && vite build",
+    "build:pages": "tsc && vite build --mode pages",
+    "build:dedicated": "vite build --config vite.dedicated.config.ts",
+    "dedicated": "npm run build:dedicated && node build/dedicated.js",
+    "build:master": "vite build --config vite.master.config.ts",
+    "master": "npm run build:master && node build/master.js",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "node-datachannel": "^0.33.4",
+    "playcanvas": "^2.23.0",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/ws": "^8.18.1",
+    "electron": "^44.3.0",
+    "electron-builder": "^26.15.3",
+    "jsdom": "^29.1.1",
+    "playwright": "^1.62.1",
+    "semver": "^7.7.4",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.8",
+    "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}

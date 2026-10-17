@@ -1,0 +1,84 @@
+name: Bug
+description: Something the port does wrong, or differently from Quake III Arena.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Never attach pk3s, or files taken out of them: name them instead. A security problem goes
+        through the security policy, privately, not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The map, the game type, the bots, and what you did.
+      placeholder: |
+        1. Start Server, q3dm17, Free For All, two bots
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: quake3
+    attributes:
+      label: What Quake III Arena does
+      description: If you know, what ioquake3 or the retail game does in the same place.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where it runs
+      options:
+        - The browser
+        - The desktop shell
+        - The dedicated server
+        - The master
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: >-
+        The release you played (the shell's zip names it), or the commit you built
+        (`git rev-parse --short HEAD`).
+    validations:
+      required: true
+  - type: textarea
+    id: paks
+    attributes:
+      label: Your paks
+      description: >-
+        The pk3s in your `baseq3`, by name, and the point release (1.32, 1.32c, …), if the bug may
+        depend on them. Names only.
+  - type: input
+    id: system
+    attributes:
+      label: Browser and system
+      description: The browser and its version, and the operating system.
+      placeholder: Chrome 141, Windows 11
+  - type: input
+    id: graphics
+    attributes:
+      label: Graphics
+      description: The GPU and its driver, and the WebGPU adapter, which `chrome://gpu` lists.
+  - type: textarea
+    id: log
+    attributes:
+      label: Console log
+      description: >-
+        The browser's console, which F12 opens, or the server's terminal, from the start to the
+        bug. Take out anything personal, such as your user folder.
+      render: text
+  - type: checkboxes
+    id: data
+    attributes:
+      label: Quake III Arena's data
+      options:
+        - label: I have attached no pk3, and no file taken out of one.
+          required: true

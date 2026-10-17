@@ -1,0 +1,42 @@
+// entity 0
+{
+"classname" "worldspawn"
+"message" "The Garage (Cat Size)"
+}
+// entity 1: spawn from viewpos (-1 -1 58) : 0, z less 26
+{
+"classname" "info_player_deathmatch"
+"origin" "-1 -1 32"
+"angle" "0"
+"spawnflags" "1"
+}
+// entity 2: spawn from viewpos (-16 -343 162) : 87, z less 26
+{
+"classname" "info_player_deathmatch"
+"origin" "-16 -343 136"
+"angle" "87"
+}
+// entity 3: spawn from viewpos (-5 -121 58) : 88, z less 26
+{
+"classname" "info_player_deathmatch"
+"origin" "-5 -121 32"
+"angle" "88"
+}
+// entity 4: spawn from viewpos (-17 420 58) : 272, z less 26
+{
+"classname" "info_player_deathmatch"
+"origin" "-17 420 32"
+"angle" "272"
+}
+// entity 5: intermission camera from viewpos (211 403 174) : 242
+{
+"classname" "info_player_intermission"
+"origin" "211 403 174"
+"target" "intermission_view"
+}
+// entity 6: what the intermission camera faces, from viewpos (0 0 20)
+{
+"classname" "target_position"
+"targetname" "intermission_view"
+"origin" "0 0 20"
+}

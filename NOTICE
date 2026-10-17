@@ -1,0 +1,68 @@
+playcanvas-quake3
+Copyright (C) 2026 Brandon Eberlin
+
+This program is free software; you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation; either version 2 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program, in the
+file LICENSE; if not, see <https://www.gnu.org/licenses/>.
+
+
+The works it translates
+-----------------------
+
+playcanvas-quake3 translates the programs below into TypeScript, and changes them to run on the
+PlayCanvas engine, in a browser, a desktop shell and Node. Its splat-maps/ folder translates parts
+of ioquake3 into Python, to write and check the maps the port plays. The files under src/,
+master/, scripts/, electron/ and splat-maps/ hold code translated from these works and changed,
+from 2026 on, and the source names the file and line each part comes from, as file.c:line. Each
+work is free software under the GNU General Public License, version 2 or (at your option) any
+later version.
+
+ioquake3, https://github.com/ioquake/ioq3
+    Copyright (C) 1999-2005 Id Software, Inc.
+    and the ioquake3 contributors named in its files
+
+Quake III Arena, id Software's source release 1.32b, https://github.com/id-Software/Quake-III-Arena
+    Copyright (C) 1999-2005 Id Software, Inc.
+
+Quake II, id Software's source release, for its CTF grappling hook (ctf/g_ctf.c),
+https://github.com/id-Software/Quake-2
+    Copyright (C) 1997-2001 Id Software, Inc.
+
+Unlagged 2.01, as XreaL carries it (code/game/g_unlagged.c), https://github.com/raynorpat/xreal
+    Copyright (C) 2006-2007 Neil "haste" Toronto <https://www.ra.is/unlagged/>
+
+dpmaster, https://github.com/kphillisjr/dpmaster
+    Copyright (C) 2004-2010 Mathieu Olivier
+
+One part keeps a notice of its own: formatShaderTime, in src/sim/shader-remap.ts, translates part
+of fmtfp, from ioquake3's bg_lib.c, and that file keeps Patrick Powell's notice for it.
+
+
+Quake III Arena's data
+----------------------
+
+No Quake III Arena data is included: no pak, map, model, texture, sound or shader script. The GPL
+covers id Software's source code, not the game's data, which remains id Software's. To play, you
+need your own copy of Quake III Arena.
+
+
+Trademarks
+----------
+
+playcanvas-quake3 is a fan project, not affiliated with or endorsed by id Software, ZeniMax Media,
+Bethesda, Microsoft, PlayCanvas or Snap. Quake and Quake III Arena are trademarks of id Software
+LLC. PlayCanvas is a trademark of its owner.
+
+
+Others' work
+------------
+
+Each build lists the packages it bundles, with their licences, in its THIRD-PARTY-NOTICES.md.
+CREDITS.md credits the mods, specifications, posts, tools and map capture the port draws on.

@@ -1,0 +1,55 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+build
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# An agent's own: its working notes, its worktrees and its local settings.
+.claude/plans/
+.claude/worktrees/
+.claude/settings.local.json
+
+# large splat assets + collision bake (regenerate via splat-maps/)
+public/maps/*.sog
+public/maps/*.ply
+public/maps/*.voxel.json
+public/maps/*.voxel.bin
+public/maps/*.collision.glb
+
+# reference-only third-party archives (CorkScrew mod etc.) — never commit game assets
+*.zip
+*.pk3
+
+# The desktop shell's builds from `npm run shell:build`: Electron and the web build, hundreds of
+# MB each time.
+release/
+
+# Play-session captures from `npm run record` — frames, contact sheets and video of a real
+# playtest. Throwaway evidence for one bug report, and megabytes of it.
+recordings/
+
+# The local Quake 3 install used as a test bed. Deliberately OUTSIDE public/,
+# which vite copies verbatim into dist/ — a pak under public/ would ship gigabytes of id
+# assets in every build. Ignored wholesale: it also holds loose .dll/.cfg/.txt files that
+# the *.pk3 rule above does not cover.
+baseq3/

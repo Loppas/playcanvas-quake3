@@ -1,0 +1,53 @@
+import type { HomeFolder } from './home-folder';
+
+/**
+ * The presets: cfgs in `presets` that set a ruleset's cvars, run with `exec`, so a switch takes
+ * effect as each value is read. The port ships one for id's Quake 3 and one for each of CPMA's
+ * rulesets. A player's own go in the home folder's `presets`, where a copy of a shipped one is
+ * read in its place.
+ */
+
+/** The presets' folder, in the home folder and among the port's own files. */
+export const PRESET_DIR = 'presets';
+
+/** The shipped presets by name, in the order they are offered: id's Quake 3's, then CPMA's. */
+export const SHIPPED_PRESETS: readonly string[] = ['vq3', 'pmc', 'cpm', 'cq3', 'dev'];
+
+/** The shipped files' text, by their paths in lower case. */
+const SHIPPED_CFGS = new Map(
+  Object.entries(
+    import.meta.glob<string>('./presets/*.cfg', { query: '?raw', import: 'default', eager: true })
+  ).map(([file, text]) => [file.slice('./'.length).toLowerCase(), text])
+);
+
+/**
+ * One of the port's own cfgs, by its path as `exec` names it, matched without regard to case, as
+ * Q3 finds a file in a pak (`FS_FilenameCompare`).
+ *
+ * @returns Its text, or `undefined` for a file the port doesn't ship.
+ */
+export function shippedCfg(path: string): string | undefined {
+  return SHIPPED_CFGS.get(path.toLowerCase());
+}
+
+/**
+ * A cfg by its path: the home folder's, else the port's own, as Q3 searches `fs_homepath` before
+ * the install.
+ *
+ * @returns Its text, or `undefined` where neither has it.
+ */
+export async function readCfg(path: string, home: HomeFolder): Promise<string | undefined> {
+  return (await home.read(path)) ?? shippedCfg(path);
+}
+
+/**
+ * The presets on offer, by their files' names without `.cfg`: the shipped ones in their order,
+ * then the home folder's others, sorted.
+ */
+export async function listPresets(home: HomeFolder): Promise<string[]> {
+  const shipped = new Set(SHIPPED_PRESETS);
+  const own = (await home.list(PRESET_DIR))
+    .map((file) => file.slice(0, -'.cfg'.length))
+    .filter((name) => !shipped.has(name.toLowerCase()));
+  return [...SHIPPED_PRESETS, ...own.sort()];
+}

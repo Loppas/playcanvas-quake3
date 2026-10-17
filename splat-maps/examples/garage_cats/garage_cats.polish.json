@@ -1,0 +1,29 @@
+{
+  "_pcq_polish": "--metric-height 3.0 --player-height 0.5 --up-hint 0,-1,0",
+  "_pcq_scale": "3.21776090",
+  "_pcq_splat_transform": "3.1.6",
+  "_pcq_source": "Garage - High Detail Test by Ethan, https://superspl.at/scene/8f4d8e05",
+  "_pcq_license": "CC-BY-4.0",
+  "input": "garage.sog",
+  "transform": "-r 166.7266,-6.6361,1.9838 -s 3.21776090 -t -0.126846,-4.57255,1.3956",
+  "license": {
+    "title": "Garage - High Detail Test",
+    "author": "Ethan (https://superspl.at/user?id=ethan3111)",
+    "source": "https://superspl.at/scene/8f4d8e05",
+    "license": "CC Attribution (Creative Commons Attribution)",
+    "license url": "http://creativecommons.org/licenses/by/4.0/",
+    "requirements": "Author must be credited. Commercial use is allowed."
+  },
+  "verify": {
+    "tilt_deg": 0.0485,
+    "yaw_deg": -0.02,
+    "floor_units": -0.047,
+    "clear_height_m": 10.5,
+    "footprint_m": [
+      15.8471,
+      28.9409
+    ]
+  },
+  "errors": [],
+  "warnings": []
+}

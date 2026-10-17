@@ -1,0 +1,684 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the in-game menu on screen > draws Server info, each value beside its key 1`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x152 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "SERVER INFO"",
+  "menu-item-0 @0,-50 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-0-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "mapname:"",
+  "menu-item-0-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "garage_rats"",
+  "menu-item-1 @0,-72 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "sv_hostname:"",
+  "menu-item-1-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "Arena"",
+  "menu-item-2 @0,-94 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.3 f15 "ADD TO FAVORITES"",
+  "menu-item-3 @0,-116 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o1 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 1`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 300x316 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "SETUP"",
+  "menu-item-0 @0,-50 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o1 f17 "PLAYER"",
+  "menu-item-1 @0,-78 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "CONTROLS"",
+  "menu-item-2 @0,-106 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "SYSTEM"",
+  "menu-item-3 @0,-134 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "GAME OPTIONS"",
+  "menu-item-4 @0,-162 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.3 f17 "GAME DATA"",
+  "menu-item-5 @0,-190 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "DEFAULTS"",
+  "menu-item-6 @0,-218 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-6-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "EXPORT CONFIG"",
+  "menu-item-7 @0,-246 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-7-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "IMPORT CONFIG"",
+  "menu-item-8 @0,-274 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-8-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 2`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @-160,0 302x174 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "PLAYER SETTINGS"",
+  "menu-item-0 @0,-50 274x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-0-text @-125,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o1 f15 "Name"",
+  "menu-item-0-value @125,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o1 f15 "UnnamedPlayer"",
+  "menu-item-0-caret @125,0 1x15 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o1",
+  "menu-item-1 @0,-72 274x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @-125,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Handicap"",
+  "menu-item-1-value @125,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "None"",
+  "menu-item-2 @0,-94 274x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @-125,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Effects"",
+  "menu-item-2-value @125,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 """,
+  "menu-item-2-swatch @125,0 40x12 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,0,0 o1",
+  "menu-item-3 @0,-116 274x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "MODEL"",
+  "menu-item-4 @0,-138 274x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 3`] = `
+{
+  "height": 400,
+  "look": undefined,
+  "rect": [
+    0.53125,
+    0.08333333333333333,
+    0.25,
+    0.8333333333333334,
+  ],
+  "width": 240,
+}
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 4`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @-160,0 302x430 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "PLAYER MODEL"",
+  "menu-status @0,-10 0x0 a0.5,0,0.5,0 p0.5,1 rgb1,1,1 o0.8 f13 "sarge / default"",
+  "menu-item-0 @-105,-50 64x64 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-0-pick @0,0 64x3 a0.5,0,0.5,0 p0.5,0 rgb1,0.55,0.12 o1",
+  "menu-item-1 @-35,-50 64x64 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-18 @0,-388 274x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-18-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "BACK"",
+  "menu-caption @150,-214 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o1 f15 "SARGE / DEFAULT"",
+]
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 5`] = `
+{
+  "height": 400,
+  "look": undefined,
+  "rect": [
+    0.53125,
+    0.08333333333333333,
+    0.25,
+    0.8333333333333334,
+  ],
+  "width": 240,
+}
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 6`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x402 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "CONTROLS"",
+  "menu-item-0 @-154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,0.55,0.12 o1 f15 "LOOK"",
+  "menu-item-1 @-51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "MOVE"",
+  "menu-item-2 @51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "SHOOT"",
+  "menu-item-3 @154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "MISC"",
+  "menu-item-4 @0,-80 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "mouse speed"",
+  "menu-item-4-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "6.8"",
+  "menu-item-4-track @16,0 126x4 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.3",
+  "menu-item-4-thumb @37.6,0 8x16 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7",
+  "menu-item-5 @0,-102 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "invert mouse"",
+  "menu-item-5-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "off"",
+  "menu-item-6 @0,-366 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-6-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 7`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x402 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "CONTROLS"",
+  "menu-item-0 @-154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "LOOK"",
+  "menu-item-1 @-51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,0.55,0.12 o1 f15 "MOVE"",
+  "menu-item-2 @51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "SHOOT"",
+  "menu-item-3 @154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "MISC"",
+  "menu-item-4 @0,-80 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "walk forward"",
+  "menu-item-4-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "W"",
+  "menu-item-5 @0,-102 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "backpedal"",
+  "menu-item-5-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "S"",
+  "menu-item-6 @0,-124 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-6-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "step left"",
+  "menu-item-6-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "A"",
+  "menu-item-7 @0,-146 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-7-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "step right"",
+  "menu-item-7-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "D"",
+  "menu-item-8 @0,-168 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-8-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "up / jump"",
+  "menu-item-8-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "SPACE"",
+  "menu-item-9 @0,-190 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-9-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "down / crouch"",
+  "menu-item-9-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "SHIFT"",
+  "menu-item-10 @0,-366 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-10-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 8`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x402 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "CONTROLS"",
+  "menu-item-0 @-154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "LOOK"",
+  "menu-item-1 @-51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "MOVE"",
+  "menu-item-2 @51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,0.55,0.12 o1 f15 "SHOOT"",
+  "menu-item-3 @154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "MISC"",
+  "menu-item-4 @0,-80 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "attack"",
+  "menu-item-4-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "MOUSE1"",
+  "menu-item-5 @0,-102 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "next weapon"",
+  "menu-item-5-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "MWHEELDOWN"",
+  "menu-item-6 @0,-124 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-6-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "prev weapon"",
+  "menu-item-6-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "MWHEELUP"",
+  "menu-item-7 @0,-146 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-7-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "gauntlet"",
+  "menu-item-7-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "1"",
+  "menu-item-8 @0,-168 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-8-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "machinegun"",
+  "menu-item-8-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "2"",
+  "menu-item-9 @0,-190 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-9-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "shotgun"",
+  "menu-item-9-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "3"",
+  "menu-item-10 @0,-212 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-10-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "grenade launcher"",
+  "menu-item-10-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "4"",
+  "menu-item-11 @0,-234 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-11-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "rocket launcher"",
+  "menu-item-11-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "5"",
+  "menu-item-12 @0,-256 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-12-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "lightning"",
+  "menu-item-12-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "6"",
+  "menu-item-13 @0,-278 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-13-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "railgun"",
+  "menu-item-13-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "7"",
+  "menu-item-14 @0,-300 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-14-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "plasma gun"",
+  "menu-item-14-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "8"",
+  "menu-item-15 @0,-322 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-15-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "BFG"",
+  "menu-item-15-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "9"",
+  "menu-item-16 @0,-344 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-16-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Fire grapple"",
+  "menu-item-16-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "F"",
+  "menu-item-17 @0,-366 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-17-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 9`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x402 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "CONTROLS"",
+  "menu-item-0 @-154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "LOOK"",
+  "menu-item-1 @-51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "MOVE"",
+  "menu-item-2 @51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "SHOOT"",
+  "menu-item-3 @154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,0.55,0.12 o1 f15 "MISC"",
+  "menu-item-4 @0,-80 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "show scores"",
+  "menu-item-4-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "TAB"",
+  "menu-item-5 @0,-102 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "use item"",
+  "menu-item-5-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "ENTER"",
+  "menu-item-6 @0,-124 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-6-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "collision overlay"",
+  "menu-item-6-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "C"",
+  "menu-item-7 @0,-366 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-7-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 10`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x248 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "SYSTEM SETUP"",
+  "menu-item-0 @-154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,0.55,0.12 o1 f15 "GRAPHICS"",
+  "menu-item-1 @-51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "DISPLAY"",
+  "menu-item-2 @51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "SOUND"",
+  "menu-item-3 @154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "NETWORK"",
+  "menu-item-4 @0,-80 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Backend"",
+  "menu-item-4-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "WebGPU"",
+  "menu-item-5 @0,-102 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Lighting style"",
+  "menu-item-5-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "opengl1"",
+  "menu-item-6 @0,-124 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-6-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Overbright bits"",
+  "menu-item-6-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "1"",
+  "menu-item-7 @0,-146 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-7-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Normal mapping"",
+  "menu-item-7-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "on"",
+  "menu-item-8 @0,-168 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-8-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Specular mapping"",
+  "menu-item-8-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "on"",
+  "menu-item-10 @0,-212 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-10-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 11`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x248 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "SYSTEM SETUP"",
+  "menu-item-0 @-154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "GRAPHICS"",
+  "menu-item-1 @-51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,0.55,0.12 o1 f15 "DISPLAY"",
+  "menu-item-2 @51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "SOUND"",
+  "menu-item-3 @154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "NETWORK"",
+  "menu-item-4 @0,-80 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Field of view"",
+  "menu-item-4-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "89.2"",
+  "menu-item-4-track @16,0 126x4 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.3",
+  "menu-item-4-thumb @68.56,0 8x16 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7",
+  "menu-item-5 @0,-102 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Vertical sync"",
+  "menu-item-5-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "on"",
+  "menu-item-6 @0,-124 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-6-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.3 f15 "Max FPS"",
+  "menu-item-6-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.3 f15 "125"",
+  "menu-item-7 @0,-212 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-7-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 12`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x248 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "SYSTEM SETUP"",
+  "menu-item-0 @-154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "GRAPHICS"",
+  "menu-item-1 @-51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "DISPLAY"",
+  "menu-item-2 @51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,0.55,0.12 o1 f15 "SOUND"",
+  "menu-item-3 @154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "NETWORK"",
+  "menu-item-4 @0,-80 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Effects volume"",
+  "menu-item-4-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "8"",
+  "menu-item-4-track @16,0 126x4 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.3",
+  "menu-item-4-thumb @116.8,0 8x16 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7",
+  "menu-item-5 @0,-102 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Music volume"",
+  "menu-item-5-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "2.5"",
+  "menu-item-5-track @16,0 126x4 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.3",
+  "menu-item-5-thumb @47.5,0 8x16 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7",
+  "menu-item-6 @0,-212 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-6-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 13`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x248 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "SYSTEM SETUP"",
+  "menu-item-0 @-154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "GRAPHICS"",
+  "menu-item-1 @-51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "DISPLAY"",
+  "menu-item-2 @51.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "SOUND"",
+  "menu-item-3 @154.5,-50 103x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,0.55,0.12 o1 f15 "NETWORK"",
+  "menu-item-4 @0,-80 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Data rate"",
+  "menu-item-4-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "LAN/Cable/xDSL"",
+  "menu-item-5 @0,-212 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 14`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x284 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "GAME OPTIONS"",
+  "menu-item-0 @0,-50 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-0-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o1 f15 "Crosshair"",
+  "menu-item-0-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o1 f15 "e"",
+  "menu-item-1 @0,-72 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Crosshair size"",
+  "menu-item-1-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "24"",
+  "menu-item-1-track @16,0 126x4 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.3",
+  "menu-item-1-thumb @52,0 8x16 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7",
+  "menu-item-2 @0,-94 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Marks on walls"",
+  "menu-item-2-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "on"",
+  "menu-item-3 @0,-116 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Dynamic lights"",
+  "menu-item-3-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "on"",
+  "menu-item-4 @0,-138 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "High quality sky"",
+  "menu-item-4-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "on"",
+  "menu-item-5 @0,-160 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "3D icons"",
+  "menu-item-5-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "on"",
+  "menu-item-6 @0,-182 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-6-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Draw 2D"",
+  "menu-item-6-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "on"",
+  "menu-item-7 @0,-204 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-7-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Draw FPS"",
+  "menu-item-7-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "off"",
+  "menu-item-8 @0,-226 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-8-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Speedometer"",
+  "menu-item-8-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "off"",
+  "menu-item-9 @0,-248 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-9-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws Setup and each of its pages 15`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 360x118 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "SET TO DEFAULTS?"",
+  "menu-warning @0,-91 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.85,0.3 o1 f13 "WARNING: This will reset *ALL* options to their default values."",
+  "menu-item-0 @-48,-50 96x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "YES"",
+  "menu-item-1 @48,-50 96x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o1 f17 "NO"",
+]
+`;
+
+exports[`the in-game menu on screen > draws a remote server's root page and Server info 1`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 300x336 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-item-0 @0,-14 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o1 f17 "RESUME GAME"",
+  "menu-item-1 @0,-42 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "START"",
+  "menu-item-2 @0,-70 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.3 f17 "ADD BOTS"",
+  "menu-item-3 @0,-98 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.3 f17 "REMOVE BOTS"",
+  "menu-item-4 @0,-126 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "SETUP"",
+  "menu-item-5 @0,-154 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "SERVER INFO"",
+  "menu-item-6 @0,-182 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-6-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.3 f17 "SERVER OPTIONS"",
+  "menu-item-7 @0,-210 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-7-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "DEBUG"",
+  "menu-item-8 @0,-238 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-8-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.3 f17 "RESTART ARENA"",
+  "menu-item-9 @0,-266 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-9-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "LEAVE ARENA"",
+  "menu-item-10 @0,-294 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-10-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "EXIT GAME"",
+]
+`;
+
+exports[`the in-game menu on screen > draws a remote server's root page and Server info 2`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x152 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "SERVER INFO"",
+  "menu-item-0 @0,-50 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-0-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "mapname:"",
+  "menu-item-0-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "garage_rats"",
+  "menu-item-1 @0,-72 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "sv_hostname:"",
+  "menu-item-1-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "Arena"",
+  "menu-item-2 @0,-94 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o1 f15 "ADD TO FAVORITES"",
+  "menu-item-3 @0,-116 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws the bot pages 1`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x350 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "ADD BOTS"",
+  "menu-item-0 @0,-50 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,0.55,0.12 o1 f15 "Anarki"",
+  "menu-item-1 @0,-72 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "Angel"",
+  "menu-item-2 @0,-94 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "Biker"",
+  "menu-item-7 @0,-204 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-7-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.3 f15 "PREVIOUS PAGE"",
+  "menu-item-8 @0,-226 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-8-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.3 f15 "NEXT PAGE"",
+  "menu-item-9 @0,-248 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-9-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Skill"",
+  "menu-item-9-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "Bring It On"",
+  "menu-item-10 @0,-270 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-10-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.3 f15 "Team"",
+  "menu-item-10-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.3 f15 "Free"",
+  "menu-item-11 @0,-292 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-11-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "ADD"",
+  "menu-item-12 @0,-314 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-12-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws the bot pages 2`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x306 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "REMOVE BOTS"",
+  "menu-item-7 @0,-204 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-7-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.3 f15 "PREVIOUS PAGE"",
+  "menu-item-8 @0,-226 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-8-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.3 f15 "NEXT PAGE"",
+  "menu-item-9 @0,-248 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-9-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.3 f15 "DELETE"",
+  "menu-item-10 @0,-270 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-10-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o1 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws the root page 1`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 300x336 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-item-0 @0,-14 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o1 f17 "RESUME GAME"",
+  "menu-item-1 @0,-42 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "START"",
+  "menu-item-2 @0,-70 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "ADD BOTS"",
+  "menu-item-3 @0,-98 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "REMOVE BOTS"",
+  "menu-item-4 @0,-126 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "SETUP"",
+  "menu-item-5 @0,-154 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "SERVER INFO"",
+  "menu-item-6 @0,-182 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-6-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "SERVER OPTIONS"",
+  "menu-item-7 @0,-210 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-7-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "DEBUG"",
+  "menu-item-8 @0,-238 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-8-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "RESTART ARENA"",
+  "menu-item-9 @0,-266 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-9-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "LEAVE ARENA"",
+  "menu-item-10 @0,-294 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-10-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "EXIT GAME"",
+]
+`;
+
+exports[`the in-game menu on screen > draws the root page's confirms 1`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 360x92 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "RESTART ARENA?"",
+  "menu-item-0 @-48,-50 96x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "YES"",
+  "menu-item-1 @48,-50 96x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o1 f17 "NO"",
+]
+`;
+
+exports[`the in-game menu on screen > draws the root page's confirms 2`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 360x92 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "EXIT GAME?"",
+  "menu-item-0 @-48,-50 96x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "YES"",
+  "menu-item-1 @48,-50 96x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o1 f17 "NO"",
+]
+`;
+
+exports[`the in-game menu on screen > draws the server options and debug pages 1`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x240 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "SERVER OPTIONS"",
+  "menu-status @0,-10 0x0 a0.5,0,0.5,0 p0.5,1 rgb1,1,1 o0.8 f13 "Takes effect at APPLY, which restarts the match"",
+  "menu-item-0 @0,-50 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-0-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o1 f15 "Game type"",
+  "menu-item-0-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o1 f15 "Free For All"",
+  "menu-item-2 @0,-94 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Preset"",
+  "menu-item-2-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "none"",
+  "menu-item-3 @0,-116 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Score limit"",
+  "menu-item-3-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "20"",
+  "menu-item-4 @0,-138 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Time limit"",
+  "menu-item-4-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "0"",
+  "menu-item-5 @0,-160 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Offhand grapple"",
+  "menu-item-5-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "CorkScrew"",
+  "menu-item-6 @0,-182 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-6-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Spawn armor"",
+  "menu-item-6-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "0"",
+  "menu-item-7 @0,-204 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-7-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws the server options and debug pages 2`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 440x284 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "DEBUG"",
+  "menu-item-0 @0,-50 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-0-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o1 f15 "God"",
+  "menu-item-0-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o1 f15 "off"",
+  "menu-item-1 @0,-72 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Third person"",
+  "menu-item-1-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "off"",
+  "menu-item-2 @0,-94 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-2-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Collision overlay"",
+  "menu-item-2-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "off"",
+  "menu-item-3 @0,-116 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Hit boxes"",
+  "menu-item-3-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "off"",
+  "menu-item-4 @0,-138 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Rewind report"",
+  "menu-item-4-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "off"",
+  "menu-item-5 @0,-160 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-5-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Status line"",
+  "menu-item-5-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "off"",
+  "menu-item-6 @0,-182 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-6-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Fly camera"",
+  "menu-item-6-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "off"",
+  "menu-item-7 @0,-204 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-7-text @-194,0 0x0 a0.5,0.5,0.5,0.5 p0,0.5 rgb1,1,1 o0.7 f15 "Pause bots"",
+  "menu-item-7-value @194,0 0x0 a0.5,0.5,0.5,0.5 p1,0.5 rgb1,1,1 o0.7 f15 "off"",
+  "menu-item-8 @0,-226 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-8-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "RESET DEBUG OPTIONS"",
+  "menu-item-9 @0,-248 412x22 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-9-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f15 "BACK"",
+]
+`;
+
+exports[`the in-game menu on screen > draws the server options and debug pages 3`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 360x92 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "RESET DEBUG OPTIONS?"",
+  "menu-item-0 @-48,-50 96x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "YES"",
+  "menu-item-1 @48,-50 96x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o1 f17 "NO"",
+]
+`;
+
+exports[`the in-game menu on screen > draws the team page 1`] = `
+[
+  "menu @0,0",
+  "menu-backdrop @480,240 960x480 a0,0,1,1 p0.5,0.5 rgb0,0,0 o0.55",
+  "menu-panel @0,0 300x204 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb0.07,0.07,0.09 o0.92",
+  "menu-title @0,-32 0x0 a0.5,1,0.5,1 p0.5,0.5 rgb1,0.55,0.12 o1 f22 "TEAM"",
+  "menu-item-0 @0,-50 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-0-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.3 f17 "JOIN RED"",
+  "menu-item-1 @0,-78 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-1-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.3 f17 "JOIN BLUE"",
+  "menu-item-2 @0,-106 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0.28",
+  "menu-item-2-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o1 f17 "JOIN GAME"",
+  "menu-item-3 @0,-134 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-3-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "SPECTATE"",
+  "menu-item-4 @0,-162 272x28 a0.5,1,0.5,1 p0.5,1 rgb1,0.55,0.12 o0",
+  "menu-item-4-text @0,0 0x0 a0.5,0.5,0.5,0.5 p0.5,0.5 rgb1,1,1 o0.7 f17 "BACK"",
+]
+`;
