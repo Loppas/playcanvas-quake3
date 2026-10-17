@@ -30,8 +30,9 @@ export default {
   appId: 'io.github.loppas.playcanvas-quake3',
   productName: 'playcanvas-quake3',
   directories: { output: 'release' },
-  // The Electron `npm install` unpacked, copied in. Unpacking the zip again ends in a folder
-  // rename that Windows can refuse (EPERM) while a virus scan holds the new `electron.exe`.
+  // Electron as `install-electron` unpacks it, copied in: `npm install` doesn't fetch it, so
+  // `shell:build` runs that first. Unpacking the zip again ends in a folder rename that Windows can
+  // refuse (EPERM) while a virus scan holds the new `electron.exe`.
   electronDist: 'node_modules/electron/dist',
   // The main process has no native modules to rebuild.
   npmRebuild: false,
