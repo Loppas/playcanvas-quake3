@@ -50,6 +50,9 @@ Read [`AGENTS.md`](AGENTS.md), then the conventions a change touches:
 - **Before opening a pull request**, run `npm run typecheck`, `npm test` and `npm run build`.
 - **The pull request's title is a [Conventional Commit](https://www.conventionalcommits.org/)**
   (`fix(render): …`), as it becomes the squashed commit's subject, and releases are cut from it.
+- **CI checks it all again** on every pull request: the typecheck, the suite on Linux, the web,
+  Pages, dedicated and master builds, the title, and the Windows shell or `splat-maps/` where
+  they changed. Its `ci` check must pass before a merge.
 
 ## Reporting
 

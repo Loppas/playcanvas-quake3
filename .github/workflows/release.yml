@@ -1,0 +1,121 @@
+name: release
+
+# A push to main opens or updates release-please's release pull request, and merging that cuts the
+# tag and the GitHub release. A release's own jobs deploy Pages and attach the Windows shell, since
+# a release made with GITHUB_TOKEN starts no other workflow. A manual run is the dry run: it builds
+# both from the ref it is given and releases nothing.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  release-please:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      created: ${{ steps.release.outputs.release_created }}
+      tag: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@v5
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  pages:
+    needs: release-please
+    if: ${{ !cancelled() && (needs.release-please.outputs.created == 'true' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.tag }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build:pages
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy-pages:
+    needs: [release-please, pages]
+    if: needs.release-please.outputs.created == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v6
+      - id: deploy
+        uses: actions/deploy-pages@v5
+
+  shell:
+    needs: release-please
+    if: ${{ !cancelled() && (needs.release-please.outputs.created == 'true' || github.event_name == 'workflow_dispatch') }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.release-please.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run shell:build
+      # The folder as built, with the licence, the notices and Electron's licences beside the exe,
+      # and SOURCE.txt naming the source it was built from.
+      - id: zip
+        shell: pwsh
+        run: |
+          $label = if ($env:TAG) { $env:TAG } else { "dry-run-$($env:GITHUB_SHA.Substring(0, 7))" }
+          $tree = if ($env:TAG) { $env:TAG } else { $env:GITHUB_SHA }
+          $folder = "playcanvas-quake3-$label-windows-x64"
+          Move-Item release/win-unpacked "release/$folder"
+          @(
+            "playcanvas-quake3 $label, built from commit $env:GITHUB_SHA.",
+            "Its source, under the GNU GPL version 2 or later (LICENSE):",
+            "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/tree/$tree"
+          ) | Set-Content "release/$folder/SOURCE.txt" -Encoding utf8
+          Compress-Archive -Path "release/$folder" -DestinationPath "$folder.zip"
+          "file=$folder.zip" >> $env:GITHUB_OUTPUT
+      - if: env.TAG != ''
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FILE: ${{ steps.zip.outputs.file }}
+        run: gh release upload $env:TAG $env:FILE --repo $env:GITHUB_REPOSITORY
+      - if: env.TAG == ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: shell
+          path: ${{ steps.zip.outputs.file }}
