@@ -19,7 +19,7 @@
     "play": "vite --mode release",
     "preshell": "node ./scripts/ensure-node-version.cjs",
     "shell": "node ./scripts/shell-dev.mjs",
-    "shell:build": "tsc --noEmit -p electron && npm run build && electron-builder --config electron-builder.config.mjs",
+    "shell:build": "tsc --noEmit -p electron && install-electron && npm run build && electron-builder --config electron-builder.config.mjs",
     "typecheck": "tsc --noEmit && tsc --noEmit -p electron",
     "test": "vitest run",
     "test:watch": "vitest",
