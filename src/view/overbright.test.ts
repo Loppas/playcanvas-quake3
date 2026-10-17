@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Wave } from '../formats/shader-script';
-import { noise4 } from './noise';
+import { NOISE, fillNoise, noise4 } from './noise';
 import {
   CLASSIC_FULLSCREEN,
   framebufferAlpha,
@@ -184,14 +184,18 @@ describe("framebufferColor: a world stage's colour in opengl1's framebuffer", ()
 
   it('reads a noise wave from its phase on, unscaled by identityLight, clamped', () => {
     const flicker: Wave = { func: 'noise', base: 0.5, amplitude: 0.5, phase: 0.25, frequency: 2 };
-    const at = (seconds: number) =>
-      Math.min(1, Math.max(0, 0.5 + noise4(0, 0, 0, (seconds + 0.25) * 2) * 0.5));
+    const at = (seconds: number, noise = NOISE) =>
+      Math.min(1, Math.max(0, 0.5 + noise4(0, 0, 0, (seconds + 0.25) * 2, noise) * 0.5));
     for (const seconds of [0, 0.3, 1.7]) {
       const byte = Math.trunc(255 * at(seconds));
       expect(grey({ rgbGen: 'wave', rgbWave: flicker }, seconds)).toBe(byte / 255);
     }
-    // Where the noise is, the phase taken before the frequency differs from after it.
-    expect(at(0.3)).not.toBeCloseTo(0.5 + noise4(0, 0, 0, 0.3 * 2 + 0.25) * 0.5, 3);
+    // Where the noise is, the phase taken before the frequency differs from after it. Read on a
+    // table from a fixed sequence: the port's own is random, and about one in 140 puts the two
+    // within the margin.
+    let draw = 0;
+    const fixed = fillNoise(() => (draw++ * 0.618034) % 1);
+    expect(at(0.3, fixed)).not.toBeCloseTo(0.5 + noise4(0, 0, 0, 0.3 * 2 + 0.25, fixed) * 0.5, 3);
   });
 
   it('drops the map for a wave with no function, as TableForFunc does', () => {
