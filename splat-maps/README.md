@@ -30,23 +30,25 @@ Every stage has been run on Windows 11; macOS and Linux are untried.
 ## Quick start
 
 Set up the environment once, as [training.md](docs/training.md#the-environment) does, then run
-from `splat-maps\`, in a command prompt or in bash:
+from `splat-maps\`. Once a shell, the environment and where gsplat is:
+
+**Windows**
 
 ```bat
-:: once a command prompt: the environment, and where gsplat is
 conda activate gsplat
 set SPLAT_GSPLAT=C:\src\gsplat
-
-:: a video to a map in the game, in one run
-splat-maps all "C:\path\to\video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
 ```
 
+**Linux**
+
 ```bash
-# once a shell: the environment, and where gsplat is
 conda activate gsplat
 export SPLAT_GSPLAT=~/src/gsplat
+```
 
-# a video to a map in the game, in one run
+Then a video to a map in the game, in one run, the same on both:
+
+```bash
 splat-maps all "/path/to/video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
 ```
 
@@ -70,10 +72,14 @@ user's own. Node 24, for splat-transform, comes from `PATH`.
 | `SPLAT_COLMAP` | `sfm` | `colmap`, from `PATH` | COLMAP 4.1.1's `colmap.exe` |
 | `SPLAT_FFMPEG` | `frames` | `ffmpeg`, from `PATH` | ffmpeg |
 
+**Windows**
+
 ```bat
 set SPLAT_COLMAP=C:\Tools\colmap\bin\colmap.exe
 set SPLAT_FFMPEG=C:\Tools\ffmpeg\bin\ffmpeg.exe
 ```
+
+**Linux/macOS**
 
 ```bash
 export SPLAT_COLMAP=/opt/colmap/bin/colmap

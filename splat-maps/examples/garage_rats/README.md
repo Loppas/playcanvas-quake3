@@ -16,22 +16,25 @@ readme. Those three are left out here, the splat at 175 MB, and the steps below 
 ## Rebuilding it
 
 Make `data\garage\garage-aligned.sog` as [the examples' README](../README.md) has it. Then, from
-`splat-maps\`, with `nvm use 24` run once:
+`splat-maps\`, with `nvm use 24` run once, copy its entities into the map's folder:
+
+**Windows**
 
 ```bat
 mkdir data\garage_rats\map
 copy examples\garage_rats\garage_rats.ent data\garage_rats\map\
-splat-maps polish data\garage\garage-aligned.sog data\garage_rats\map\garage_rats.sog 3.0 --player-height 0.1
-splat-maps bake data\garage_rats\map\garage_rats.sog
-splat-maps levelshot data\garage_rats\map\garage_rats.sog
-splat-maps arena data\garage_rats\map\garage_rats.arena --ent data\garage_rats\map\garage_rats.ent --type "ffa tourney team clanarena" --bots "ranger phobos sarge"
-splat-maps package data\garage_rats\map\garage_rats.sog --author "<your name>"
-splat-maps deliver data\garage_rats\map\map-garage_rats.pk3
 ```
+
+**Linux/macOS**
 
 ```bash
 mkdir -p data/garage_rats/map
 cp examples/garage_rats/garage_rats.ent data/garage_rats/map/
+```
+
+Then build it there, the same on both:
+
+```bash
 splat-maps polish data/garage/garage-aligned.sog data/garage_rats/map/garage_rats.sog 3.0 --player-height 0.1
 splat-maps bake data/garage_rats/map/garage_rats.sog
 splat-maps levelshot data/garage_rats/map/garage_rats.sog

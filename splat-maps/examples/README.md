@@ -20,10 +20,6 @@ once, with no player height, and each example's polish scales it for its player.
 Download the capture from its page on [superspl.at](https://superspl.at/scene/8f4d8e05), as
 `data\garage\garage.sog`. Then, from `splat-maps\`, with `nvm use 24` run once:
 
-```bat
-splat-maps polish data\garage\garage.sog data\garage\garage-aligned.sog 3.0 --up-hint "0,-1,0"
-```
-
 ```bash
 splat-maps polish data/garage/garage.sog data/garage/garage-aligned.sog 3.0 --up-hint "0,-1,0"
 ```

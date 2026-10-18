@@ -23,7 +23,9 @@ X forward, Y left, Z up, 32 units to the delivered metre, the floor at z = 0 and
 at the origin (`map-format.md` §6). A "rats" map is magnified by the polish, so its metres are
 already the game's.
 
-**Shells.** Each command is given twice: for Windows' command prompt, then for bash.
+**Shells.** A command given once runs the same in Windows' command prompt and in bash: its
+paths' forward slashes work in both. Where the shells differ, each has a block of its own,
+headed by the systems it is for.
 
 ---
 
@@ -42,10 +44,14 @@ editor offers to install its files there, and may write `scripts\shaderlist.txt`
 ([conventions.md](conventions.md), "The map editor and q3map2"). This runbook uses
 `data\editor\`, with two folders made inside it before the first run:
 
+**Windows**
+
 ```bat
 mkdir data\editor\baseq3\models\splatmaps
 mkdir data\editor\baseq3\maps
 ```
+
+**Linux/macOS**
 
 ```bash
 mkdir -p data/editor/baseq3/models/splatmaps
@@ -94,11 +100,6 @@ splat from then on. A source that carries its own licence keeps it: the polish r
 
 ### 2. Polish
 
-```bat
-nvm use 24
-splat-maps polish data\<project>\results\mcmc\<project>.sog data\<project>\map\<stem>.sog <height_m> --player-height <m>
-```
-
 ```bash
 nvm use 24
 splat-maps polish data/<project>/results/mcmc/<project>.sog data/<project>/map/<stem>.sog <height_m> --player-height <m>
@@ -124,10 +125,6 @@ above, square to the page, and the two sections a level floor at 0. It writes `<
 `<stem>.polish.json`.
 
 ### 3. Bake, from a seed
-
-```bat
-splat-maps bake data\<project>\map\<stem>.sog --seed x,y,z
-```
 
 ```bash
 splat-maps bake data/<project>/map/<stem>.sog --seed x,y,z
@@ -182,10 +179,6 @@ the map, and the port starts a map only with a spawn spot in it (see "Known gaps
 
 1. Turn the collision mesh into the editor's reference model, in the editor's own folder:
 
-   ```bat
-   splat-maps entities reference data\<project>\map\<stem>.collision.glb --out data\editor\baseq3\models\splatmaps\<stem>_collision.obj
-   ```
-
    ```bash
    splat-maps entities reference data/<project>/map/<stem>.collision.glb --out data/editor/baseq3/models/splatmaps/<stem>_collision.obj
    ```
@@ -194,11 +187,15 @@ the map, and the port starts a map only with a spawn spot in it (see "Known gaps
 2. Start the editor on the Quake 3 game with that engine path. Forward slashes, and the trailing
    one, as the check ran it:
 
+   **Windows**
+
    ```bat
    editor\netradiant-custom-20260114\radiant.exe -global-gamefile Q3.game -global-gamePrompt false -Q3.game-EnginePath C:/path/to/playcanvas-quake3/splat-maps/data/editor/ -Q3.game-InstalledDevFilesPath C:/path/to/playcanvas-quake3/splat-maps/data/editor/
    ```
 
-   On Linux the AppImage takes the same arguments, untried:
+   **Linux**
+
+   The release's AppImage takes the same arguments, untried:
 
    ```bash
    editor/netradiant-custom-20260114/NetRadiant-Custom-x86_64.AppImage -global-gamefile Q3.game -global-gamePrompt false -Q3.game-EnginePath /path/to/playcanvas-quake3/splat-maps/data/editor/ -Q3.game-InstalledDevFilesPath /path/to/playcanvas-quake3/splat-maps/data/editor/
@@ -214,10 +211,6 @@ the map, and the port starts a map only with a spawn spot in it (see "Known gaps
    `func_group`'s. Keep them to one brush syntax, the editor's default, since the editor opens only
    one per file.
 6. Save as `data\editor\baseq3\maps\<stem>.map`, then keep its point entities:
-
-   ```bat
-   splat-maps entities from-map data\editor\baseq3\maps\<stem>.map data\<project>\map\<stem>.ent
-   ```
 
    ```bash
    splat-maps entities from-map data/editor/baseq3/maps/<stem>.map data/<project>/map/<stem>.ent
@@ -238,10 +231,6 @@ For a spawn spot, stand on the floor where it goes, not crouched, and face the w
 arrive. Keep the yaw: it is the spot's angle. Frame the intermission with `cg_fov 90`. Then paste
 the readings as they are printed:
 
-```bat
-splat-maps entities readings data\<project>\map\<stem>.ent --message "The Garage" --spawn "(-4 -4 69) : 0" --intermission "(1056 2016 868) : 242" --look-at "(0 0 100) : 0" --octree data\<project>\map\<stem>.voxel.json
-```
-
 ```bash
 splat-maps entities readings data/<project>/map/<stem>.ent --message "The Garage" --spawn "(-4 -4 69) : 0" --intermission "(1056 2016 868) : 242" --look-at "(0 0 100) : 0" --octree data/<project>/map/<stem>.voxel.json
 ```
@@ -250,10 +239,6 @@ It applies §3.4's rules (a spawn spot is its reading less 26 in z), gives the f
 `spawnflags 1`, and with `--octree` checks each spot as the lint will. `--spawn` repeats.
 
 ### 5. Bake again, from the spawn
-
-```bat
-splat-maps bake data\<project>\map\<stem>.sog
-```
 
 ```bash
 splat-maps bake data/<project>/map/<stem>.sog
@@ -271,10 +256,6 @@ A spot `in solid` must move. One that `thuds` or `lands hurt` is too high above 
 
 ### 6. The levelshot
 
-```bat
-splat-maps levelshot data\<project>\map\<stem>.sog
-```
-
 ```bash
 splat-maps levelshot data/<project>/map/<stem>.sog
 ```
@@ -286,10 +267,6 @@ of the capture or sits in a wall: move the intermission point or its target (ste
 this again.
 
 ### 7. The arena block
-
-```bat
-splat-maps arena data\<project>\map\<stem>.arena --ent data\<project>\map\<stem>.ent
-```
 
 ```bash
 splat-maps arena data/<project>/map/<stem>.arena --ent data/<project>/map/<stem>.ent
@@ -306,10 +283,6 @@ They name three bots each, as q3dm17 does, which Server Options seeds a skirmish
 
 ### 8. Package
 
-```bat
-splat-maps package data\<project>\map\<stem>.sog --author "<who made the map>"
-```
-
 ```bash
 splat-maps package data/<project>/map/<stem>.sog --author "<who made the map>"
 ```
@@ -323,10 +296,6 @@ the pk3 back entry by entry and runs the lint, `map_lint.py`, whose 29 rules are
 scripts had uncommitted changes, so commit them and package again before a release.
 
 ### 9. Deliver
-
-```bat
-splat-maps deliver data\<project>\map\map-<stem>.pk3
-```
 
 ```bash
 splat-maps deliver data/<project>/map/map-<stem>.pk3

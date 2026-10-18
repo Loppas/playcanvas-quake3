@@ -21,24 +21,26 @@ capture ──▶ frames (ffmpeg) ──▶ sfm (COLMAP) ──▶ train (gsplat
 
 ## Quick start
 
-Set up the environment once ([below](#the-environment)), then from `splat-maps\`, in a
-command prompt or in bash:
+Set up the environment once ([below](#the-environment)), then from `splat-maps\`. Once a
+shell, the environment and where gsplat is:
+
+**Windows**
 
 ```bat
-:: once a command prompt: the environment, and where gsplat is
 conda activate gsplat
 set SPLAT_GSPLAT=C:\src\gsplat
-
-:: a video to a map in the game, in one run
-splat-maps all "C:\path\to\video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
 ```
 
+**Linux**
+
 ```bash
-# once a shell: the environment, and where gsplat is
 conda activate gsplat
 export SPLAT_GSPLAT=~/src/gsplat
+```
 
-# a video to a map in the game, in one run
+Then a video to a map in the game, in one run, the same on both:
+
+```bash
 splat-maps all "/path/to/video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
 ```
 
@@ -60,13 +62,6 @@ fails its checks. It takes the training stages' own options too: `--fps`, `--wid
 detail, below).
 
 Or the training stages one at a time, each on the capture's folder:
-
-```bat
-splat-maps frames "C:\path\to\video.mov" data\myroom --fps 1.5
-splat-maps sfm    data\myroom
-splat-maps train  data\myroom
-splat-maps export data\myroom
-```
 
 ```bash
 splat-maps frames "/path/to/video.mov" data/myroom --fps 1.5
@@ -104,8 +99,11 @@ Python side on Windows; the rest is installed by hand. Elsewhere it is the same 
 | **Node and splat-transform** | **Node ≥ 24**, splat-transform at the pin | via nvm-windows, or nvm elsewhere (`nvm install 24` / `nvm use 24`). `export` and the map stages install the pinned splat-transform with npm when it is missing, and refuse another version |
 | **git** | | to clone gsplat |
 
-The steps, in Visual Studio 2022's x64 Native Tools Command Prompt, since gsplat's build needs
-its compiler; `<splat-maps>` is this folder:
+The steps, where `<splat-maps>` is this folder.
+
+**Windows**
+
+In Visual Studio 2022's x64 Native Tools Command Prompt, since gsplat's build needs its compiler:
 
 ```bat
 conda create -y -n gsplat python=3.11
@@ -123,8 +121,10 @@ python -m pip install -e <splat-maps>
 python -m splat_maps.patch_pycolmap
 ```
 
-On Linux, untried, the same steps in bash, with a GCC that CUDA 12.8 supports in place of
-Visual Studio and without its two settings:
+**Linux**
+
+Untried: the same steps, with a GCC that CUDA 12.8 supports in place of Visual Studio, and
+without its two settings:
 
 ```bash
 conda create -y -n gsplat python=3.11

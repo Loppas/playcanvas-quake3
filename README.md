@@ -79,10 +79,6 @@ would be: `maps/<n>.sog`, `maps/<n>.voxel.*`, the entities in `maps/<n>.ent`, an
 `scripts/<n>.arena`. The [splat-maps](splat-maps/) pipeline builds one from a capture of a real
 space and delivers it here, from `splat-maps\`:
 
-```bat
-splat-maps deliver data\garage_rats\map\map-garage_rats.pk3
-```
-
 ```bash
 splat-maps deliver data/garage_rats/map/map-garage_rats.pk3
 ```
@@ -180,9 +176,13 @@ without it, and the rest run, as they do in CI, which has none of it:
 
 They read the install `PCQ_FS_BASEPATH` names, from `.env.local` or the environment:
 
+**Windows**
+
 ```powershell
 $env:PCQ_FS_BASEPATH = 'C:\Games\Quake3'; npm test
 ```
+
+**Linux/macOS**
 
 ```bash
 PCQ_FS_BASEPATH=/usr/local/games/quake3 npm test
