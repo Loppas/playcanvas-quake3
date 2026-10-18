@@ -209,7 +209,7 @@ def write_room(folder, stem="room"):
 
 
 def run_cli(*args):
-    """Run the CLI as a wrapper runs it; returns its exit code and its output."""
+    """Run the CLI in its own process; returns its exit code and its output."""
     run = subprocess.run([sys.executable, "-m", "splat_maps", *map(str, args)],
                          capture_output=True, text=True, encoding="utf-8")
     return run.returncode, run.stdout + run.stderr

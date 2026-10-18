@@ -14,9 +14,8 @@ SOG ─▶ polish ─▶ bake ─▶ entities ─▶ levelshot ─▶ arena ─�
 ```
 
 Every stage is a command of one Python package's CLI, `splat-maps`, and `all` runs them in order
-from a video: `uv run splat-maps --help` lists them. The Windows batch files are wrappers over
-it. The training half needs an NVIDIA GPU with CUDA. Every stage has been run on Windows 11;
-macOS and Linux are untried.
+from a video: `splat-maps --help` lists them. The training half needs an NVIDIA GPU with CUDA.
+Every stage has been run on Windows 11; macOS and Linux are untried.
 
 ## The docs
 
@@ -30,18 +29,16 @@ macOS and Linux are untried.
 
 ## Quick start (Windows)
 
-Install the prerequisites in [training.md](docs/training.md#the-environment), then run from
-`splat-maps\`:
+Set up the environment once, as [training.md](docs/training.md#the-environment) does, then run
+from `splat-maps\`:
 
 ```bat
-:: once
-scripts\windows\setup-env.bat
-
-:: once a command prompt: the settings, and the package on PYTHONPATH
-call scripts\windows\settings.bat
+:: once a command prompt: the environment, and where gsplat is
+conda activate gsplat
+set SPLAT_GSPLAT=C:\src\gsplat
 
 :: a video to a map in the game, in one run
-"%SPLAT_PYTHON%" -m splat_maps all "C:\path\to\video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
+splat-maps all "C:\path\to\video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
 ```
 
 `2.4` is the room's floor-to-ceiling height in metres, `--box` the map's corners in Q3 units
@@ -55,26 +52,19 @@ the real entities. [training.md](docs/training.md) runs the training stages one 
 
 ## Settings
 
-The scripts find their tools through `scripts\windows\settings.bat`. Each setting has a default,
-and a value already in the environment wins. The CLI reads `SPLAT_FFMPEG`, `SPLAT_COLMAP` and
-`SPLAT_GSPLAT` itself, so they serve it outside the wrappers too. A machine's own paths go in
-`scripts\windows\settings.local.bat`, which git ignores:
+The CLI finds its tools through these environment variables, set in the prompt or once as a
+user's own. Node 24, for splat-transform, comes from `PATH`.
+
+| Setting | Read by | Default | What it names |
+|---|---|---|---|
+| `SPLAT_GSPLAT` | `train` | none, so `train` refuses to start | gsplat's checkout, whose `examples/simple_trainer.py` runs in the CLI's own Python |
+| `SPLAT_COLMAP` | `sfm` | `colmap`, from `PATH` | COLMAP 4.1.1's `colmap.exe` |
+| `SPLAT_FFMPEG` | `frames` | `ffmpeg`, from `PATH` | ffmpeg |
 
 ```bat
-@echo off
-set "SPLAT_COLMAP=C:\Tools\colmap\bin\colmap.exe"
-set "SPLAT_FFMPEG=C:\Tools\ffmpeg\bin\ffmpeg.exe"
+set SPLAT_COLMAP=C:\Tools\colmap\bin\colmap.exe
+set SPLAT_FFMPEG=C:\Tools\ffmpeg\bin\ffmpeg.exe
 ```
-
-| Setting | Default | What it is |
-|---|---|---|
-| `SPLAT_PYTHON` | `%USERPROFILE%\miniconda3\envs\gsplat\python.exe` | The Python every script runs on: the conda env `setup-env.bat` makes |
-| `SPLAT_GSPLAT` | `gsplat\` beside this checkout | gsplat's clone, which `setup-env.bat` makes and builds and `train` runs |
-| `SPLAT_COLMAP` | `colmap`, from `PATH` | COLMAP 4.1.1's `colmap.exe` |
-| `SPLAT_FFMPEG` | `ffmpeg`, from `PATH` | ffmpeg |
-| `SPLAT_VCVARS` | Visual Studio 2022 Community's `vcvars64.bat` | The compiler environment gsplat is built in |
-| `SPLAT_NODE` | none: Node from `PATH` | A folder put first on `PATH`, for Node 24 and splat-transform |
-| `TORCH_CUDA_ARCH_LIST` | none: the GPUs in this machine | Torch's own: the GPU architectures gsplat is built for, e.g. `8.9` |
 
 ## The example
 
@@ -105,11 +95,11 @@ CI runs them on Linux, macOS and Windows whenever `splat-maps/` changes.
 splat-maps/
 ├── README.md
 ├── docs/                    the docs above
-├── scripts/windows/         the batch wrappers and settings.bat, which run the package
 ├── src/splat_maps/          the stages' Python, one package, and its CLI
 │   └── templates/readme.txt the readme packed into each map
 ├── tests/                   pytest for the stages that need no GPU, on a map they build
 ├── pyproject.toml, uv.lock  the package and its locked environment, which the tests run in
+├── gsplat-requirements.txt  gsplat's example dependencies, for the training environment
 ├── examples/garage_cats/    a map's parts, from polish to package
 ├── data/                    per-capture working data and outputs (git-ignored)
 └── editor/                  NetRadiant-custom, for placing entities (git-ignored)

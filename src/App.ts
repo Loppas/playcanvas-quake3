@@ -243,7 +243,7 @@ export interface AppHandle {
 /**
  * `viewpos`'s reading, printed where Q3's `CG_Printf` prints: the console, whose notify
  * lines show it and whose other half is the browser's console. And the clipboard, ready to paste
- * into splat-maps' `write_ent.bat`.
+ * into splat-maps' `entities readings`.
  */
 function printViewpos(reading: string, print: (text: string) => void): void {
   print(`${reading}\n`);
