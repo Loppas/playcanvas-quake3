@@ -1,12 +1,12 @@
 # Agents
 
 Rules for an agent working in this repository, whatever the task: the design principles, when to
-stop and ask, working memory, comments, and git. The repository's own rules sit beside them in
-`.claude/`: [`code-standards.md`](.claude/code-standards.md) (how code is written here),
-[`conventions.md`](.claude/conventions.md) (what porting Quake 3 has taught, by theme) and
-[`testing.md`](.claude/testing.md) (how a change is proved). Read the ones a change touches, and
-read the files a change touches before changing them. Where those and this file differ, theirs,
-being more specific, win.
+stop and ask, how the work is tracked, working memory, comments, and git. The repository's own
+rules sit beside them in `.claude/`: [`code-standards.md`](.claude/code-standards.md) (how code is
+written here), [`conventions.md`](.claude/conventions.md) (what porting Quake 3 has taught, by
+theme) and [`testing.md`](.claude/testing.md) (how a change is proved). Read the ones a change
+touches, and read the files a change touches before changing them. Where those and this file
+differ, theirs, being more specific, win.
 
 ## Design principles
 
@@ -95,6 +95,36 @@ Some decisions are not the agent's to take alone. Stop and ask the maintainer:
 Ask before writing it, not after. Removing something is not gated the same way, but say what was
 removed and why.
 
+## How the work is tracked
+
+Work is planned in private notes and tracked in public, on the Project linked to the repository.
+
+- **The work's notes** are its plan (decisions, stages with their checklists, open questions) and
+  its log (an entry per session). They are the working notes that [never go in a
+  commit](#what-does-not-belong-in-a-commit), and nothing public names them or quotes from them.
+- **Issues come from outside**, through the issue forms (bugs and ideas), or are a started cycle's
+  stages and tickets. Work that is planned but not started is not filed: its milestone says what
+  it is, and the detail stays in the notes.
+- **A cycle of work is a milestone**, whose description says what the cycle is for. When a cycle
+  starts, its plan is filed under the milestone, drafted from the plan as it stands then:
+  - **each stage as an issue** labelled `stage`, saying what the stage delivers and how it is
+    accepted;
+  - **each item of the stage's checklist as a ticket**, a sub-issue of the stage's. A ticket is the
+    smallest change that builds and passes on its own: usually one item, while items that only
+    build together share one. Its title says what the change does, not where it sits in the
+    plan, and the plan notes its number beside the item.
+- **Every unit of work is done in a pull request**, whatever its size, and the pull request closes
+  its ticket where it has one. Tickets are worked in the plan's order, each branched from `main`
+  once the one before it has merged.
+- **An outside issue that a cycle takes up** goes under the cycle's milestone, and the pull request
+  that does the work closes it. An issue need not belong to a milestone; the ticket for its work
+  then links to it and carries its labels.
+- **On the Project**, a ticket is In Progress while it is worked on, and its pull request is In
+  Review while it is open; the merge moves both to Done. A stage's issue is closed once its last
+  ticket has merged and its accept holds.
+- **Every issue and pull request body is checked before it goes out**, against
+  [what does not belong in a commit](#what-does-not-belong-in-a-commit).
+
 ## Context and compaction
 
 An agent's context window is a working set, not an archive. The budget: **stay under ~50% of the
@@ -123,8 +153,8 @@ breaks fall in different places.
 
 **Break at these points, in preference order:**
 
-- **A stage boundary in the plan.** The natural one. All its checklist items are ticked, the log
-  entry is written, and nothing is half-edited.
+- **A ticket's end.** The natural one: its pull request is open, its item is ticked in the plan,
+  the log entry is written, and nothing is half-edited.
 - **A green build.** Typecheck, the suite and the build passing is the cheapest possible resume
   point: the next session re-reads only what it is about to change. Never break on a red build
   without recording the failure verbatim in the log — a remembered error message is not a real
