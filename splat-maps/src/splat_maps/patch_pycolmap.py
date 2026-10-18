@@ -6,7 +6,7 @@ Windows + Python 3. Two latent bugs that only bite on Windows/Py3:
   2) camera.py slices a Python-3 map() object (a Py2-ism) -> coerce params to list.
 
 Idempotent: safe to run repeatedly (reports "already patched" once applied).
-Run with the gsplat env python:  python patch_pycolmap.py
+Run with the gsplat env python:  python -m splat_maps.patch_pycolmap
 """
 import importlib.util
 import os

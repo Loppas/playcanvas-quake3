@@ -17,7 +17,7 @@ Then it reads the OBJ back, applies the loaders' turn, and measures the result: 
 counts, bounds, and where the mesh's floor sits against the octree's under a given point.
 
 Usage:
-    python glb_to_editor.py <stem>.collision.glb [--out <stem>_collision.obj] [--probe x,y,z]
+    splat-maps entities reference <stem>.collision.glb [--out <stem>_collision.obj] [--probe x,y,z]
 """
 
 import argparse
@@ -28,7 +28,7 @@ import sys
 
 import numpy as np
 
-import splat_map as sm
+from . import splat_map as sm
 
 
 def read_glb(path):
@@ -80,14 +80,14 @@ def floor_hits(verts, tris, x, y):
     return (w1 * a[:, 2] + w2 * b[:, 2] + w3 * c[:, 2])[inside]
 
 
-def main():
+def main(argv=None, prog=None):
     ap = argparse.ArgumentParser(
-        description="Write a splat map's collision mesh as an editor model.")
+        prog=prog, description="Write a splat map's collision mesh as an editor model.")
     ap.add_argument("glb", help="the bake's <stem>.collision.glb")
     ap.add_argument("--out", help="the OBJ to write (default <stem>_collision.obj beside the glb)")
     ap.add_argument("--probe", default="-4,-4,43",
                     help="a sim point whose floor to compare with the octree's (default -4,-4,43)")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
 
     stem = sm.stem_of(args.glb, ".collision.glb")

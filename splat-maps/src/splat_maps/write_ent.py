@@ -15,9 +15,9 @@ entity naming the reading it came from, then read back by Q3's rules. Given the 
 and the intermission point are checked in the octree as the lint checks them (L20-L22).
 
 Usage:
-    python write_ent.py <stem>.ent --message "The Garage" --spawn "(-4 -4 69) : 0"
-                        [--spawn ...] --intermission "(1056 2016 868) : 242"
-                        --look-at "(0 0 100) : 0" [--octree <stem>.voxel.json]
+    splat-maps entities readings <stem>.ent --message "The Garage" --spawn "(-4 -4 69) : 0"
+                                 [--spawn ...] --intermission "(1056 2016 868) : 242"
+                                 --look-at "(0 0 100) : 0" [--octree <stem>.voxel.json]
 
 The first spawn gets spawnflags 1, the spot a local player's first spawn prefers
 (g_client.c:308-333). The _pcq_* keys are left out: package_map writes them.
@@ -29,7 +29,7 @@ import os
 import re
 import sys
 
-import splat_map as sm
+from . import splat_map as sm
 
 READING = re.compile(r"^\s*\(\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*\)"
                      r"\s*:\s*(-?\d+(?:\.\d+)?)\s*$")
@@ -47,8 +47,9 @@ def num(v):
     return sm.fmt_num(v)
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Write a splat map's .ent from viewpos readings.")
+def main(argv=None, prog=None):
+    ap = argparse.ArgumentParser(
+        prog=prog, description="Write a splat map's .ent from viewpos readings.")
     ap.add_argument("out", help="the file to write, <stem>.ent")
     ap.add_argument("--message", required=True, help="the map's long name, worldspawn's message")
     ap.add_argument("--spawn", type=reading, action="append", default=[],
@@ -59,7 +60,7 @@ def main():
     ap.add_argument("--look-at", type=reading, required=True,
                     help="a viewpos reading at the point the intermission camera faces")
     ap.add_argument("--octree", help="the map's <stem>.voxel.json, to check the spots in it")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
     if not args.spawn:
         sys.exit("ERROR: at least one --spawn: every spawn path in Q3 falls back to one "

@@ -2,9 +2,9 @@
 
 import pytest
 
-import map_to_ent
-import splat_map as sm
-from room import run_script
+from splat_maps import map_to_ent
+from splat_maps import splat_map as sm
+from room import run_cli
 
 #: A `.map` as NetRadiant saves one: worldspawn's brushes in all three syntaxes and a patch, a
 #: func_group, the collision mesh as a reference misc_model, and the point entities.
@@ -112,7 +112,7 @@ def test_read_map_refuses_an_unfinished_map(text, message):
 
 def test_map_to_ent_keeps_the_point_entities(tmp_path):
     out = tmp_path / "room.ent"
-    code, log = run_script("map_to_ent.py", write_map(tmp_path), out)
+    code, log = run_cli("entities", "from-map", write_map(tmp_path), out)
     assert code == 0, log
     assert out.read_bytes() == ENT.encode("ascii")
     assert "wrote" in log and "3 entities, 1 spawn spot(s)" in log
@@ -122,15 +122,15 @@ def test_map_to_ent_keeps_the_point_entities(tmp_path):
 
 def test_map_to_ent_drops_only_the_named_reference(tmp_path):
     out = tmp_path / "room.ent"
-    code, log = run_script("map_to_ent.py", write_map(tmp_path), out,
-                           "--reference", "other_collision.obj")
+    code, log = run_cli("entities", "from-map", write_map(tmp_path), out,
+                        "--reference", "other_collision.obj")
     assert code == 0, log
     assert '"model" "models/room_collision.obj"' in out.read_text(encoding="ascii")
 
 
 def test_map_to_ent_refuses_an_entity_with_brushes(tmp_path):
     text = MAP.replace('"classname" "func_group"', '"classname" "func_door"')
-    code, log = run_script("map_to_ent.py", write_map(tmp_path, text), tmp_path / "room.ent")
+    code, log = run_cli("entities", "from-map", write_map(tmp_path, text), tmp_path / "room.ent")
     assert code != 0
     assert "func_door at line 39, with 1 brush(es) or patch(es)" in log
     assert not (tmp_path / "room.ent").exists()
@@ -139,7 +139,7 @@ def test_map_to_ent_refuses_an_entity_with_brushes(tmp_path):
 def test_map_to_ent_needs_worldspawn_first(tmp_path):
     text = ('{\n"classname" "info_player_deathmatch"\n"origin" "0 0 24"\n}\n'
             '{\n"classname" "worldspawn"\n}\n')
-    code, log = run_script("map_to_ent.py", write_map(tmp_path, text), tmp_path / "room.ent")
+    code, log = run_cli("entities", "from-map", write_map(tmp_path, text), tmp_path / "room.ent")
     assert code != 0
     assert "first kept entity is not worldspawn" in log
     assert not (tmp_path / "room.ent").exists()
@@ -147,6 +147,6 @@ def test_map_to_ent_needs_worldspawn_first(tmp_path):
 
 def test_map_to_ent_warns_of_a_map_with_no_spawn(tmp_path):
     text = MAP.replace('"info_player_deathmatch"', '"info_null"')
-    code, log = run_script("map_to_ent.py", write_map(tmp_path, text), tmp_path / "room.ent")
+    code, log = run_cli("entities", "from-map", write_map(tmp_path, text), tmp_path / "room.ent")
     assert code == 0, log
     assert "WARNING: no spawn spot" in log

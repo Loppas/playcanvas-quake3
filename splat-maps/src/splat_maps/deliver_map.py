@@ -8,7 +8,7 @@ Delivery is the only way a map gets there, so nothing is copied by hand:
   3. the copy is hashed against the original.
 
 Usage:
-    python deliver_map.py <dir>/map-<stem>.pk3 [--port DIR]
+    splat-maps deliver <dir>/map-<stem>.pk3 [--port DIR]
 
 `--port` defaults to the checkout these scripts are in. A released pk3 is never rewritten in
 place (§9), so delivering over an existing file with different bytes needs --replace.
@@ -33,14 +33,14 @@ def sha256(path):
     return h.hexdigest()
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Deliver a splat map pk3 to the port.")
+def main(argv=None, prog=None):
+    ap = argparse.ArgumentParser(prog=prog, description="Deliver a splat map pk3 to the port.")
     ap.add_argument("pk3")
     ap.add_argument("--port", default=DEFAULT_PORT,
                     help=f"the port's checkout (default {DEFAULT_PORT})")
     ap.add_argument("--replace", action="store_true",
                     help="replace a delivered pk3 of the same name whose bytes differ")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
 
     maps = os.path.join(args.port, "public", "maps")
@@ -49,7 +49,7 @@ def main():
     dest = os.path.join(maps, os.path.basename(args.pk3))
 
     print(flush=True)
-    lint = subprocess.run([sys.executable, os.path.join(HERE, "map_lint.py"), args.pk3])
+    lint = subprocess.run([sys.executable, "-m", "splat_maps", "lint", args.pk3])
     if lint.returncode != 0:
         sys.exit("ERROR: the lint refused the pk3, so it was not delivered")
 

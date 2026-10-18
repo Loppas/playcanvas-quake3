@@ -19,8 +19,8 @@ player's box can get to. The record, `<stem>.bake.json`, carries `_pcq_bake` for
 and the measurements.
 
 Usage:
-    python bake_map.py <map.sog> [--voxel 8] [--fill auto|UNITS] [--seed x,y,z] [--ent FILE]
-                       [--mesh smooth|faces] [--out-dir DIR]
+    splat-maps bake <map.sog> [--voxel 8] [--fill auto|UNITS] [--seed x,y,z] [--ent FILE]
+                    [--mesh smooth|faces] [--out-dir DIR]
 
 Outputs, beside the .sog unless --out-dir is given: <stem>.voxel.json, <stem>.voxel.bin,
 <stem>.collision.glb, <stem>.bake.json and <stem>.bake.log (splat-transform's own output).
@@ -40,7 +40,7 @@ import time
 
 import numpy as np
 
-import splat_map as sm
+from . import splat_map as sm
 
 #: The largest reach the fill search tries, in units: the standing player's height
 #: (bg_public.h:50-51). At an 8-unit voxel it is the 7-voxel dilation of splat-transform's
@@ -69,8 +69,9 @@ SKIPPED = {
 FLOOR_BAND = 48
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Bake a splat map's collision in Quake units.")
+def main(argv=None, prog=None):
+    ap = argparse.ArgumentParser(
+        prog=prog, description="Bake a splat map's collision in Quake units.")
     ap.add_argument("sog", help="the delivered, polished map .sog (metres, Y up, floor at 0)")
     ap.add_argument("--voxel", type=float, default=8,
                     help="voxel edge in Quake units: whole, 1 to 13 (default 8)")
@@ -85,7 +86,7 @@ def main():
     ap.add_argument("--mesh", default="smooth", choices=("smooth", "faces"),
                     help="the debug overlay's shape (default smooth)")
     ap.add_argument("--out-dir", help="where to write (default beside the .sog)")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     sys.stdout.reconfigure(line_buffering=True, encoding="utf-8")
 
     auto = args.fill == "auto"

@@ -2,7 +2,7 @@
 and the largest is NOT always sparse/0. gsplat's parser reads sparse/0, so this promotes
 the sub-model with the most registered images to sparse/0 (removing the rest).
 
-Usage:  python promote_largest_model.py <sparse_dir> <colmap_exe>
+Usage:  python -m splat_maps.promote_largest_model <sparse_dir> <colmap_exe>
 """
 import os
 import re

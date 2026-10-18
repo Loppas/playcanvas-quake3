@@ -40,7 +40,7 @@ if not exist "%SPARSE%" mkdir "%SPARSE%"
 "%SPLAT_COLMAP%" mapper --database_path "%DB%" --image_path "%IMG%" --output_path "%SPARSE%" || exit /b 1
 
 echo === promote largest sub-model to sparse/0, normalize to BIN ===
-"%SPLAT_PYTHON%" "%SCRIPT_DIR%promote_largest_model.py" "%SPARSE%" "%SPLAT_COLMAP%" || exit /b 1
+"%SPLAT_PYTHON%" -m splat_maps.promote_largest_model "%SPARSE%" "%SPLAT_COLMAP%" || exit /b 1
 "%SPLAT_COLMAP%" model_converter --input_path "%SPARSE%\0" --output_path "%SPARSE%\0" --output_type BIN || exit /b 1
 
 echo.

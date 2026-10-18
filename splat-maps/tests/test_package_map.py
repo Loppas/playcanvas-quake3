@@ -7,9 +7,9 @@ import zipfile
 
 import pytest
 
-import package_map
-import splat_map as sm
-from room import BAKE, ENT, POLISH, read_pk3, run_script
+from splat_maps import package_map
+from splat_maps import splat_map as sm
+from room import BAKE, ENT, POLISH, lint_failures, read_pk3, run_cli
 
 
 def test_package_lays_out_the_pk3(packaged):
@@ -127,15 +127,25 @@ def test_package_writes_the_readme_for_people(packaged):
 
 def test_package_makes_the_same_bytes_from_the_same_parts(packaged, tmp_path):
     pk3, _, _ = packaged
-    code, log = run_script("package_map.py", pk3.parent / "room.sog", "--author", "A Mapper",
-                           "--out-dir", tmp_path)
+    code, log = run_cli("package", pk3.parent / "room.sog", "--author", "A Mapper",
+                        "--out-dir", tmp_path)
     assert code == 0, log
     assert (tmp_path / "map-room.pk3").read_bytes() == pk3.read_bytes()
 
 
+def test_package_fails_when_its_lint_refuses(room):
+    # The spawn spot sunk into the floor, which the package leaves to the lint to judge.
+    ent = room.with_name("room.ent")
+    text = ent.read_text(encoding="ascii")
+    ent.write_text(text.replace('"origin" "0 0 24"', '"origin" "0 0 0"', 1), encoding="ascii")
+    code, log = run_cli("package", room, "--author", "A Mapper")
+    assert code == 1, log
+    assert ("ERR", "L20") in lint_failures(log)
+
+
 def test_package_leaves_out_a_part_that_is_optional(room):
     room.with_name("room.tga").unlink()
-    code, log = run_script("package_map.py", room, "--author", "A Mapper")
+    code, log = run_cli("package", room, "--author", "A Mapper")
     assert code == 0, log
     with zipfile.ZipFile(room.with_name("map-room.pk3")) as z:
         assert "levelshots/room.tga" not in z.namelist()
@@ -183,7 +193,7 @@ def rename_parts(folder):
 ])
 def test_package_refuses(room, change, sog, message):
     change(room.parent)
-    code, log = run_script("package_map.py", room.parent / sog, "--author", "A Mapper")
+    code, log = run_cli("package", room.parent / sog, "--author", "A Mapper")
     assert code != 0
     assert message in log
     assert not list(room.parent.glob("*.pk3"))

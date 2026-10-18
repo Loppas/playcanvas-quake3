@@ -2,7 +2,7 @@
 
 import pytest
 
-from room import ENT, run_script
+from room import ENT, run_cli
 
 #: garage_cats' arena block, as write_arena wrote it.
 GARAGE_CATS_ARENA = """\
@@ -24,8 +24,8 @@ def ent(tmp_path):
 
 def test_write_arena_writes_garage_cats_block(tmp_path, ent):
     out = tmp_path / "scripts" / "garage_cats.arena"
-    code, log = run_script("write_arena.py", out, "--ent", ent,
-                           "--type", "ffa  tourney team clanarena", "--bots", "mynx orbb bitterman")
+    code, log = run_cli("arena", out, "--ent", ent,
+                        "--type", "ffa  tourney team clanarena", "--bots", "mynx orbb bitterman")
     assert code == 0, log
     assert out.read_bytes() == GARAGE_CATS_ARENA.encode("ascii")
     assert "WARNING" not in log
@@ -33,8 +33,8 @@ def test_write_arena_writes_garage_cats_block(tmp_path, ent):
 
 def test_write_arena_adds_single_players_keys_in_order(tmp_path):
     out = tmp_path / "room.arena"
-    code, log = run_script("write_arena.py", out, "--longname", "Test Room", "--type", "single",
-                           "--fraglimit", "10", "--timelimit", "5", "--special", "Training")
+    code, log = run_cli("arena", out, "--longname", "Test Room", "--type", "single",
+                        "--fraglimit", "10", "--timelimit", "5", "--special", "Training")
     assert code == 0, log
     assert out.read_text(encoding="ascii") == (
         '{\nmap "room"\nlongname "Test Room"\ntype "single"\nfraglimit "10"\ntimelimit "5"\n'
@@ -43,7 +43,7 @@ def test_write_arena_adds_single_players_keys_in_order(tmp_path):
 
 def test_write_arena_defaults_to_ffa(tmp_path):
     out = tmp_path / "room.arena"
-    assert run_script("write_arena.py", out, "--longname", "Test Room")[0] == 0
+    assert run_cli("arena", out, "--longname", "Test Room")[0] == 0
     assert 'type "ffa"' in out.read_text(encoding="ascii")
 
 
@@ -54,7 +54,7 @@ def test_write_arena_defaults_to_ffa(tmp_path):
      "'The Garage (Cat Size)' (L27)"),
 ])
 def test_write_arena_warns_as_the_lint(tmp_path, ent, args, warning):
-    code, log = run_script("write_arena.py", tmp_path / "room.arena", "--ent", ent, *args)
+    code, log = run_cli("arena", tmp_path / "room.arena", "--ent", ent, *args)
     assert code == 0, log
     assert warning in log.splitlines()
 
@@ -65,7 +65,7 @@ def test_write_arena_warns_as_the_lint(tmp_path, ent, args, warning):
     ("room.arena", ["--longname", "Test; Room"], "not a valid arena pair"),
 ])
 def test_write_arena_refuses(tmp_path, name, args, error):
-    code, log = run_script("write_arena.py", tmp_path / name, *args)
+    code, log = run_cli("arena", tmp_path / name, *args)
     assert code != 0
     assert error in log
     assert not (tmp_path / name).exists()

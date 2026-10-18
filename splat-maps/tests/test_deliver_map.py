@@ -1,8 +1,11 @@
 """`deliver_map.py`: a linted pk3 into the port's `public/maps/`, whole or not at all."""
 
+from pathlib import Path
+
 import pytest
 
-from room import run_script
+from room import run_cli
+from splat_maps import deliver_map
 
 
 @pytest.fixture
@@ -15,7 +18,11 @@ def port(tmp_path):
 
 
 def deliver(pk3, port, *args):
-    return run_script("deliver_map.py", pk3, "--port", port, *args)
+    return run_cli("deliver", pk3, "--port", port, *args)
+
+
+def test_the_default_port_is_this_checkout():
+    assert Path(deliver_map.DEFAULT_PORT) == Path(__file__).resolve().parents[2]
 
 
 def test_deliver_copies_the_pk3_whole(room_pk3, port):

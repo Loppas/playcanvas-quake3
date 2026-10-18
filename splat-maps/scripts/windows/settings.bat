@@ -12,4 +12,6 @@ if not defined SPLAT_COLMAP set "SPLAT_COLMAP=colmap"
 if not defined SPLAT_FFMPEG set "SPLAT_FFMPEG=ffmpeg"
 if not defined SPLAT_VCVARS set "SPLAT_VCVARS=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
 if defined SPLAT_NODE set "PATH=%SPLAT_NODE%;%PATH%"
+REM The splat_maps package the wrappers run, from this checkout.
+if defined PYTHONPATH (set "PYTHONPATH=%~dp0..\..\src;%PYTHONPATH%") else (set "PYTHONPATH=%~dp0..\..\src")
 exit /b 0

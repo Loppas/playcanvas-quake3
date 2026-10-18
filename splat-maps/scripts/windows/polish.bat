@@ -51,7 +51,7 @@ call "%SCRIPT_DIR%pin-splat-transform.bat" || exit /b 1
 
 echo(
 echo === 1/4  measuring %IN%
-"%SPLAT_PYTHON%" "%SCRIPT_DIR%sog_inspect.py" "%IN%" --metric-height %HEIGHT% !EXTRA! || exit /b 1
+"%SPLAT_PYTHON%" -m splat_maps.sog_inspect "%IN%" --metric-height %HEIGHT% !EXTRA! || exit /b 1
 
 REM sog_inspect writes the transform to report.json next to the input. The command
 REM starts with `call` because for /f strips the first and last quote from a command
@@ -69,11 +69,11 @@ REM input's --up-hint on to it made sog_inspect lock onto the ceiling of an outp
 REM polished with --up-hint 0,-1,0. argparse keeps the last value given.
 echo(
 echo === 3/4  verifying %OUT%   (expect tilt ~0, yaw ~0, floor y ~0)
-"%SPLAT_PYTHON%" "%SCRIPT_DIR%sog_inspect.py" "%OUT%" --scale 1.0 !EXTRA! --up-hint 0,1,0 || exit /b 1
+"%SPLAT_PYTHON%" -m splat_maps.sog_inspect "%OUT%" --scale 1.0 !EXTRA! --up-hint 0,1,0 || exit /b 1
 
 echo(
 echo === 4/4  recording the polish and keeping the source's licence
-"%SPLAT_PYTHON%" "%SCRIPT_DIR%polish_record.py" "%IN%" "%OUT%" !LICENSE! --metric-height %HEIGHT% !EXTRA! || exit /b 1
+"%SPLAT_PYTHON%" -m splat_maps.polish_record "%IN%" "%OUT%" !LICENSE! --metric-height %HEIGHT% !EXTRA! || exit /b 1
 
 echo(
 echo Done. Compare the two report.json files and the plan/section drawings.

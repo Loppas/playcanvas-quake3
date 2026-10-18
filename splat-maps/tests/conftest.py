@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from room import run_script, write_room
+from room import run_cli, write_room
 
 
 @pytest.fixture
@@ -18,7 +18,7 @@ def room(tmp_path):
 def packaged(tmp_path_factory):
     """The room packaged once: the pk3, and package_map's exit code and output."""
     sog = write_room(tmp_path_factory.mktemp("packaged"))
-    code, out = run_script("package_map.py", sog, "--author", "A Mapper")
+    code, out = run_cli("package", sog, "--author", "A Mapper")
     return sog.with_name("map-room.pk3"), code, out
 
 

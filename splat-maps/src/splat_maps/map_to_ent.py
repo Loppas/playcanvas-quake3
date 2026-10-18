@@ -15,14 +15,14 @@ skipped, and all three brush syntaxes are skipped alike (axial, Valve 220, brush
 `patchDef2`. The result is read back by Q3's rules.
 
 Usage:
-    python map_to_ent.py <file>.map <stem>.ent [--reference <stem>_collision.obj]
+    splat-maps entities from-map <file>.map <stem>.ent [--reference <stem>_collision.obj]
 """
 
 import argparse
 import os
 import sys
 
-import splat_map as sm
+from . import splat_map as sm
 
 
 def read_map(data):
@@ -59,13 +59,14 @@ def read_map(data):
         out.append((pairs, prims, line))
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Keep a .map's point entities as a splat map .ent.")
+def main(argv=None, prog=None):
+    ap = argparse.ArgumentParser(
+        prog=prog, description="Keep a .map's point entities as a splat map .ent.")
     ap.add_argument("map", help="the editor's saved .map")
     ap.add_argument("out", help="the .ent to write")
     ap.add_argument("--reference", help="the reference model's file name, whose misc_model is "
                                         "dropped (default: any model ending _collision.obj)")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
 
     with open(args.map, "rb") as fh:
