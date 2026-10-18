@@ -73,6 +73,21 @@ port's maps, as the map steps wrote them: its hand-placed entities, its arena bl
 its levelshot, with what the polish and the bake recorded. The splat itself is left out, at 178 MB,
 and its README rebuilds the map from the capture it was made from.
 
+## Tests
+
+The stages that need no GPU and no external tool are tested with pytest, on a tiny map the tests
+build: the format's shared pieces, the entities, the arena block, the package, the lint and the
+delivery. Their environment is a [uv](https://docs.astral.sh/uv/) project: `pyproject.toml` and
+its lock, `uv.lock`, on the Python in `.python-version`, which uv fetches if it is missing. From
+`splat-maps/`:
+
+```bash
+uv sync
+uv run pytest
+```
+
+CI runs them on Linux, macOS and Windows whenever `splat-maps/` changes.
+
 ## Layout
 
 ```
@@ -81,6 +96,8 @@ splat-maps/
 ├── docs/                    the docs above
 ├── scripts/windows/         the batch wrappers, settings.bat, and the Python they run
 │   └── templates/readme.txt the readme packed into each map
+├── tests/                   pytest for the stages that need no GPU, on a map they build
+├── pyproject.toml, uv.lock  the map half's Python environment, which the tests run in
 ├── examples/garage_cats/    a map's parts, from polish to package
 ├── data/                    per-capture working data and outputs (git-ignored)
 └── editor/                  NetRadiant-custom, for placing entities (git-ignored)
