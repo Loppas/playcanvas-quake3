@@ -1,0 +1,72 @@
+// entity 0
+{
+"classname" "worldspawn"
+"message" "The Garage"
+}
+// entity 1: spawn from viewpos (-4 -4 69) : 0, z less 26
+{
+"classname" "info_player_deathmatch"
+"origin" "-4 -4 43"
+"angle" "0"
+"spawnflags" "1"
+}
+// entity 2: spawn from viewpos (1073 -1552 1450) : 125, z less 26
+{
+"classname" "info_player_deathmatch"
+"origin" "1073 -1552 1424"
+"angle" "125"
+}
+// entity 3: spawn from viewpos (-80 -1714 586) : 87, z less 26
+{
+"classname" "info_player_deathmatch"
+"origin" "-80 -1714 560"
+"angle" "87"
+}
+// entity 4: spawn from viewpos (-25 -605 66) : 88, z less 26
+{
+"classname" "info_player_deathmatch"
+"origin" "-25 -605 40"
+"angle" "88"
+}
+// entity 5: spawn from viewpos (-85 2100 82) : 272, z less 26
+{
+"classname" "info_player_deathmatch"
+"origin" "-85 2100 56"
+"angle" "272"
+}
+// entity 6: spawn from viewpos (1 847 1490) : 270, z less 26
+{
+"classname" "info_player_deathmatch"
+"origin" "1 847 1464"
+"angle" "270"
+}
+// entity 7: spawn from viewpos (-51 -2075 1314) : 89, z less 26
+{
+"classname" "info_player_deathmatch"
+"origin" "-51 -2075 1288"
+"angle" "89"
+}
+// entity 8: spawn from viewpos (-1139 -425 986) : 20, z less 26
+{
+"classname" "info_player_deathmatch"
+"origin" "-1139 -425 960"
+"angle" "20"
+}
+// entity 9: spawn from viewpos (1124 151 610) : 188, z less 26
+{
+"classname" "info_player_deathmatch"
+"origin" "1124 151 584"
+"angle" "188"
+}
+// entity 10: intermission camera from viewpos (1056 2016 868) : 242
+{
+"classname" "info_player_intermission"
+"origin" "1056 2016 868"
+"target" "intermission_view"
+}
+// entity 11: what the intermission camera faces, from viewpos (0 0 100)
+{
+"classname" "target_position"
+"targetname" "intermission_view"
+"origin" "0 0 100"
+}

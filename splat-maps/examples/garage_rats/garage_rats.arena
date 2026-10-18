@@ -1,0 +1,6 @@
+{
+map "garage_rats"
+longname "The Garage"
+type "ffa tourney team clanarena"
+bots "ranger phobos sarge"
+}

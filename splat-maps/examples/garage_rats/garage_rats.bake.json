@@ -1,0 +1,211 @@
+{
+  "_pcq_bake": "--voxel-size 0.25 --voxel-external-fill 0.875 --voxel-carve 0.75,0.125 --seed-pos 0.125,-1.5,0.125 --collision-mesh smooth",
+  "_pcq_splat_transform": "3.1.6",
+  "input": "garage_rats.sog",
+  "voxel_units": 8,
+  "carve_box_units": [
+    24.0,
+    40.0
+  ],
+  "fill_units": 32,
+  "fill_seals_under_units": 64,
+  "fill_search": [
+    {
+      "fill_units": 32,
+      "seals_under_units": 64,
+      "leaked": false,
+      "seconds": 25.9
+    },
+    {
+      "fill_units": 16,
+      "seals_under_units": 32,
+      "leaked": true,
+      "seconds": 40.4
+    },
+    {
+      "fill_units": 24,
+      "seals_under_units": 48,
+      "leaked": true,
+      "seconds": 39.6
+    }
+  ],
+  "seed_sim": [
+    -4.0,
+    -4.0,
+    48.0
+  ],
+  "seed_from": "garage_rats.ent's first spawn spot",
+  "seed_octree": [
+    0.125,
+    -1.5,
+    0.125
+  ],
+  "seconds": 25.9,
+  "peak_memory": "2.96 GB CPU, 871.9 MB GPU",
+  "grid_voxels": [
+    376,
+    280,
+    596
+  ],
+  "open_voxels": 30483223,
+  "nodes": {
+    "interior": 28686,
+    "mixed": 72754,
+    "solid": 59801
+  },
+  "bytes": {
+    "voxel.json": 588,
+    "voxel.bin": 1226996,
+    "collision.glb": 12075132
+  },
+  "glb": {
+    "triangles": 671304,
+    "min": [
+      -45.125,
+      -58.125,
+      -74.125
+    ],
+    "max": [
+      48.875,
+      11.875,
+      74.875
+    ]
+  },
+  "spawns": [
+    {
+      "origin": [
+        -4.0,
+        -4.0,
+        43.0
+      ],
+      "solid_voxels": 0,
+      "drop": 20.0,
+      "landing": "silent"
+    },
+    {
+      "origin": [
+        1073.0,
+        -1552.0,
+        1424.0
+      ],
+      "solid_voxels": 0,
+      "drop": 9.0,
+      "landing": "silent"
+    },
+    {
+      "origin": [
+        -80.0,
+        -1714.0,
+        560.0
+      ],
+      "solid_voxels": 0,
+      "drop": 9.0,
+      "landing": "silent"
+    },
+    {
+      "origin": [
+        -25.0,
+        -605.0,
+        40.0
+      ],
+      "solid_voxels": 0,
+      "drop": 9.0,
+      "landing": "silent"
+    },
+    {
+      "origin": [
+        -85.0,
+        2100.0,
+        56.0
+      ],
+      "solid_voxels": 0,
+      "drop": 9.0,
+      "landing": "silent"
+    },
+    {
+      "origin": [
+        1.0,
+        847.0,
+        1464.0
+      ],
+      "solid_voxels": 0,
+      "drop": 9.0,
+      "landing": "silent"
+    },
+    {
+      "origin": [
+        -51.0,
+        -2075.0,
+        1288.0
+      ],
+      "solid_voxels": 0,
+      "drop": 9.0,
+      "landing": "silent"
+    },
+    {
+      "origin": [
+        -1139.0,
+        -425.0,
+        960.0
+      ],
+      "solid_voxels": 0,
+      "drop": 9.0,
+      "landing": "silent"
+    },
+    {
+      "origin": [
+        1124.0,
+        151.0,
+        584.0
+      ],
+      "solid_voxels": 0,
+      "drop": 9.0,
+      "landing": "silent"
+    }
+  ],
+  "floor": {
+    "columns": 131933,
+    "area_m2": 8245.8,
+    "height_units": {
+      "p5": 8.0,
+      "median": 16.0,
+      "p95": 24.0
+    },
+    "neighbour_pairs": 274190,
+    "flat": 255976,
+    "quiet": 0,
+    "steps": 16800,
+    "walls": 1414,
+    "step_ups_per_100_units": 0.38,
+    "units_climbed_per_100_units": 3.27,
+    "step_events": {
+      "EV_STEP_4": 0,
+      "EV_STEP_8": 15654,
+      "EV_STEP_12": 0,
+      "EV_STEP_16": 1146
+    }
+  },
+  "reach": {
+    "positions": 27853602,
+    "box_voxels": [
+      4,
+      4,
+      5
+    ],
+    "feet_min": -240.0,
+    "feet_max": 1704.0,
+    "x": [
+      -1512.0,
+      1368.0
+    ],
+    "y": [
+      -2344.0,
+      2272.0
+    ],
+    "under_floor": 4813
+  },
+  "errors": [],
+  "warnings": [
+    "the player can get 4,813 box positions under the floor (feet below -48, lowest -240): the capture has holes the player fits through"
+  ]
+}

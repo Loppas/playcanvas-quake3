@@ -14,19 +14,19 @@
       "fill_units": 32,
       "seals_under_units": 64,
       "leaked": false,
-      "seconds": 21.7
+      "seconds": 23.0
     },
     {
       "fill_units": 16,
       "seals_under_units": 32,
       "leaked": false,
-      "seconds": 20.5
+      "seconds": 20.6
     },
     {
       "fill_units": 8,
       "seals_under_units": 16,
       "leaked": false,
-      "seconds": 20.9
+      "seconds": 20.0
     }
   ],
   "seed_sim": [
@@ -40,26 +40,26 @@
     -1.15625,
     0.03125
   ],
-  "seconds": 20.9,
-  "peak_memory": "3.01 GB CPU, 885.7 MB GPU",
+  "seconds": 20.0,
+  "peak_memory": "2.93 GB CPU, 885.7 MB GPU",
   "grid_voxels": [
     72,
     52,
     124
   ],
-  "open_voxels": 205936,
+  "open_voxels": 205970,
   "nodes": {
     "interior": 788,
-    "mixed": 1619,
-    "solid": 1771
+    "mixed": 1615,
+    "solid": 1764
   },
   "bytes": {
-    "voxel.json": 580,
-    "voxel.bin": 29664,
-    "collision.glb": 230480
+    "voxel.json": 579,
+    "voxel.bin": 29588,
+    "collision.glb": 229580
   },
   "glb": {
-    "triangles": 12778,
+    "triangles": 12728,
     "min": [
       -9.125,
       -12.125,
@@ -114,29 +114,29 @@
     }
   ],
   "floor": {
-    "columns": 4791,
-    "area_m2": 299.4,
+    "columns": 4787,
+    "area_m2": 299.2,
     "height_units": {
       "p5": 8.0,
       "median": 8.0,
       "p95": 40.0
     },
-    "neighbour_pairs": 10759,
-    "flat": 10075,
+    "neighbour_pairs": 10749,
+    "flat": 10087,
     "quiet": 0,
-    "steps": 413,
-    "walls": 271,
-    "step_ups_per_100_units": 0.24,
-    "units_climbed_per_100_units": 2.45,
+    "steps": 400,
+    "walls": 262,
+    "step_ups_per_100_units": 0.23,
+    "units_climbed_per_100_units": 2.38,
     "step_events": {
       "EV_STEP_4": 0,
-      "EV_STEP_8": 298,
+      "EV_STEP_8": 288,
       "EV_STEP_12": 0,
-      "EV_STEP_16": 115
+      "EV_STEP_16": 112
     }
   },
   "reach": {
-    "positions": 151039,
+    "positions": 151083,
     "box_voxels": [
       4,
       4,

@@ -27,18 +27,29 @@ Every stage has been run on Windows 11; macOS and Linux are untried.
 | [map-format.md](docs/map-format.md) | The spec of a splat map: what the pk3 holds, the frames, the bake's sizes, the lint's rules |
 | [conventions.md](docs/conventions.md) | Lessons the pipeline has paid for: verification, calibrating splat-transform, fitting planes, scale |
 
-## Quick start (Windows)
+## Quick start
 
 Set up the environment once, as [training.md](docs/training.md#the-environment) does, then run
-from `splat-maps\`:
+from `splat-maps\`. Once a shell, the environment and where gsplat is:
+
+**Windows (cmd)**
 
 ```bat
-:: once a command prompt: the environment, and where gsplat is
 conda activate gsplat
 set SPLAT_GSPLAT=C:\src\gsplat
+```
 
-:: a video to a map in the game, in one run
-splat-maps all "C:\path\to\video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
+**Linux (bash)**
+
+```bash
+conda activate gsplat
+export SPLAT_GSPLAT=~/src/gsplat
+```
+
+Then a video to a map in the game, in one run, the same on both:
+
+```bash
+splat-maps all "/path/to/video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
 ```
 
 `2.4` is the room's floor-to-ceiling height in metres, `--box` the map's corners in Q3 units
@@ -61,17 +72,27 @@ user's own. Node 24, for splat-transform, comes from `PATH`.
 | `SPLAT_COLMAP` | `sfm` | `colmap`, from `PATH` | COLMAP 4.1.1's `colmap.exe` |
 | `SPLAT_FFMPEG` | `frames` | `ffmpeg`, from `PATH` | ffmpeg |
 
+**Windows (cmd)**
+
 ```bat
 set SPLAT_COLMAP=C:\Tools\colmap\bin\colmap.exe
 set SPLAT_FFMPEG=C:\Tools\ffmpeg\bin\ffmpeg.exe
 ```
 
-## The example
+**Linux/macOS (bash)**
 
-[`examples/garage_cats/`](examples/garage_cats/) holds the parts of `garage_cats`, one of the
-port's maps, as the map steps wrote them: its hand-placed entities, its arena block, its bake and
-its levelshot, with what the polish and the bake recorded. The splat itself is left out, at 178 MB,
-and its README rebuilds the map from the capture it was made from.
+```bash
+export SPLAT_COLMAP=/opt/colmap/bin/colmap
+export SPLAT_FFMPEG=/opt/ffmpeg/bin/ffmpeg
+```
+
+## The examples
+
+[`examples/`](examples/) holds the parts of the port's two garage maps, `garage_cats` and
+`garage_rats`, as the map steps wrote them: their hand-placed entities, their arena blocks and their
+levelshots, with what the polish and the bake recorded. The splats, at about 175 MB each, are left
+out with the octrees and the meshes. Each map's README rebuilds its map from the garage aligned at
+life size, which [`examples/README.md`](examples/README.md) makes from the capture.
 
 ## Tests
 
@@ -100,7 +121,7 @@ splat-maps/
 ├── tests/                   pytest for the stages that need no GPU, on a map they build
 ├── pyproject.toml, uv.lock  the package and its locked environment, which the tests run in
 ├── gsplat-requirements.txt  gsplat's example dependencies, for the training environment
-├── examples/garage_cats/    a map's parts, from polish to package
+├── examples/                two maps' parts, and the garage they start from
 ├── data/                    per-capture working data and outputs (git-ignored)
 └── editor/                  NetRadiant-custom, for placing entities (git-ignored)
 ```
