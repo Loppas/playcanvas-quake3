@@ -70,7 +70,8 @@ STEM_RE = re.compile(r"^[a-z0-9_]{1,44}$")
 
 def _pinned_version():
     """`ST_VERSION` from pin-splat-transform.bat, the one place the pin is written."""
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pin-splat-transform.bat")
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "scripts",
+                        "windows", "pin-splat-transform.bat")
     with open(path, encoding="utf-8") as fh:
         return re.search(r"^set ST_VERSION=(\S+)", fh.read(), re.M).group(1)
 

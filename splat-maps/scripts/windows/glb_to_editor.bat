@@ -11,4 +11,4 @@ set SCRIPT_DIR=%~dp0
 call "%SCRIPT_DIR%settings.bat"
 
 if "%~1"=="" echo Usage: glb_to_editor.bat ^<stem^>.collision.glb [--out FILE] & exit /b 1
-"%SPLAT_PYTHON%" "%SCRIPT_DIR%glb_to_editor.py" %*
+"%SPLAT_PYTHON%" -m splat_maps entities reference %*

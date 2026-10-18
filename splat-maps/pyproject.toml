@@ -1,6 +1,6 @@
 [project]
 name = "splat-maps"
-version = "0.0.0"
+version = "0.1.0"
 description = "Gaussian-splat captures to Quake 3 maps for playcanvas-quake3"
 # numpy below 2 has no wheels past 3.12.
 requires-python = ">=3.11,<3.13"
@@ -10,12 +10,15 @@ dependencies = [
     "scipy",
 ]
 
+[project.scripts]
+splat-maps = "splat_maps.__main__:main"
+
 [dependency-groups]
 dev = ["pytest"]
 
-[tool.uv]
-package = false
+[build-system]
+requires = ["uv_build>=0.11.6,<0.12"]
+build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["scripts/windows"]

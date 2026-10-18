@@ -16,7 +16,7 @@ What it does:
 Nothing is modified: the input is read-only and every output lands in --out.
 
 Usage:
-    python sog_inspect.py <input.sog> [--out DIR] [--metric-height M] [--render]
+    python -m splat_maps.sog_inspect <input.sog> [--out DIR] [--metric-height M] [--render]
 
 Requires numpy + Pillow (present in the `gsplat` conda env) and, for --render,
 splat-transform on PATH (Node >= 24).

@@ -5,12 +5,12 @@ import json
 
 import pytest
 
-from room import encode_octree, lint_failures, read_pk3, room_grid, run_script, sog_bytes, \
+from room import encode_octree, lint_failures, read_pk3, room_grid, run_cli, sog_bytes, \
     write_pk3
 
 
 def lint(pk3):
-    code, log = run_script("map_lint.py", pk3)
+    code, log = run_cli("lint", pk3)
     return code, log, lint_failures(log)
 
 

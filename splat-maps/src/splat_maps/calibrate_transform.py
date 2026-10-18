@@ -14,7 +14,7 @@ operation — they differ by -I, which cancels. Translating tells them apart, an
 wrong put a polished floor at -3.136 instead of 0. Centroids are order-free, so this part
 is a subtraction.
 
-Usage:  python calibrate_transform.py <source.sog>
+Usage:  python -m splat_maps.calibrate_transform <source.sog>
 """
 
 import itertools
@@ -25,8 +25,7 @@ import sys
 
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from sog_inspect import find_splat_transform, load_sog  # noqa: E402
+from .sog_inspect import find_splat_transform, load_sog
 
 PROBES = [(30.0, 0.0, 0.0), (0.0, 30.0, 0.0), (0.0, 0.0, 30.0), (30.0, 20.0, 10.0)]
 CAP = 1_000_000        # covariance and third moments converge long before this

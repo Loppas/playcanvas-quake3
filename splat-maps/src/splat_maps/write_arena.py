@@ -6,9 +6,9 @@ one pair per line), then re-reads it with `G_ParseInfos`'s rules (g_bot.c:68-110
 against the lint's arena rules (L25-L27).
 
 Usage:
-    python write_arena.py <out/<stem>.arena> [--longname TEXT] [--type "ffa tourney team"]
-                          [--ent <stem>.ent] [--fraglimit N] [--timelimit N] [--bots NAMES]
-                          [--special Training|Final]
+    splat-maps arena <out/<stem>.arena> [--longname TEXT] [--type "ffa tourney team"]
+                     [--ent <stem>.ent] [--fraglimit N] [--timelimit N] [--bots NAMES]
+                     [--special Training|Final]
 
 The `map` key is the stem, taken from the file's name. `--longname` defaults to the `.ent`'s
 worldspawn `message`, and `--type` to `ffa`.
@@ -18,15 +18,15 @@ import argparse
 import os
 import sys
 
-import splat_map as sm
+from . import splat_map as sm
 
 #: The gametype tokens the menus know (`GametypeBits`, ui_startserver.c:113-151), and the
 #: port's `clanarena` for Clan Arena. Others are ignored there, so the lint only warns about them.
 KNOWN_TYPES = ("ffa", "tourney", "single", "team", "ctf", "clanarena")
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Write a splat map's arena block.")
+def main(argv=None, prog=None):
+    ap = argparse.ArgumentParser(prog=prog, description="Write a splat map's arena block.")
     ap.add_argument("out", help="the file to write, <stem>.arena")
     ap.add_argument("--longname", help="the display name (default: the .ent's worldspawn message)")
     ap.add_argument("--type", default="ffa", help="space-separated gametypes (default ffa)")
@@ -35,7 +35,7 @@ def main():
     ap.add_argument("--timelimit", type=int, help="Single Player only")
     ap.add_argument("--bots", help="bot names for Single Player")
     ap.add_argument("--special", choices=("Training", "Final"), help="a Single Player tier")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
 
     stem = sm.stem_of(args.out, ".arena")

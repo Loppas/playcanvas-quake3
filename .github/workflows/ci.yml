@@ -120,7 +120,7 @@ jobs:
         with:
           working-directory: splat-maps
       - run: uv sync --locked
-      - run: uv run python -m compileall -q scripts
+      - run: uv run python -m compileall -q src
       - run: uv run pytest
 
   pr-title:

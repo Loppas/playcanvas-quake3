@@ -5,8 +5,8 @@ import json
 
 import pytest
 
-import write_ent
-from room import encode_octree, room_grid, run_script
+from splat_maps import write_ent
+from room import encode_octree, room_grid, run_cli
 
 #: garage_cats' entities, as write_ent wrote them from its readings.
 GARAGE_CATS_ENT = """\
@@ -72,8 +72,8 @@ def test_reading_refuses_anything_else(text):
 
 def test_write_ent_places_garage_cats_from_its_readings(tmp_path):
     out = tmp_path / "garage_cats.ent"
-    code, log = run_script(
-        "write_ent.py", out, "--message", "The Garage (Cat Size)",
+    code, log = run_cli(
+        "entities", "readings", out, "--message", "The Garage (Cat Size)",
         "--spawn", "(-1 -1 58) : 0", "--spawn", "(-16 -343 162) : 87",
         "--spawn", "(-5 -121 58) : 88", "--spawn", "(-17 420 58) : 272",
         "--intermission", "(211 403 174) : 242", "--look-at", "(0 0 20) : 0")
@@ -82,8 +82,8 @@ def test_write_ent_places_garage_cats_from_its_readings(tmp_path):
 
 
 def test_write_ent_needs_a_spawn(tmp_path):
-    code, log = run_script("write_ent.py", tmp_path / "room.ent", "--message", "Test Room",
-                           "--intermission", "(0 -32 100) : 0", "--look-at", "(0 0 24) : 0")
+    code, log = run_cli("entities", "readings", tmp_path / "room.ent", "--message", "Test Room",
+                        "--intermission", "(0 -32 100) : 0", "--look-at", "(0 0 24) : 0")
     assert code != 0
     assert "at least one --spawn" in log
     assert not (tmp_path / "room.ent").exists()
@@ -100,9 +100,9 @@ def octree(tmp_path):
 
 
 def place(tmp_path, octree, spawn, intermission="(0 -32 100) : 0"):
-    return run_script("write_ent.py", tmp_path / "room.ent", "--message", "Test Room",
-                      "--spawn", spawn, "--intermission", intermission,
-                      "--look-at", "(8 -16 24) : 0", "--octree", octree)
+    return run_cli("entities", "readings", tmp_path / "room.ent", "--message", "Test Room",
+                   "--spawn", spawn, "--intermission", intermission,
+                   "--look-at", "(8 -16 24) : 0", "--octree", octree)
 
 
 def test_write_ent_checks_a_free_spawn_and_an_open_intermission(tmp_path, octree):

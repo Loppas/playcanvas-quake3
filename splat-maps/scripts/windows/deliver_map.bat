@@ -13,4 +13,4 @@ set SCRIPT_DIR=%~dp0
 call "%SCRIPT_DIR%settings.bat"
 
 if "%~1"=="" echo Usage: deliver_map.bat ^<dir^>\map-^<stem^>.pk3 [--port DIR] [--replace] & exit /b 1
-"%SPLAT_PYTHON%" "%SCRIPT_DIR%deliver_map.py" %*
+"%SPLAT_PYTHON%" -m splat_maps deliver %*

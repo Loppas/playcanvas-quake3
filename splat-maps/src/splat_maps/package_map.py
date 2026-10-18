@@ -21,7 +21,7 @@ It then reads the pk3 back and checks it entry by entry against what it packed, 
 lint.
 
 Usage:
-    python package_map.py <dir>/<stem>.sog --author NAME [--out-dir DIR]
+    splat-maps package <dir>/<stem>.sog --author NAME [--out-dir DIR]
 """
 
 import argparse
@@ -32,7 +32,7 @@ import sys
 import textwrap
 import zipfile
 
-import splat_map as sm
+from . import splat_map as sm
 
 #: The layout's version (§9). It changes only when the spec changes what a reader must do.
 PCQ_FORMAT = "1"
@@ -53,12 +53,12 @@ def pipeline_commit():
     return (sha or "unknown") + ("-dirty" if dirty else "")
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Assemble a splat map's pk3.")
+def main(argv=None, prog=None):
+    ap = argparse.ArgumentParser(prog=prog, description="Assemble a splat map's pk3.")
     ap.add_argument("sog", help="the map's polished .sog, beside its other parts")
     ap.add_argument("--author", required=True, help="who made the map, for the readme")
     ap.add_argument("--out-dir", help="where to write map-<stem>.pk3 (default beside the .sog)")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
 
     stem = sm.stem_of(args.sog, ".sog")
@@ -250,10 +250,8 @@ def main():
             print(f"  ERROR: {e}")
         sys.exit(1)
 
-    lint = os.path.join(HERE, "map_lint.py")
-    if os.path.exists(lint):
-        print(flush=True)  # the lint writes to the same console
-        sys.exit(subprocess.run([sys.executable, lint, pk3]).returncode)
+    print(flush=True)  # the lint writes to the same console
+    sys.exit(subprocess.run([sys.executable, "-m", "splat_maps", "lint", pk3]).returncode)
 
 
 if __name__ == "__main__":

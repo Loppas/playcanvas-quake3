@@ -13,8 +13,8 @@ had to be reconstructed from a log), and `splat-transform -w` drops a SOG bundle
      clear height kept.
 
 Usage:
-    python polish_record.py <input.sog> <output.sog> [--license FILE|FIELDS]
-                            [the sog_inspect arguments polish.bat ran]
+    python -m splat_maps.polish_record <input.sog> <output.sog> [--license FILE|FIELDS]
+                                       [the sog_inspect arguments polish.bat ran]
 
 It reads the two reports sog_inspect wrote: `<input>_inspect/report.json` (the measure) and
 `<output>_inspect/report.json` (the verify).
@@ -26,7 +26,7 @@ import re
 import sys
 import zipfile
 
-import splat_map as sm
+from . import splat_map as sm
 
 #: What a verify must show. The shipped garage verifies at 0.044 deg of tilt, -0.02 deg of yaw
 #: and its floor 0.23 units low, so these leave room without letting a real error through.

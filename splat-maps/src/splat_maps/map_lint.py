@@ -6,7 +6,7 @@ by Q3's rules, the spawn spots placed in the octree, the arena, the levelshot an
 **E** refuses the package and **W** reports and passes it.
 
 Usage:
-    python map_lint.py <dir>/map-<stem>.pk3
+    splat-maps lint <dir>/map-<stem>.pk3
 
 Exits 1 if any rule fails at E.
 """
@@ -19,7 +19,7 @@ import re
 import sys
 import zipfile
 
-import splat_map as sm
+from . import splat_map as sm
 
 REQUIRED = ("maps/{n}.sog", "maps/{n}.voxel.json", "maps/{n}.voxel.bin", "maps/{n}.ent", "{n}.txt")
 OPTIONAL = ("maps/{n}.collision.glb", "scripts/{n}.arena", "levelshots/{n}.tga")
@@ -55,10 +55,10 @@ def flag_value(flags, name):
     return parts[parts.index(name) + 1] if name in parts[:-1] else None
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Lint a splat map pk3.")
+def main(argv=None, prog=None):
+    ap = argparse.ArgumentParser(prog=prog, description="Lint a splat map pk3.")
     ap.add_argument("pk3")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
     rep = Report()
     pk3 = args.pk3

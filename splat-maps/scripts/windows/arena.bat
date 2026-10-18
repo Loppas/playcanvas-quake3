@@ -13,4 +13,4 @@ set SCRIPT_DIR=%~dp0
 call "%SCRIPT_DIR%settings.bat"
 
 if "%~1"=="" echo Usage: arena.bat ^<stem^>.arena [--longname TEXT] [--type TYPES] [--ent FILE] & exit /b 1
-"%SPLAT_PYTHON%" "%SCRIPT_DIR%write_arena.py" %*
+"%SPLAT_PYTHON%" -m splat_maps arena %*

@@ -21,7 +21,7 @@ Then it reads the TGA back and checks it byte for byte, and checks the view is n
 void or a wall.
 
 Usage:
-    python levelshot.py <map.sog> [--ent <stem>.ent] [--out <stem>.tga]
+    splat-maps levelshot <map.sog> [--ent <stem>.ent] [--out <stem>.tga]
 
 Writes <stem>.tga beside the .sog, and <stem>.levelshot.png, the 512 x 384 frame, for people.
 """
@@ -35,7 +35,7 @@ import sys
 import numpy as np
 from PIL import Image
 
-import splat_map as sm
+from . import splat_map as sm
 
 WIDTH, HEIGHT = 512, 384                                          # tr_init.c:597-598
 FOV_X = 90.0                                                      # cg_view.c:480-482
@@ -89,12 +89,13 @@ def tga_header():
     return bytes(h)
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Make a splat map's levelshot, as Q3 makes one.")
+def main(argv=None, prog=None):
+    ap = argparse.ArgumentParser(
+        prog=prog, description="Make a splat map's levelshot, as Q3 makes one.")
     ap.add_argument("sog", help="the map's polished .sog")
     ap.add_argument("--ent", help="the map's entity text (default <stem>.ent beside the .sog)")
     ap.add_argument("--out", help="the TGA to write (default <stem>.tga beside the .sog)")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
 
     stem = sm.stem_of(args.sog, ".sog")

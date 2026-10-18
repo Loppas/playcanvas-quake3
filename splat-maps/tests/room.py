@@ -18,8 +18,6 @@ from pathlib import Path
 
 import numpy as np
 
-SCRIPTS = Path(__file__).resolve().parents[1] / "scripts" / "windows"
-
 SOLID_LEAF_MARKER = 0xFF000000
 GENERATOR = "splat-transform v3.1.6"
 
@@ -210,9 +208,9 @@ def write_room(folder, stem="room"):
     return folder / f"{stem}.sog"
 
 
-def run_script(name, *args):
-    """Run one of the scripts as a stage runs it; returns its exit code and its output."""
-    run = subprocess.run([sys.executable, str(SCRIPTS / name), *map(str, args)],
+def run_cli(*args):
+    """Run the CLI as a wrapper runs it; returns its exit code and its output."""
+    run = subprocess.run([sys.executable, "-m", "splat_maps", *map(str, args)],
                          capture_output=True, text=True, encoding="utf-8")
     return run.returncode, run.stdout + run.stderr
 

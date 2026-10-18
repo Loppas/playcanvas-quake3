@@ -33,7 +33,7 @@ echo === 3/5  example deps (minus optional fused_bilagrid) ===
 "%SPLAT_PYTHON%" -m pip install -r "%SCRIPT_DIR%requirements-min.txt" --no-build-isolation || exit /b 1
 
 echo === 4/5  patch pycolmap for Windows/Py3 ===
-"%SPLAT_PYTHON%" "%SCRIPT_DIR%patch_pycolmap.py" || exit /b 1
+"%SPLAT_PYTHON%" -m splat_maps.patch_pycolmap || exit /b 1
 
 echo === 5/5  verify ===
 "%SPLAT_PYTHON%" -c "import torch,gsplat,fused_ssim,pycolmap; print('OK | torch',torch.__version__,'| gsplat',gsplat.__version__,'| cuda',torch.cuda.is_available())" || exit /b 1

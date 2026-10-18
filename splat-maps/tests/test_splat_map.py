@@ -5,7 +5,7 @@ import json
 import numpy as np
 import pytest
 
-import splat_map as sm
+from splat_maps import splat_map as sm
 from room import encode_octree, room_grid
 
 

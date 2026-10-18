@@ -14,4 +14,4 @@ call "%SCRIPT_DIR%settings.bat"
 
 if "%~1"=="" echo Usage: levelshot.bat ^<map.sog^> [--ent FILE] [--out FILE] & exit /b 1
 call "%SCRIPT_DIR%pin-splat-transform.bat" || exit /b 1
-"%SPLAT_PYTHON%" "%SCRIPT_DIR%levelshot.py" %*
+"%SPLAT_PYTHON%" -m splat_maps levelshot %*

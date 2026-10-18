@@ -13,8 +13,9 @@ SOG ─▶ polish ─▶ bake ─▶ entities ─▶ levelshot ─▶ arena ─�
   the scripts here, splat-transform, optionally NetRadiant-custom
 ```
 
-The scripts are Windows batch files over Python. The training half needs an NVIDIA GPU with
-CUDA. Every stage has been run on Windows 11; macOS and Linux are untried.
+The scripts are Windows batch files over a Python package, `splat_maps`, whose CLI runs the map
+stages: `uv run splat-maps --help` lists them. The training half needs an NVIDIA GPU with CUDA.
+Every stage has been run on Windows 11; macOS and Linux are untried.
 
 ## The docs
 
@@ -94,10 +95,11 @@ CI runs them on Linux, macOS and Windows whenever `splat-maps/` changes.
 splat-maps/
 ├── README.md
 ├── docs/                    the docs above
-├── scripts/windows/         the batch wrappers, settings.bat, and the Python they run
+├── scripts/windows/         the batch wrappers and settings.bat, which run the package
+├── src/splat_maps/          the stages' Python, one package, and its CLI
 │   └── templates/readme.txt the readme packed into each map
 ├── tests/                   pytest for the stages that need no GPU, on a map they build
-├── pyproject.toml, uv.lock  the map half's Python environment, which the tests run in
+├── pyproject.toml, uv.lock  the package and its locked environment, which the tests run in
 ├── examples/garage_cats/    a map's parts, from polish to package
 ├── data/                    per-capture working data and outputs (git-ignored)
 └── editor/                  NetRadiant-custom, for placing entities (git-ignored)

@@ -11,4 +11,4 @@ set SCRIPT_DIR=%~dp0
 call "%SCRIPT_DIR%settings.bat"
 
 if "%~1"=="" echo Usage: map_to_ent.bat ^<file^>.map ^<stem^>.ent [--reference FILE] & exit /b 1
-"%SPLAT_PYTHON%" "%SCRIPT_DIR%map_to_ent.py" %*
+"%SPLAT_PYTHON%" -m splat_maps entities from-map %*

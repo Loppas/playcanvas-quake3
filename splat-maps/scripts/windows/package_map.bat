@@ -12,4 +12,4 @@ set SCRIPT_DIR=%~dp0
 call "%SCRIPT_DIR%settings.bat"
 
 if "%~1"=="" echo Usage: package_map.bat ^<dir^>\^<stem^>.sog --author "NAME" [--out-dir DIR] & exit /b 1
-"%SPLAT_PYTHON%" "%SCRIPT_DIR%package_map.py" %*
+"%SPLAT_PYTHON%" -m splat_maps package %*
