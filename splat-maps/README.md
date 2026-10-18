@@ -105,6 +105,13 @@ splat-maps/
 └── editor/                  NetRadiant-custom, for placing entities (git-ignored)
 ```
 
+## Versions
+
+`splat-maps` is released on its own, tagged `splat-maps-v<version>`, from the changes under this
+folder. Its version is `pyproject.toml`'s, which `splat-maps --version` prints. The pk3s it makes
+carry the layout's own version, `_pcq_format` (`map-format.md` §7), which changes only when the
+layout does: a reader of the pk3 goes by that one.
+
 ## Licence and credits
 
 `splat-maps/` is part of playcanvas-quake3 and under its licence, the GNU GPL, version 2 or later

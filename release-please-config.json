@@ -1,10 +1,26 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "include-component-in-tag": false,
+  "separate-pull-requests": true,
   "packages": {
     ".": {
       "release-type": "node",
-      "bump-minor-pre-major": true
+      "bump-minor-pre-major": true,
+      "exclude-paths": ["splat-maps"]
+    },
+    "splat-maps": {
+      "release-type": "python",
+      "component": "splat-maps",
+      "include-component-in-tag": true,
+      "bump-minor-pre-major": true,
+      "initial-version": "0.1.0",
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='splat-maps')].version"
+        }
+      ]
     }
   }
 }

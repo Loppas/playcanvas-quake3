@@ -50,7 +50,9 @@ Read [`AGENTS.md`](AGENTS.md), then the conventions a change touches:
 - **Before opening a pull request**, run `npm run typecheck`, `npm test` and `npm run build`, and
   for a change to `splat-maps/`, its tests, as [its README](splat-maps/README.md#tests) says.
 - **The pull request's title is a [Conventional Commit](https://www.conventionalcommits.org/)**
-  (`fix(render): …`), as it becomes the squashed commit's subject, and releases are cut from it.
+  (`fix(render): …`), as it becomes the squashed commit's subject, and releases are cut from it:
+  [`splat-maps/`'s own](splat-maps/README.md#versions) from changes under it, and the app's from
+  the rest.
 - **CI checks it all again** on every pull request: the title; the typecheck, the suite on Linux
   and the web, Pages, dedicated and master builds, unless every change is under `splat-maps/`;
   the Windows shell where it changed; and `splat-maps/`'s tests on Linux, macOS and Windows where

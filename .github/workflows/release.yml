@@ -1,9 +1,12 @@
 name: release
 
-# A push to main opens or updates release-please's release pull request, and merging that cuts the
-# tag and the GitHub release. A release's own jobs deploy Pages and attach the Windows shell, since
-# a release made with GITHUB_TOKEN starts no other workflow. A manual run is the dry run: it builds
-# both from the ref it is given and releases nothing.
+# A push to main opens or updates release-please's release pull requests, one per package, and
+# merging one cuts its tag and GitHub release. The app's release deploys Pages and attaches the
+# Windows shell through this workflow's own jobs, since a release made with GITHUB_TOKEN starts no
+# other workflow.
+# The action's `release_created` and `tag_name` are the root package's alone, so a splat-maps
+# release runs neither. A manual run is the dry run: it builds both from the ref it is given and
+# releases nothing.
 on:
   push:
     branches: [main]
