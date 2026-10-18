@@ -6,6 +6,10 @@ beside them (`map-format.md` §2.1). Every script writes its output, reads it ba
 and stops on an error. So a step that finishes without an `ERROR` line has been checked. Read its
 `WARNING` lines before moving on.
 
+From a video, `splat-maps all` runs the training and then every step here, with starter entities
+for step 4: one spawn over the floor and the intermission above it ([training.md](training.md),
+"Quick start"). Its map is the first draft of these steps, whose entities steps 4 to 9 replace.
+
 ```
 <project>.sog ─polish─▶ <stem>.sog ─bake, from a seed─▶ .voxel.*  .collision.glb
                                                                   │
@@ -25,7 +29,7 @@ already the game's.
 
 | Tool | What for |
 |---|---|
-| The training environment, from [training.md](training.md) → Windows | the `gsplat` Python, which has everything these scripts import: numpy, Pillow, and scipy, which comes in only as scikit-learn's dependency |
+| The training environment, from [training.md](training.md#the-environment) | the `gsplat` Python, which has everything these scripts import: numpy, Pillow, and scipy, which comes in only as scikit-learn's dependency |
 | **Node ≥ 24** through nvm-windows | splat-transform. Run `nvm use 24` once per shell before the polish, the bake and the levelshot |
 | **splat-transform 3.1.6** | The polish, the bake and the levelshot install it with npm if it is missing, and refuse any other version, since the frames and the bake were calibrated on 3.1.6 ([conventions.md](conventions.md), "Current answer") |
 | **The port**, the checkout `splat-maps\` sits in | delivery writes to its `public\maps\`. `--port DIR` names another checkout |
@@ -68,7 +72,7 @@ License URL: http://creativecommons.org/licenses/by/4.0/
 Requirements: Author must be credited. Commercial use is allowed.
 ```
 
-**A capture of your own has none**, since `deliver.bat` does not write one. Give the polish its
+**A capture of your own has none**, since `export` writes none. Give the polish its
 credit with `--license` (step 2): a file laid out as above, or the same fields in one quoted
 string, separated by semicolons. It needs a Title, an Author, a Source that is one link, and a
 Creative Commons License URL. The Author may carry a link in brackets, as Ethan's does:
@@ -93,7 +97,12 @@ scripts\windows\polish.bat data\<project>\results\mcmc\<project>.sog data\<proje
   size, and 0.1 is rat size, which builds the garage 17.5× life size. The capture's detail limits
   how far a map can be magnified ([conventions.md](conventions.md), "Capture resolution").
 - Add `--up-hint "0,-1,0"` when the capture is upside down in the file, as the garage's was. Quote
-  it, since cmd splits arguments at commas.
+  it, since cmd splits arguments at commas. A capture trained here takes `--up-hint "0,0,1"`:
+  gsplat's trainer leaves +Z roughly up.
+- Add `--outdoor` for a capture with no ceiling to fit, such as one outdoors. `<height_m>` is
+  then the real height from the floor to the top of the tallest thing in the capture, a roof or a
+  tree. The measure takes that top as the solid splats' 99th percentile, since stray splats float
+  far above it; the section drawings show where it lies. The bake takes `--outdoor` too (step 3).
 - Add `--license …` for a capture with no `license.txt` of its own (step 1).
 
 **Check:** the last step prints four `ok` lines, tilt and yaw within 0.1°, the floor within 1
@@ -115,6 +124,20 @@ the room's open air. With no entities yet, choose it from the polish:
   32 units make a metre.
 
 The garage used `--seed 0,0,160`, the plan's centre 5 m up in a 52.5 m room.
+
+A capture trained here holds stray splats far past what was filmed, of sky above all, out to
+kilometres, and the bake's grid spans every splat it is given. Crop them with `--box`, the
+corners of the map in Q3 units about the plan's centre, the floor at 0, lower corner first:
+`plan.png` and the sections give the space's size, in metres. Leave a margin round the room and a
+metre under the floor, and keep the room's walls inside, or the hull opens. Write it
+`--box=x0,y0,z0,x1,y1,z1`, since a value starting with a minus is otherwise read as an option.
+The box is recorded in `_pcq_bake`.
+
+**Outdoors**, add `--outdoor`. The exterior fill seals a room's hull and fills what lies outside
+it; with no ceiling it floods in through the sky and closes everything. `--outdoor` leaves it
+out, and since everything outside the grid is solid, the box's sides and top then bound the map:
+keep its floor a little under the ground, so that a player who steps off the captured ground
+drops only that far.
 
 The voxel is 8 units unless `--voxel` says otherwise. `map-format.md` §6.1 says when another size
 pays. The external fill defaults to `auto`, which bakes several times to find the smallest reach

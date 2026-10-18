@@ -3,12 +3,14 @@ polished, and splat-transform a stand-in that copies the bundle as its writer do
 
 import json
 import os
+import shutil
 import zipfile
 
 import pytest
 
 from capture import LICENCE, write_capture
 from room import run_cli
+from splat_maps import polish as polish_stage
 from splat_maps import splat_map as sm
 from tools import install, splat_transform
 
@@ -30,9 +32,9 @@ def runs(tmp_path, monkeypatch):
     return first_on_path(monkeypatch, tmp_path / "bin", sm.SPLAT_TRANSFORM_VERSION)
 
 
-def polish(tmp_path, *args, licence=LICENCE):
+def polish(tmp_path, *args, licence=LICENCE, ceiling=True):
     """The capture polished into `map/room.sog`: the exit code, the output and the record."""
-    src = write_capture(tmp_path / "room.sog", licence)
+    src = write_capture(tmp_path / "room.sog", licence, ceiling)
     out = tmp_path / "map" / "room.sog"
     out.parent.mkdir()
     code, text = run_cli("polish", src, out, *args)
@@ -92,6 +94,47 @@ def test_another_splat_transform_is_refused_before_anything_is_measured(tmp_path
     assert code == 1
     assert "splat-transform 3.1.5 is on PATH" in text
     assert not (tmp_path / "room_inspect").exists() and record is None
+
+
+def test_a_capture_open_to_the_sky_has_no_ceiling_to_scale_by(tmp_path, runs):
+    code, text, record = polish(tmp_path, "2.5", ceiling=False)
+    assert code == 1
+    assert "--outdoor for a capture with no ceiling" in text
+    assert record is None
+
+
+def test_the_top_of_a_capture_open_to_the_sky_scales_it(tmp_path, runs):
+    # The walls stand 2.5 m, and the top leaves the highest 1% of the splats above it: 1.4% of
+    # the walls', so their top 3.6 cm. Given as 2.464 m, the copy verifies.
+    code, text, record = polish(tmp_path, "2.464", "--outdoor", ceiling=False)
+    assert code == 0, text
+    measure = json.loads((tmp_path / "room_inspect" / "report.json").read_text())
+    assert (measure["outdoor"], measure["ceiling_inliers"]) == (True, None)
+    assert measure["clear_height_units"] == pytest.approx(2.464, abs=0.002)
+    assert record["_pcq_polish"] == "--metric-height 2.464 --outdoor"
+    assert record["verify"]["clear_height_m"] == pytest.approx(2.464, abs=0.005)
+    assert (record["errors"], record["warnings"]) == ([], [])
+
+
+@pytest.mark.parametrize("outdoor", [True, False], ids=["outdoors", "a room"])
+def test_outdoors_the_verify_may_sit_a_little_further_off(tmp_path, outdoor):
+    # 0.2 degrees of tilt and yaw and 0.8% of height: inside --outdoor's limits, past a room's.
+    src = write_capture(tmp_path / "room.sog", LICENCE)
+    out = tmp_path / "map.sog"
+    shutil.copy(src, out)
+    measure = {"splat_transform_args": ["-s", "1.00000000"], "outdoor": outdoor, "splats": 40_000,
+               "clear_height_units": 2.5, "scale_m_per_unit": 1.0}
+    verify = {"tilt_from_hint_deg": 0.2, "yaw_deg": -0.2, "floor_y_units": 0.0,
+              "clear_height_units": 2.52, "footprint_units": [4.0, 5.0]}
+    record = lambda: polish_stage.record_polish(str(src), str(out), measure, verify,  # noqa: E731
+                                                ["--metric-height", "2.5"], None)
+    if outdoor:
+        record()
+    else:
+        with pytest.raises(SystemExit):
+            record()
+    written = json.loads(out.with_name("map.polish.json").read_text())
+    assert len(written["errors"]) == (0 if outdoor else 3)
 
 
 def test_a_verify_off_the_mark_fails_the_polish(tmp_path, runs):

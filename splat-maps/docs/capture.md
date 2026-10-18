@@ -132,11 +132,11 @@ for d in positions/*/; do focus-stack "$d"/*.JPG --output "stacked/$(basename "$
 
 ### Feed stacked images into the pipeline
 The `stacked/` folder of all-in-focus images IS the image input to the pipeline.
-`process.bat` takes a video, so copy the stills into `data\<scene>\images\` and run the COLMAP
-commands it runs, from feature extraction on ([training.md](training.md), stage 2). For a
-controlled macro set of a few hundred images, `exhaustive` matching is appropriate; for a
-walk-through video use the default `sequential` matcher (see §(d)). Then continue with
-`train.bat` / `deliver.bat` unchanged.
+`frames` takes a video, so copy the stills into `data\<scene>\images\` and run `sfm` on
+`data\<scene>` ([training.md](training.md), stage 2). It matches sequentially, as a walk-through
+video wants (see §(d)). For a controlled macro set of a few hundred images, `exhaustive` matching
+is appropriate: run the COLMAP commands `sfm` runs, with `exhaustive_matcher` in place of
+`sequential_matcher`. Then continue with `train` and `export` unchanged.
 
 ### Macro gotchas
 - **Backgrounds → floaters.** The #1 macro-splat artifact. Control the background or plan to
@@ -170,7 +170,7 @@ fix.
 | **Low texture everywhere** | sharpest frame only var-Laplacian **95** (soft) | **Add temporary texture**: set out patterned props (books, patterned cloths — the one patterned towel in-frame was the single strongest region), or low-tack painter's-tape crosses on blank walls (peel off after). Removes the "blank white" ambiguity for both SfM and the splat. |
 | **Motion blur** | ~18% of frames below half-median sharpness | Move **slowly**, pause at corners, keep shutter ≥ 1/120. High source fps (60) helps only if motion is slow. |
 
-**Matcher note.** Plain **sequential** matching (the validated default in `process.bat`) is
+**Matcher note.** Plain **sequential** matching (the validated default in `sfm`) is
 correct for a walk-through — but it needs enough temporal overlap, so extract dense frames
 (frames ≲ 0.6 s apart). Do **not** reach for `exhaustive` matching to paper over sparse
 frames in a repetitive room: identical cabinet doors / doorframes produce false matches and a

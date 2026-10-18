@@ -434,8 +434,8 @@ Four frames are in play. Each file is in exactly one of them.
 
 | Frame | Units, up | Defined at | Files in it |
 |---|---|---|---|
-| **capture** | arbitrary: COLMAP's scale, up and yaw | the SfM solve | the trained PLY, and `deliver.bat`'s raw `.sog` |
-| **world** | metres, +Y up, floor at y = 0, the plan's centre at the origin | the polish (`sog_inspect.py:685–686`); `simToWorld`, `src/coords.ts` | `maps/<n>.sog` |
+| **capture** | arbitrary: COLMAP's scale, up and yaw, which gsplat's trainer turns +Z roughly up | the SfM solve | the trained PLY, and `export`'s raw `.sog` |
+| **world** | metres, +Y up, floor at y = 0, the plan's centre at the origin | the polish (`sog_inspect.py:706–707`); `simToWorld`, `src/coords.ts` | `maps/<n>.sog` |
 | **sim** | Q3 units (32 to the metre), +Z up; X forward, Y left | `UNITS_PER_METRE`, `src/coords.ts` | `maps/<n>.ent` (every `origin`, `angle`, `angles`); `viewpos`'s readout |
 | **octree** | metres; the world turned 180° about Z, `ST_FRAME = diag(-1,-1,1)` | `simToOctree`, `src/coords.ts`; `conventions.md` ("Current answer") | `maps/<n>.voxel.json` and `.bin`; `maps/<n>.collision.glb`; the bake's `--seed-pos` |
 

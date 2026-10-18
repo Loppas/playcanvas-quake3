@@ -251,7 +251,9 @@ def main(argv=None, prog=None):
         sys.exit(1)
 
     print(flush=True)  # the lint writes to the same console
-    sys.exit(subprocess.run([sys.executable, "-m", "splat_maps", "lint", pk3]).returncode)
+    lint = subprocess.run([sys.executable, "-m", "splat_maps", "lint", pk3]).returncode
+    if lint != 0:
+        sys.exit(lint)
 
 
 if __name__ == "__main__":

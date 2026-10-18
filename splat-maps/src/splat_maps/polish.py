@@ -18,7 +18,8 @@ than assume it:
 
 Usage:
     splat-maps polish <input.sog> <output.sog> <metric_height_m> [--license FILE|FIELDS]
-                      [sog_inspect's arguments, e.g. --player-height 0.5 --up-hint 0,-1,0]
+                      [sog_inspect's arguments, e.g. --player-height 0.5 --up-hint 0,-1,0
+                       --outdoor]
 
 The three positional arguments come first. Any other argument is sog_inspect's, given to both
 measures. Outputs: <output.sog>, <output stem>.polish.json, and each measure's report and
@@ -43,6 +44,13 @@ MAX_TILT_DEG = 0.1
 MAX_YAW_DEG = 0.1
 MAX_FLOOR_UNITS = 1.0
 MAX_CLEAR_CHANGE = 0.005
+
+#: The same with `--outdoor`. A yard's paving, lawn and trees are rougher ground for the fits
+#: than a room's floor and walls, and its measure and verify agree to about a tenth of a degree,
+#: so these are wider, and still far inside a levelling error, which is degrees.
+OUTDOOR_MAX_TILT_DEG = 0.25
+OUTDOOR_MAX_YAW_DEG = 0.25
+OUTDOOR_MAX_CLEAR_CHANGE = 0.01
 
 #: sog_inspect arguments that change nothing in the transform, so are not recorded.
 NOT_RECORDED = {"--render": 0, "--out": 1}
@@ -90,11 +98,12 @@ def main(argv=None, prog=None):
     ap = argparse.ArgumentParser(
         prog=prog, description="Level, square and scale a trained SOG, and record the polish.",
         epilog="Any other argument is sog_inspect's, given to both measures: --player-height, "
-               "--up-hint, --opacity, --no-yaw or --render, say.")
+               "--up-hint, --outdoor, --opacity, --no-yaw or --render, say.")
     ap.add_argument("input", help="the trained .sog")
     ap.add_argument("output", help="the polished .sog to write")
     ap.add_argument("metric_height", metavar="metric_height_m",
-                    help="the real floor-to-ceiling height in metres, the scale's reference")
+                    help="the real floor-to-ceiling height in metres, the scale's reference; "
+                         "with --outdoor, from the floor to the capture's top")
     ap.add_argument("--license", help="the source's credit, for a capture with no license.txt of "
                                       "its own: a file in superspl.at's layout, or its fields in "
                                       "one string, \"Title: ...; Author: ...; Source: <link>; "
@@ -199,6 +208,11 @@ def record_polish(src, out, measure, verify, inspect_args, given):
                 errors.append(f"{key} cannot ride in an entity token: {record[key]!r}")
 
     # The verify, checked.
+    if measure.get("outdoor"):
+        max_tilt, max_yaw, max_clear = (OUTDOOR_MAX_TILT_DEG, OUTDOOR_MAX_YAW_DEG,
+                                        OUTDOOR_MAX_CLEAR_CHANGE)
+    else:
+        max_tilt, max_yaw, max_clear = MAX_TILT_DEG, MAX_YAW_DEG, MAX_CLEAR_CHANGE
     tilt = verify["tilt_from_hint_deg"]
     yaw = verify["yaw_deg"]
     floor_units = verify["floor_y_units"] * sm.UNITS_PER_METRE  # the output is in metres
@@ -206,13 +220,13 @@ def record_polish(src, out, measure, verify, inspect_args, given):
     clear_out = verify["clear_height_units"]
     change = abs(clear_out - clear_in) / clear_in
     checks = [
-        (tilt <= MAX_TILT_DEG, f"tilt {tilt:.3f} deg (at most {MAX_TILT_DEG})"),
-        (abs(yaw) <= MAX_YAW_DEG, f"yaw {yaw:+.3f} deg (at most {MAX_YAW_DEG})"),
+        (tilt <= max_tilt, f"tilt {tilt:.3f} deg (at most {max_tilt})"),
+        (abs(yaw) <= max_yaw, f"yaw {yaw:+.3f} deg (at most {max_yaw})"),
         (abs(floor_units) <= MAX_FLOOR_UNITS,
          f"floor {floor_units:+.2f} units from z = 0 (at most {MAX_FLOOR_UNITS})"),
-        (change <= MAX_CLEAR_CHANGE,
+        (change <= max_clear,
          f"clear height {clear_out:.3f} m against {clear_in:.3f} m expected "
-         f"({change:.2%}; at most {MAX_CLEAR_CHANGE:.1%})"),
+         f"({change:.2%}; at most {max_clear:.1%})"),
     ]
     print("  verify:")
     for ok, what in checks:
