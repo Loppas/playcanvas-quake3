@@ -24,6 +24,10 @@ Download the capture from its page on [superspl.at](https://superspl.at/scene/8f
 splat-maps polish data\garage\garage.sog data\garage\garage-aligned.sog 3.0 --up-hint "0,-1,0"
 ```
 
+```bash
+splat-maps polish data/garage/garage.sog data/garage/garage-aligned.sog 3.0 --up-hint "0,-1,0"
+```
+
 The capture is upside down in its file, hence `--up-hint`. `garage-aligned.polish.json` here is
 what the polish recorded: its transform, its verify and the capture's licence. A rerun makes the
 same record, and the same splat but for its spherical harmonics, which each polish encodes

@@ -83,6 +83,10 @@ space and delivers it here, from `splat-maps\`:
 splat-maps deliver data\garage_rats\map\map-garage_rats.pk3
 ```
 
+```bash
+splat-maps deliver data/garage_rats/map/map-garage_rats.pk3
+```
+
 Every `public/maps/*.pk3` is mounted at the bottom of the search path, under the Quake 3 paks,
 and read by `Range` as they are. The game reads the whole map through it: the splat, the octree,
 the debug collision mesh, the entities, and every arena. A map without its splat, its octree or
@@ -178,6 +182,10 @@ They read the install `PCQ_FS_BASEPATH` names, from `.env.local` or the environm
 
 ```powershell
 $env:PCQ_FS_BASEPATH = 'C:\Games\Quake3'; npm test
+```
+
+```bash
+PCQ_FS_BASEPATH=/usr/local/games/quake3 npm test
 ```
 
 No test needs a GPU or the Internet. The network tests open data channels through

@@ -23,6 +23,8 @@ X forward, Y left, Z up, 32 units to the delivered metre, the floor at z = 0 and
 at the origin (`map-format.md` §6). A "rats" map is magnified by the polish, so its metres are
 already the game's.
 
+**Shells.** Each command is given twice: for Windows' command prompt, then for bash.
+
 ---
 
 ## Once per machine
@@ -30,10 +32,10 @@ already the game's.
 | Tool | What for |
 |---|---|
 | The training environment, from [training.md](training.md#the-environment) | the `gsplat` env, with this package installed in it: the `splat-maps` command. Without it, `uv run splat-maps` from `splat-maps\` runs these steps in the tests' environment ([README](../README.md#tests)), which needs none of the GPU stack |
-| **Node ≥ 24** through nvm-windows | splat-transform. Run `nvm use 24` once per shell before the polish, the bake and the levelshot |
+| **Node ≥ 24** through nvm-windows, or nvm | splat-transform. Run `nvm use 24` once per shell before the polish, the bake and the levelshot |
 | **splat-transform 3.1.6** | The polish, the bake and the levelshot install it with npm if it is missing, and refuse any other version, since the frames and the bake were calibrated on 3.1.6 ([conventions.md](conventions.md), "Current answer") |
 | **The port**, the checkout `splat-maps\` sits in | delivery writes to its `public\maps\`. `--port DIR` names another checkout |
-| **NetRadiant-custom 20260114**, only for the editor route | unzipped into `editor\netradiant-custom-20260114\`, which git ignores. It bundles q3map2 |
+| **NetRadiant-custom 20260114**, only for the editor route | unzipped into `editor\netradiant-custom-20260114\`, which git ignores. It bundles q3map2. On Linux, the release's AppImage, in the same folder, untried; there is no build for macOS |
 
 **The editor's engine path.** Point it at a folder of its own, never at the game install. The
 editor offers to install its files there, and may write `scripts\shaderlist.txt`
@@ -43,6 +45,11 @@ editor offers to install its files there, and may write `scripts\shaderlist.txt`
 ```bat
 mkdir data\editor\baseq3\models\splatmaps
 mkdir data\editor\baseq3\maps
+```
+
+```bash
+mkdir -p data/editor/baseq3/models/splatmaps
+mkdir -p data/editor/baseq3/maps
 ```
 
 ---
@@ -77,7 +84,7 @@ credit with `--license` (step 2): a file laid out as above, or the same fields i
 string, separated by semicolons. It needs a Title, an Author, a Source that is one link, and a
 Creative Commons License URL. The Author may carry a link in brackets, as Ethan's does:
 
-```bat
+```
 --license "Title: My Room; Author: Your Name; Source: <link to the capture>; License URL: https://creativecommons.org/licenses/by/4.0/"
 ```
 
@@ -90,6 +97,11 @@ splat from then on. A source that carries its own licence keeps it: the polish r
 ```bat
 nvm use 24
 splat-maps polish data\<project>\results\mcmc\<project>.sog data\<project>\map\<stem>.sog <height_m> --player-height <m>
+```
+
+```bash
+nvm use 24
+splat-maps polish data/<project>/results/mcmc/<project>.sog data/<project>/map/<stem>.sog <height_m> --player-height <m>
 ```
 
 - `<height_m>` is the room's real floor-to-ceiling height in metres, the scale reference.
@@ -115,6 +127,10 @@ above, square to the page, and the two sections a level floor at 0. It writes `<
 
 ```bat
 splat-maps bake data\<project>\map\<stem>.sog --seed x,y,z
+```
+
+```bash
+splat-maps bake data/<project>/map/<stem>.sog --seed x,y,z
 ```
 
 The bake keeps open only what a player-sized box can reach from the seed, so the seed must be in
@@ -170,12 +186,22 @@ the map, and the port starts a map only with a spawn spot in it (see "Known gaps
    splat-maps entities reference data\<project>\map\<stem>.collision.glb --out data\editor\baseq3\models\splatmaps\<stem>_collision.obj
    ```
 
+   ```bash
+   splat-maps entities reference data/<project>/map/<stem>.collision.glb --out data/editor/baseq3/models/splatmaps/<stem>_collision.obj
+   ```
+
    It should report the vertices `within 0.0000 units of the glb in Q3's frame`.
 2. Start the editor on the Quake 3 game with that engine path. Forward slashes, and the trailing
    one, as the check ran it:
 
    ```bat
    editor\netradiant-custom-20260114\radiant.exe -global-gamefile Q3.game -global-gamePrompt false -Q3.game-EnginePath C:/path/to/playcanvas-quake3/splat-maps/data/editor/ -Q3.game-InstalledDevFilesPath C:/path/to/playcanvas-quake3/splat-maps/data/editor/
+   ```
+
+   On Linux the AppImage takes the same arguments, untried:
+
+   ```bash
+   editor/netradiant-custom-20260114/NetRadiant-Custom-x86_64.AppImage -global-gamefile Q3.game -global-gamePrompt false -Q3.game-EnginePath /path/to/playcanvas-quake3/splat-maps/data/editor/ -Q3.game-InstalledDevFilesPath /path/to/playcanvas-quake3/splat-maps/data/editor/
    ```
 
 3. Add a `misc_model` with `"model" "models/splatmaps/<stem>_collision.obj"` at `"origin" "0 0 0"`,
@@ -191,6 +217,10 @@ the map, and the port starts a map only with a spawn spot in it (see "Known gaps
 
    ```bat
    splat-maps entities from-map data\editor\baseq3\maps\<stem>.map data\<project>\map\<stem>.ent
+   ```
+
+   ```bash
+   splat-maps entities from-map data/editor/baseq3/maps/<stem>.map data/<project>/map/<stem>.ent
    ```
 
    It lists what it dropped: the `func_group`s and the reference `misc_model`. Keep the `.map`
@@ -212,6 +242,10 @@ the readings as they are printed:
 splat-maps entities readings data\<project>\map\<stem>.ent --message "The Garage" --spawn "(-4 -4 69) : 0" --intermission "(1056 2016 868) : 242" --look-at "(0 0 100) : 0" --octree data\<project>\map\<stem>.voxel.json
 ```
 
+```bash
+splat-maps entities readings data/<project>/map/<stem>.ent --message "The Garage" --spawn "(-4 -4 69) : 0" --intermission "(1056 2016 868) : 242" --look-at "(0 0 100) : 0" --octree data/<project>/map/<stem>.voxel.json
+```
+
 It applies §3.4's rules (a spawn spot is its reading less 26 in z), gives the first spawn
 `spawnflags 1`, and with `--octree` checks each spot as the lint will. `--spawn` repeats.
 
@@ -219,6 +253,10 @@ It applies §3.4's rules (a spawn spot is its reading less 26 in z), gives the f
 
 ```bat
 splat-maps bake data\<project>\map\<stem>.sog
+```
+
+```bash
+splat-maps bake data/<project>/map/<stem>.sog
 ```
 
 With no `--seed`, the bake seeds from the `.ent`'s first spawn spot, so the carve keeps open
@@ -237,6 +275,10 @@ A spot `in solid` must move. One that `thuds` or `lands hurt` is too high above 
 splat-maps levelshot data\<project>\map\<stem>.sog
 ```
 
+```bash
+splat-maps levelshot data/<project>/map/<stem>.sog
+```
+
 It renders the view from the intermission point as Q3's `levelshot` command does, and writes
 `<stem>.tga`, 128 × 128, with `<stem>.levelshot.png`, the full frame, for people. **Check:** the
 PNG shows the room. The warning `N% of the frame is empty background` means the camera faces out
@@ -247,6 +289,10 @@ this again.
 
 ```bat
 splat-maps arena data\<project>\map\<stem>.arena --ent data\<project>\map\<stem>.ent
+```
+
+```bash
+splat-maps arena data/<project>/map/<stem>.arena --ent data/<project>/map/<stem>.ent
 ```
 
 The long name comes from worldspawn's `message`, and the gametypes default to `ffa`. Add
@@ -264,6 +310,10 @@ They name three bots each, as q3dm17 does, which Server Options seeds a skirmish
 splat-maps package data\<project>\map\<stem>.sog --author "<who made the map>"
 ```
 
+```bash
+splat-maps package data/<project>/map/<stem>.sog --author "<who made the map>"
+```
+
 It writes `map-<stem>.pk3` beside the `.sog`: every part at its Q3 path, the `_pcq_*` keys in the
 packed `.ent`'s worldspawn, and the readme `<stem>.txt`, which credits the source. Then it reads
 the pk3 back entry by entry and runs the lint, `map_lint.py`, whose 29 rules are `map-format.md`
@@ -276,6 +326,10 @@ scripts had uncommitted changes, so commit them and package again before a relea
 
 ```bat
 splat-maps deliver data\<project>\map\map-<stem>.pk3
+```
+
+```bash
+splat-maps deliver data/<project>/map/map-<stem>.pk3
 ```
 
 It lints the pk3 again and refuses it on any error, copies it into the port's `public\maps\`

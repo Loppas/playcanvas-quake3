@@ -19,9 +19,10 @@ capture ──▶ frames (ffmpeg) ──▶ sfm (COLMAP) ──▶ train (gsplat
 
 ---
 
-## Quick start (Windows)
+## Quick start
 
-Set up the environment once ([below](#the-environment)), then from `splat-maps\`:
+Set up the environment once ([below](#the-environment)), then from `splat-maps\`, in a
+command prompt or in bash:
 
 ```bat
 :: once a command prompt: the environment, and where gsplat is
@@ -30,6 +31,15 @@ set SPLAT_GSPLAT=C:\src\gsplat
 
 :: a video to a map in the game, in one run
 splat-maps all "C:\path\to\video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
+```
+
+```bash
+# once a shell: the environment, and where gsplat is
+conda activate gsplat
+export SPLAT_GSPLAT=~/src/gsplat
+
+# a video to a map in the game, in one run
+splat-maps all "/path/to/video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
 ```
 
 `all` runs this doc's stages and then [maps.md](maps.md)'s, and delivers `map-myroom.pk3` to
@@ -58,6 +68,13 @@ splat-maps train  data\myroom
 splat-maps export data\myroom
 ```
 
+```bash
+splat-maps frames "/path/to/video.mov" data/myroom --fps 1.5
+splat-maps sfm    data/myroom
+splat-maps train  data/myroom
+splat-maps export data/myroom
+```
+
 Outputs land in `data\<project>\results\mcmc\`: `ply\point_cloud_<step>.ply`,
 `<project>.sog` (the polish's input), `<project>_viewer.html` (open in a browser to fly around).
 
@@ -84,7 +101,7 @@ Python side on Windows; the rest is installed by hand. Elsewhere it is the same 
 | **The pycolmap patch** | `python -m splat_maps.patch_pycolmap` | [below](#the-pycolmap-patch-automatic-via-patch_pycolmappy) |
 | **COLMAP** | **4.1.1**, the CUDA build | the official binary from github.com/colmap/colmap releases; conda-forge's is DLL-broken on Windows. `sfm` uses 4.1's option names |
 | **ffmpeg** | | e.g. `conda create -n colmap -c conda-forge ffmpeg` |
-| **Node and splat-transform** | **Node ≥ 24**, splat-transform at the pin | via nvm-windows (`nvm install 24` / `nvm use 24`). `export` and the map stages install the pinned splat-transform with npm when it is missing, and refuse another version |
+| **Node and splat-transform** | **Node ≥ 24**, splat-transform at the pin | via nvm-windows, or nvm elsewhere (`nvm install 24` / `nvm use 24`). `export` and the map stages install the pinned splat-transform with npm when it is missing, and refuse another version |
 | **git** | | to clone gsplat |
 
 The steps, in Visual Studio 2022's x64 Native Tools Command Prompt, since gsplat's build needs
@@ -102,6 +119,23 @@ set MAX_JOBS=8
 set NVCC_APPEND_FLAGS=-allow-unsupported-compiler
 python -m pip install . --no-build-isolation --no-cache-dir
 python -m pip install -r <splat-maps>\gsplat-requirements.txt --no-build-isolation
+python -m pip install -e <splat-maps>
+python -m splat_maps.patch_pycolmap
+```
+
+On Linux, untried, the same steps in bash, with a GCC that CUDA 12.8 supports in place of
+Visual Studio and without its two settings:
+
+```bash
+conda create -y -n gsplat python=3.11
+conda activate gsplat
+python -m pip install torch==2.8.0+cu128 torchvision==0.23.0+cu128 --index-url https://download.pytorch.org/whl/cu128
+python -m pip install ninja jaxtyping rich
+git clone --recursive https://github.com/nerfstudio-project/gsplat.git ~/src/gsplat
+cd ~/src/gsplat && git checkout v1.5.3 && git submodule update --init --recursive
+export MAX_JOBS=8
+python -m pip install . --no-build-isolation --no-cache-dir
+python -m pip install -r <splat-maps>/gsplat-requirements.txt --no-build-isolation
 python -m pip install -e <splat-maps>
 python -m splat_maps.patch_pycolmap
 ```

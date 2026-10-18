@@ -29,6 +29,17 @@ splat-maps package data\garage_cats\map\garage_cats.sog --author "<your name>"
 splat-maps deliver data\garage_cats\map\map-garage_cats.pk3
 ```
 
+```bash
+mkdir -p data/garage_cats/map
+cp examples/garage_cats/garage_cats.ent data/garage_cats/map/
+splat-maps polish data/garage/garage-aligned.sog data/garage_cats/map/garage_cats.sog 3.0 --player-height 0.5
+splat-maps bake data/garage_cats/map/garage_cats.sog
+splat-maps levelshot data/garage_cats/map/garage_cats.sog
+splat-maps arena data/garage_cats/map/garage_cats.arena --ent data/garage_cats/map/garage_cats.ent --type "ffa tourney team clanarena" --bots "mynx orbb bitterman"
+splat-maps package data/garage_cats/map/garage_cats.sog --author "<your name>"
+splat-maps deliver data/garage_cats/map/map-garage_cats.pk3
+```
+
 The bake seeds from the `.ent`'s first spawn spot. The arena and the polish's record come out as
 they are here, byte for byte, and the bake's record differs only in its timings and peak memory. The
 octree and the mesh come out as the map's pk3 has them, in `maps/`. Each polish encodes the splat's

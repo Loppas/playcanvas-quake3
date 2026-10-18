@@ -27,10 +27,10 @@ Every stage has been run on Windows 11; macOS and Linux are untried.
 | [map-format.md](docs/map-format.md) | The spec of a splat map: what the pk3 holds, the frames, the bake's sizes, the lint's rules |
 | [conventions.md](docs/conventions.md) | Lessons the pipeline has paid for: verification, calibrating splat-transform, fitting planes, scale |
 
-## Quick start (Windows)
+## Quick start
 
 Set up the environment once, as [training.md](docs/training.md#the-environment) does, then run
-from `splat-maps\`:
+from `splat-maps\`, in a command prompt or in bash:
 
 ```bat
 :: once a command prompt: the environment, and where gsplat is
@@ -39,6 +39,15 @@ set SPLAT_GSPLAT=C:\src\gsplat
 
 :: a video to a map in the game, in one run
 splat-maps all "C:\path\to\video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
+```
+
+```bash
+# once a shell: the environment, and where gsplat is
+conda activate gsplat
+export SPLAT_GSPLAT=~/src/gsplat
+
+# a video to a map in the game, in one run
+splat-maps all "/path/to/video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
 ```
 
 `2.4` is the room's floor-to-ceiling height in metres, `--box` the map's corners in Q3 units
@@ -64,6 +73,11 @@ user's own. Node 24, for splat-transform, comes from `PATH`.
 ```bat
 set SPLAT_COLMAP=C:\Tools\colmap\bin\colmap.exe
 set SPLAT_FFMPEG=C:\Tools\ffmpeg\bin\ffmpeg.exe
+```
+
+```bash
+export SPLAT_COLMAP=/opt/colmap/bin/colmap
+export SPLAT_FFMPEG=/opt/ffmpeg/bin/ffmpeg
 ```
 
 ## The examples
