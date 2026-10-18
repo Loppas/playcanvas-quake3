@@ -319,6 +319,51 @@ describe('ZipArchive: reading by range', () => {
     expect(bytesRead(source)).toBeLessThan(2 * EOCD_SEARCH_CHUNK);
   });
 
+  it("ends a read at its neighbour's local header, the last at the directory", async () => {
+    // A splat map's octree, two entries read at once and each far shorter than the slack, so a
+    // read that ran past its own entry would overlap the other's.
+    const json = new TextEncoder().encode('{"version":1}');
+    const bin = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+    const zip = zipSync({ 'maps/x.voxel.json': json, 'maps/x.voxel.bin': bin }, { level: 0 });
+    const source = countReads(memorySource('neighbours.pk3', zip));
+    const archive = await ZipArchive.open(source);
+    const opening = source.reads.length;
+
+    const [readJson, readBin] = await Promise.all([
+      archive.read('maps/x.voxel.json'),
+      archive.read('maps/x.voxel.bin')
+    ]);
+    expect(readJson).toEqual(json);
+    expect(readBin).toEqual(bin);
+    const first = archive.entry('maps/x.voxel.json')!.localHeaderOffset;
+    const second = archive.entry('maps/x.voxel.bin')!.localHeaderOffset;
+    const directory = new DataView(zip.buffer).getUint32(zip.byteLength - 22 + 16, true);
+    expect(source.reads.slice(opening)).toEqual([
+      [first, second - first],
+      [second, directory - second]
+    ]);
+  });
+
+  it('ends a read at the local header of a directory entry after it', async () => {
+    // A nested folder is written as a directory entry, `maps/`, between the two files.
+    const zip = zipSync(
+      { 'x.txt': new Uint8Array(4), maps: { 'x.voxel.bin': new Uint8Array(4) } },
+      { level: 0 }
+    );
+    const source = countReads(memorySource('folders.pk3', zip));
+    const archive = await ZipArchive.open(source);
+    const opening = source.reads.length;
+
+    await archive.read('x.txt');
+    const [[offset, length], ...more] = source.reads.slice(opening);
+    expect(more).toEqual([]);
+    expect(offset).toBe(archive.entry('x.txt')!.localHeaderOffset);
+    // What follows the read is a local header short of the next file's: the directory entry's.
+    const end = offset + length;
+    expect(new DataView(zip.buffer).getUint32(end, true)).toBe(0x04034b50);
+    expect(end).toBeLessThan(archive.entry('maps/x.voxel.bin')!.localHeaderOffset);
+  });
+
   it('reads the payload again when the local extra field outruns the central one', async () => {
     const data = new TextEncoder().encode('payload behind a long local extra field');
     const name = 'models/x.md3';

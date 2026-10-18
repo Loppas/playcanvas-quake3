@@ -91,6 +91,11 @@ export interface ZipEntry {
    * the local header's own lengths still decide where the payload starts.
    */
   centralNameExtraLength: number;
+  /**
+   * Offset of what follows the entry in the archive: the next local header after its own, the
+   * central directory when none does, or the archive's end when neither does.
+   */
+  nextHeaderOffset: number;
 }
 
 /**
@@ -165,15 +170,25 @@ async function findEocd(source: ByteSource): Promise<Tail> {
   throw notZip();
 }
 
-/** Parse `entryCount` central-directory records, bounds-checking each against the buffer. */
+/**
+ * Parse `entryCount` central-directory records, bounds-checking each against the buffer.
+ *
+ * @param directoryOffset - Where the directory starts in the archive.
+ * @param size - The archive's length.
+ */
 function parseDirectory(
   label: string,
   directory: Uint8Array,
-  entryCount: number
+  entryCount: number,
+  directoryOffset: number,
+  size: number
 ): Map<string, ZipEntry> {
   const view = dataView(directory);
   const decoder = new TextDecoder();
   const index = new Map<string, ZipEntry>();
+  // The central directory and every local header, a directory entry's included: the places an
+  // entry's bytes can end.
+  const starts = new Set([directoryOffset]);
   let at = 0;
 
   for (let i = 0; i < entryCount; i++) {
@@ -189,6 +204,8 @@ function parseDirectory(
     if (next > directory.byteLength) throw corrupt();
 
     const rawName = decoder.decode(directory.subarray(nameStart, nameStart + nameLength));
+    const localHeaderOffset = view.getUint32(at + 42, true);
+    starts.add(localHeaderOffset);
     // Directory entries carry no payload; Q3's flat virtual FS has no use for them.
     if (!rawName.endsWith('/')) {
       const entry: ZipEntry = {
@@ -198,14 +215,21 @@ function parseDirectory(
         crc32: view.getUint32(at + 16, true),
         compressedSize: view.getUint32(at + 20, true),
         uncompressedSize: view.getUint32(at + 24, true),
-        localHeaderOffset: view.getUint32(at + 42, true),
-        centralNameExtraLength: nameLength + extraLength
+        localHeaderOffset,
+        centralNameExtraLength: nameLength + extraLength,
+        nextHeaderOffset: size
       };
       // Within one archive a duplicate name means the later entry wins, matching the
       // override rule we apply across archives.
       index.set(entry.name, entry);
     }
     at = next;
+  }
+
+  const sorted = [...starts].sort((a, b) => a - b);
+  const following = new Map(sorted.map((start, i) => [start, sorted[i + 1] ?? size]));
+  for (const entry of index.values()) {
+    entry.nextHeaderOffset = following.get(entry.localHeaderOffset)!;
   }
   return index;
 }
@@ -261,7 +285,10 @@ export class ZipArchive {
       directoryOffset >= start
         ? bytes.subarray(directoryOffset - start, directoryOffset - start + directorySize)
         : await source.read(directoryOffset, directorySize);
-    return new ZipArchive(source, parseDirectory(label, directory, entryCount));
+    return new ZipArchive(
+      source,
+      parseDirectory(label, directory, entryCount, directoryOffset, source.size)
+    );
   }
 
   /** Number of indexed file entries (directories excluded). */
@@ -314,12 +341,16 @@ export class ZipArchive {
    * One ranged read in the common case: the local header at the central record's lengths, some
    * slack, and the payload. Only a local extra field longer than the slack costs a second read,
    * and then `progress` hears both.
+   *
+   * The slack stops at the next local header, so reads of neighbouring entries never overlap:
+   * Chromium's HTTP cache answers the later of two overlapping ranges in flight on a URL it has
+   * not cached with only the bytes they share.
    */
   async readRaw(entry: ZipEntry, progress?: ByteProgress): Promise<Uint8Array> {
     const { label, size } = this.source;
     const local = entry.localHeaderOffset;
     const guess = Math.min(
-      size - local,
+      entry.nextHeaderOffset - local,
       LOCAL_HEADER_SIZE + entry.centralNameExtraLength + LOCAL_HEADER_SLACK + entry.compressedSize
     );
     const noLocalHeader = () => new Error(`${label}: ${entry.rawName} has no local header`);
