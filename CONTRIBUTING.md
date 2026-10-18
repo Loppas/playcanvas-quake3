@@ -47,12 +47,14 @@ Read [`AGENTS.md`](AGENTS.md), then the conventions a change touches:
   headless.
 - **Docs come with it too**: what the README or a convention says of the behaviour changes in the
   same pull request.
-- **Before opening a pull request**, run `npm run typecheck`, `npm test` and `npm run build`.
+- **Before opening a pull request**, run `npm run typecheck`, `npm test` and `npm run build`, and
+  for a change to `splat-maps/`, its tests, as [its README](splat-maps/README.md#tests) says.
 - **The pull request's title is a [Conventional Commit](https://www.conventionalcommits.org/)**
   (`fix(render): …`), as it becomes the squashed commit's subject, and releases are cut from it.
-- **CI checks it all again** on every pull request: the typecheck, the suite on Linux, the web,
-  Pages, dedicated and master builds, the title, and the Windows shell or `splat-maps/` where
-  they changed. Its `ci` check must pass before a merge.
+- **CI checks it all again** on every pull request: the title; the typecheck, the suite on Linux
+  and the web, Pages, dedicated and master builds, unless every change is under `splat-maps/`;
+  the Windows shell where it changed; and `splat-maps/`'s tests on Linux, macOS and Windows where
+  it changed. Its `ci` check must pass before a merge.
 
 ## Reporting
 

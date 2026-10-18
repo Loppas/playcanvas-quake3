@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      app: ${{ steps.paths.outputs.app }}
       shell: ${{ steps.paths.outputs.shell }}
       splat-maps: ${{ steps.paths.outputs.splat-maps }}
     steps:
@@ -30,16 +31,22 @@ jobs:
       - id: paths
         run: |
           if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+            echo "app=true" >> "$GITHUB_OUTPUT"
             echo "shell=true" >> "$GITHUB_OUTPUT"
             echo "splat-maps=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           changed=$(git diff --name-only HEAD^1 HEAD)
           match() { grep -qE "$1" <<< "$changed" && echo true || echo false; }
+          # The app's checks are skipped only when every change is under splat-maps/, so a path
+          # nobody listed runs them.
+          echo "app=$(grep -qvE '^splat-maps/' <<< "$changed" && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "shell=$(match '^(electron/|scripts/|electron-builder\.config\.mjs$|package(-lock)?\.json$|\.github/workflows/)')" >> "$GITHUB_OUTPUT"
           echo "splat-maps=$(match '^(splat-maps/|\.github/workflows/)')" >> "$GITHUB_OUTPUT"
 
   typecheck:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -52,6 +59,8 @@ jobs:
       - run: npm run typecheck
 
   test:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -64,6 +73,8 @@ jobs:
       - run: npm test
 
   build:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -95,14 +106,22 @@ jobs:
   splat-maps:
     needs: changes
     if: needs.changes.outputs.splat-maps == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: splat-maps
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
-          python-version: '3.11'
-      - run: python -m compileall -q splat-maps/scripts
+          working-directory: splat-maps
+      - run: uv sync --locked
+      - run: uv run python -m compileall -q scripts
+      - run: uv run pytest
 
   pr-title:
     if: github.event_name == 'pull_request'
