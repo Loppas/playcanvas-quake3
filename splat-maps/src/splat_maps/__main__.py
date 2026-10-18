@@ -13,6 +13,7 @@ PROG = "splat-maps"
 #: Each stage's module, by the words that run it. `entities` has a word for each way of placing
 #: them: an editor's reference model, the `.map` saved from it, or `viewpos` readings.
 STAGES = {
+    ("polish",): "polish",
     ("bake",): "bake_map",
     ("entities", "reference"): "glb_to_editor",
     ("entities", "from-map"): "map_to_ent",

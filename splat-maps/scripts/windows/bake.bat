@@ -17,5 +17,4 @@ set SCRIPT_DIR=%~dp0
 call "%SCRIPT_DIR%settings.bat"
 
 if "%~1"=="" echo Usage: bake.bat ^<map.sog^> [--voxel 8] [--fill auto] [--seed x,y,z] [--ent FILE] & exit /b 1
-call "%SCRIPT_DIR%pin-splat-transform.bat" || exit /b 1
 "%SPLAT_PYTHON%" -m splat_maps bake %*

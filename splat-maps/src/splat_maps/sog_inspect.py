@@ -27,13 +27,14 @@ import io
 import json
 import math
 import os
-import shutil
 import subprocess
 import sys
 import zipfile
 
 import numpy as np
 from PIL import Image, ImageDraw
+
+from . import splat_map as sm
 
 # A splat this transparent contributes almost nothing but is numerous enough to drag every
 # percentile and plane fit around. Geometry is measured on the solid remainder.
@@ -42,9 +43,6 @@ DEFAULT_OPACITY = 0.3
 #: Life-size player, in metres. Quake 3's bounding box is 56 units tall (MINS_Z -24 to
 #: DEFAULT_HEIGHT 32) and the port runs at 32 units = 1 m (`src/coords.ts`).
 PLAYER_HEIGHT_M = 1.75
-
-#: Quake units per metre, same source. Only used to report the map in the sim's own units.
-UNITS_PER_METRE = 32.0
 
 
 # --------------------------------------------------------------------------- decode
@@ -449,20 +447,6 @@ def orthographic(pts, au, av, path, title, step, res=1000):
     canvas.save(path)
 
 
-def find_splat_transform():
-    """The launchable splat-transform, or None.
-
-    npm installs it as a bare shell shim next to a `.cmd` wrapper, and a bare `which` finds
-    the shim first — which CreateProcess cannot run, so subprocess dies with WinError 2. Ask
-    for the wrapper by name.
-    """
-    for name in ("splat-transform.cmd", "splat-transform.exe", "splat-transform"):
-        found = shutil.which(name)
-        if found and os.path.splitext(found)[1].lower() in (".cmd", ".bat", ".exe"):
-            return found
-    return None
-
-
 def render_views(sog, basis, eye, targets, out_dir, resolution="800x450"):
     """Photoreal renders from inside the levelled scene, via splat-transform's rasterizer.
 
@@ -475,7 +459,7 @@ def render_views(sog, basis, eye, targets, out_dir, resolution="800x450"):
     camera at the origin aimed at +X sees the file's -X, and the file's +Y comes out down.
     Handing it file coordinates rendered every view from the wrong side and upside down.
     """
-    exe = find_splat_transform()
+    exe = sm.find_splat_transform()
     if not exe:
         print("  (skipping --render: splat-transform not on PATH; run `nvm use 24`)")
         return []
@@ -516,8 +500,10 @@ def render_views(sog, basis, eye, targets, out_dir, resolution="800x450"):
 # ------------------------------------------------------------------------------ main
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Measure a SOG and derive its polish transform.")
+def main(argv=None, prog=None):
+    """Measure a SOG, write its report and drawings, and return the report."""
+    ap = argparse.ArgumentParser(prog=prog,
+                                 description="Measure a SOG and derive its polish transform.")
     ap.add_argument("input", help="path to a .sog")
     ap.add_argument("--out", help="output directory (default <input>_inspect/)")
     ap.add_argument("--opacity", type=float, default=DEFAULT_OPACITY,
@@ -538,7 +524,7 @@ def main():
                     help="roughly which way is up in the file (default 0,1,0 — see find_up)")
     ap.add_argument("--no-yaw", action="store_true", help="skip the yaw alignment")
     ap.add_argument("--render", action="store_true", help="also render photoreal check views")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     sys.stdout.reconfigure(line_buffering=True)
     out_dir = args.out or os.path.splitext(args.input)[0] + "_inspect"
@@ -692,8 +678,9 @@ def main():
     if scale != 1.0:
         print(f"  final scale {scale:.6f} -> in game {width * scale:.1f} x "
               f"{depth * scale:.1f} x {clear * scale:.1f} m "
-              f"({width * scale * UNITS_PER_METRE:.0f} x {depth * scale * UNITS_PER_METRE:.0f}"
-              f" x {clear * scale * UNITS_PER_METRE:.0f} Quake units)")
+              f"({width * scale * sm.UNITS_PER_METRE:.0f} x "
+              f"{depth * scale * sm.UNITS_PER_METRE:.0f} x "
+              f"{clear * scale * sm.UNITS_PER_METRE:.0f} Quake units)")
 
     # Where the room needs to move: plan centre to the origin, floor to y = 0.
     offset = [-centre[0] * scale, -floor_y * scale, -centre[2] * scale]
@@ -767,6 +754,7 @@ def main():
     with open(report_path, "w", encoding="utf-8") as fh:
         json.dump(report, fh, indent=2)
     print(f"\nwrote {report_path}")
+    return report
 
 
 if __name__ == "__main__":

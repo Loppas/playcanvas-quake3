@@ -11,6 +11,7 @@ from splat_maps.__main__ import main
 
 #: Each stage's words, and the description its own parser prints.
 STAGES = [
+    (("polish",), "Level, square and scale a trained SOG, and record the polish."),
     (("bake",), "Bake a splat map's collision in Quake units."),
     (("entities", "reference"), "Write a splat map's collision mesh as an editor model."),
     (("entities", "from-map"), "Keep a .map's point entities as a splat map .ent."),
