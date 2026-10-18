@@ -24,14 +24,14 @@ capture ──▶ frames (ffmpeg) ──▶ sfm (COLMAP) ──▶ train (gsplat
 Set up the environment once ([below](#the-environment)), then from `splat-maps\`. Once a
 shell, the environment and where gsplat is:
 
-**Windows**
+**Windows (cmd)**
 
 ```bat
 conda activate gsplat
 set SPLAT_GSPLAT=C:\src\gsplat
 ```
 
-**Linux**
+**Linux (bash)**
 
 ```bash
 conda activate gsplat
@@ -101,7 +101,7 @@ Python side on Windows; the rest is installed by hand. Elsewhere it is the same 
 
 The steps, where `<splat-maps>` is this folder.
 
-**Windows**
+**Windows (cmd)**
 
 In Visual Studio 2022's x64 Native Tools Command Prompt, since gsplat's build needs its compiler:
 
@@ -121,7 +121,7 @@ python -m pip install -e <splat-maps>
 python -m splat_maps.patch_pycolmap
 ```
 
-**Linux**
+**Linux (bash)**
 
 Untried: the same steps, with a GCC that CUDA 12.8 supports in place of Visual Studio, and
 without its two settings:

@@ -176,13 +176,13 @@ without it, and the rest run, as they do in CI, which has none of it:
 
 They read the install `PCQ_FS_BASEPATH` names, from `.env.local` or the environment:
 
-**Windows**
+**Windows (PowerShell)**
 
 ```powershell
 $env:PCQ_FS_BASEPATH = 'C:\Games\Quake3'; npm test
 ```
 
-**Linux/macOS**
+**Linux/macOS (bash)**
 
 ```bash
 PCQ_FS_BASEPATH=/usr/local/games/quake3 npm test

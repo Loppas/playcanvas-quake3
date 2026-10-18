@@ -25,7 +25,7 @@ already the game's.
 
 **Shells.** A command given once runs the same in Windows' command prompt and in bash: its
 paths' forward slashes work in both. Where the shells differ, each has a block of its own,
-headed by the systems it is for.
+headed by the systems and the shell it is for.
 
 ---
 
@@ -44,14 +44,14 @@ editor offers to install its files there, and may write `scripts\shaderlist.txt`
 ([conventions.md](conventions.md), "The map editor and q3map2"). This runbook uses
 `data\editor\`, with two folders made inside it before the first run:
 
-**Windows**
+**Windows (cmd)**
 
 ```bat
 mkdir data\editor\baseq3\models\splatmaps
 mkdir data\editor\baseq3\maps
 ```
 
-**Linux/macOS**
+**Linux/macOS (bash)**
 
 ```bash
 mkdir -p data/editor/baseq3/models/splatmaps
@@ -187,13 +187,13 @@ the map, and the port starts a map only with a spawn spot in it (see "Known gaps
 2. Start the editor on the Quake 3 game with that engine path. Forward slashes, and the trailing
    one, as the check ran it:
 
-   **Windows**
+   **Windows (cmd)**
 
    ```bat
    editor\netradiant-custom-20260114\radiant.exe -global-gamefile Q3.game -global-gamePrompt false -Q3.game-EnginePath C:/path/to/playcanvas-quake3/splat-maps/data/editor/ -Q3.game-InstalledDevFilesPath C:/path/to/playcanvas-quake3/splat-maps/data/editor/
    ```
 
-   **Linux**
+   **Linux (bash)**
 
    The release's AppImage takes the same arguments, untried:
 

@@ -18,14 +18,14 @@ readme. Those three are left out here, the splat at 176 MB, and the steps below 
 Make `data\garage\garage-aligned.sog` as [the examples' README](../README.md) has it. Then, from
 `splat-maps\`, with `nvm use 24` run once, copy its entities into the map's folder:
 
-**Windows**
+**Windows (cmd)**
 
 ```bat
 mkdir data\garage_cats\map
 copy examples\garage_cats\garage_cats.ent data\garage_cats\map\
 ```
 
-**Linux/macOS**
+**Linux/macOS (bash)**
 
 ```bash
 mkdir -p data/garage_cats/map

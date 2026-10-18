@@ -32,14 +32,14 @@ Every stage has been run on Windows 11; macOS and Linux are untried.
 Set up the environment once, as [training.md](docs/training.md#the-environment) does, then run
 from `splat-maps\`. Once a shell, the environment and where gsplat is:
 
-**Windows**
+**Windows (cmd)**
 
 ```bat
 conda activate gsplat
 set SPLAT_GSPLAT=C:\src\gsplat
 ```
 
-**Linux**
+**Linux (bash)**
 
 ```bash
 conda activate gsplat
@@ -72,14 +72,14 @@ user's own. Node 24, for splat-transform, comes from `PATH`.
 | `SPLAT_COLMAP` | `sfm` | `colmap`, from `PATH` | COLMAP 4.1.1's `colmap.exe` |
 | `SPLAT_FFMPEG` | `frames` | `ffmpeg`, from `PATH` | ffmpeg |
 
-**Windows**
+**Windows (cmd)**
 
 ```bat
 set SPLAT_COLMAP=C:\Tools\colmap\bin\colmap.exe
 set SPLAT_FFMPEG=C:\Tools\ffmpeg\bin\ffmpeg.exe
 ```
 
-**Linux/macOS**
+**Linux/macOS (bash)**
 
 ```bash
 export SPLAT_COLMAP=/opt/colmap/bin/colmap
