@@ -44,6 +44,11 @@ DEFAULT_OPACITY = 0.3
 #: DEFAULT_HEIGHT 32) and the port runs at 32 units = 1 m (`src/coords.ts`).
 PLAYER_HEIGHT_M = 1.75
 
+#: With `--outdoor`, the capture's top is this percentile of the solid splats' heights,
+#: not their highest: above a capture with no ceiling float stray splats of sky and spill, far
+#: past anything in it.
+TOP_PERCENTILE = 99
+
 
 # --------------------------------------------------------------------------- decode
 
@@ -514,6 +519,10 @@ def main(argv=None, prog=None):
                          "map decoded whole needs several GB, and the fits do not need it")
     ap.add_argument("--metric-height", type=float,
                     help="real floor-to-ceiling height in metres; derives the scale factor")
+    ap.add_argument("--outdoor", action="store_true",
+                    help="a capture with no ceiling, such as one outdoors: --metric-height then "
+                         f"reaches the capture's top, the {TOP_PERCENTILE}th percentile of the "
+                         "solid splats' heights, and not a fitted ceiling")
     ap.add_argument("--scale", type=float,
                     help="force the final scale factor outright, ignoring the two above")
     ap.add_argument("--player-height", type=float, default=PLAYER_HEIGHT_M,
@@ -603,19 +612,31 @@ def main(argv=None, prog=None):
 
     level = solid @ basis.T
     floor, ceiling = surfaces(level, span * 0.02)
-    if floor is None or ceiling is None:
-        sys.exit("ERROR: could not fit both a floor and a ceiling — try --opacity or --up-hint")
-    floor_y, ceiling_y = floor[0], ceiling[0]
-    clear = ceiling_y - floor_y
-    print(f"  floor {floor_y:+.4f} ({floor[2]:,} splats), "
-          f"ceiling {ceiling_y:+.4f} ({ceiling[2]:,} splats), clear height {clear:.4f} units")
-    out_of_plane = math.degrees(math.acos(max(-1.0, min(1.0, float(ceiling[1] @ floor[1])))))
-    print(f"  ceiling sits {out_of_plane:.2f} deg off parallel to the floor"
-          f"{'  — check it is not a sloped roof' if out_of_plane > 3 else ''}")
+    if args.outdoor:
+        if floor is None:
+            sys.exit("ERROR: could not fit a floor. Try --opacity or --up-hint")
+        floor_y = floor[0]
+        ceiling_y = float(np.percentile(level[:, 1], TOP_PERCENTILE))
+        ceiling, out_of_plane = None, None
+        clear = ceiling_y - floor_y
+        print(f"  floor {floor_y:+.4f} ({floor[2]:,} splats), the capture's top "
+              f"{ceiling_y:+.4f} (the solid splats' {TOP_PERCENTILE}th percentile), "
+              f"{clear:.4f} units above the floor")
+    else:
+        if floor is None or ceiling is None:
+            sys.exit("ERROR: could not fit both a floor and a ceiling. Try --opacity or "
+                     "--up-hint, or --outdoor for a capture with no ceiling")
+        floor_y, ceiling_y = floor[0], ceiling[0]
+        clear = ceiling_y - floor_y
+        print(f"  floor {floor_y:+.4f} ({floor[2]:,} splats), "
+              f"ceiling {ceiling_y:+.4f} ({ceiling[2]:,} splats), clear height {clear:.4f} units")
+        out_of_plane = math.degrees(math.acos(max(-1.0, min(1.0, float(ceiling[1] @ floor[1])))))
+        print(f"  ceiling sits {out_of_plane:.2f} deg off parallel to the floor"
+              f"{'  — check it is not a sloped roof' if out_of_plane > 3 else ''}")
     below_floor = float((level[:, 1] < floor_y).mean())
     above_ceiling = float((level[:, 1] > ceiling_y).mean())
-    print(f"  outside the room: {below_floor:.2%} below the floor, "
-          f"{above_ceiling:.2%} above the ceiling")
+    print(f"  outside the room: {below_floor:.2%} below the floor, {above_ceiling:.2%} above "
+          f"{'the top' if args.outdoor else 'the ceiling'}")
 
     # Vertical-sign guard. find_up biases the up axis toward its hint (default +Y) and the
     # enclosure test cannot tell a box's floor from its ceiling, so an inverted capture — whose
@@ -733,9 +754,10 @@ def main(argv=None, prog=None):
         "floor_y_units": round(floor_y, 6),
         "ceiling_y_units": round(ceiling_y, 6),
         "clear_height_units": round(clear, 6),
+        "outdoor": args.outdoor,
         "floor_inliers": floor[2],
-        "ceiling_inliers": ceiling[2],
-        "ceiling_off_parallel_deg": round(out_of_plane, 4),
+        "ceiling_inliers": ceiling[2] if ceiling else None,
+        "ceiling_off_parallel_deg": round(out_of_plane, 4) if ceiling else None,
         "footprint_units": [round(float(hi[0] - lo[0]), 4), round(float(hi[2] - lo[2]), 4)],
         "scale_m_per_unit": scale,
         "metric_scale_m_per_unit": metric,

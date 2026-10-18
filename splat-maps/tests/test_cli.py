@@ -11,6 +11,11 @@ from splat_maps.__main__ import main
 
 #: Each stage's words, and the description its own parser prints.
 STAGES = [
+    (("all",), "Make a map from a video: every stage, with starter entities."),
+    (("frames",), "Extract a video's frames for the SfM."),
+    (("sfm",), "COLMAP's SfM over a capture's frames."),
+    (("train",), "Train a splat with gsplat's MCMC trainer."),
+    (("export",), "Export a trained splat as a SOG."),
     (("polish",), "Level, square and scale a trained SOG, and record the polish."),
     (("bake",), "Bake a splat map's collision in Quake units."),
     (("entities", "reference"), "Write a splat map's collision mesh as an editor model."),

@@ -196,7 +196,7 @@ deliverable's warrant. The record step fails the polish unless it shows tilt and
   `--up-hint 0,-1,0` makes `sog_inspect` lock onto the ceiling and report the map upside down.
 - **The polish keeps the source's `license.txt`** inside the output bundle, since
   `splat-transform -w` drops it. The credit it carries is the licence's condition, not
-  decoration. A capture with none, as these scripts' own `deliver.bat` writes, is given one with
+  decoration. A capture with none, as `export` writes, is given one with
   `--license`, a file or its fields in a string. A source's own licence is never replaced: that is
   its creator's to set.
 - **A re-encode reproduces geometry, not the SH codebook.** Positions, rotations, scales and

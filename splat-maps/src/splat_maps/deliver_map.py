@@ -33,6 +33,14 @@ def sha256(path):
     return h.hexdigest()
 
 
+def maps_folder(port):
+    """The port's `public/maps/`; exits unless `port` looks like the port."""
+    maps = os.path.join(port, "public", "maps")
+    if not os.path.isfile(os.path.join(port, "package.json")) or not os.path.isdir(maps):
+        sys.exit(f"ERROR: {port} does not look like the port: no package.json and public/maps")
+    return maps
+
+
 def main(argv=None, prog=None):
     ap = argparse.ArgumentParser(prog=prog, description="Deliver a splat map pk3 to the port.")
     ap.add_argument("pk3")
@@ -43,10 +51,7 @@ def main(argv=None, prog=None):
     args = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
 
-    maps = os.path.join(args.port, "public", "maps")
-    if not os.path.isfile(os.path.join(args.port, "package.json")) or not os.path.isdir(maps):
-        sys.exit(f"ERROR: {args.port} does not look like the port: no package.json and public/maps")
-    dest = os.path.join(maps, os.path.basename(args.pk3))
+    dest = os.path.join(maps_folder(args.port), os.path.basename(args.pk3))
 
     print(flush=True)
     lint = subprocess.run([sys.executable, "-m", "splat_maps", "lint", args.pk3])

@@ -12,6 +12,11 @@ from splat_maps import splat_map as sm
 from room import BAKE, ENT, POLISH, lint_failures, read_pk3, run_cli
 
 
+def test_a_package_that_lints_clean_returns_to_its_caller(room):
+    # A stage can run in its caller's process, so one that passes returns rather than exits.
+    assert package_map.main([str(room), "--author", "A Mapper"]) is None
+
+
 def test_package_lays_out_the_pk3(packaged):
     pk3, code, log = packaged
     assert code == 0, log
@@ -221,7 +226,5 @@ def test_pipeline_commit_names_the_scripts_commit_and_whether_they_changed(tmp_p
 def test_package_warns_when_the_scripts_have_changed(room, monkeypatch, capsys):
     monkeypatch.setattr(package_map, "pipeline_commit", lambda: "abc1234-dirty")
     monkeypatch.setattr("sys.argv", ["package_map.py", str(room), "--author", "A Mapper"])
-    with pytest.raises(SystemExit) as ended:
-        package_map.main()
-    assert ended.value.code == 0
+    package_map.main()
     assert "WARNING: the scripts have uncommitted changes" in capsys.readouterr().out

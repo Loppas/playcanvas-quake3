@@ -10,7 +10,13 @@ The bake is splat-transform's own voxel writer. What this adds is the sizing and
      reach also seals the ring of reconstruction spill around the room, and the voids inside
      that ring (under the floor, behind the walls) then count as inside;
   4. the seed is given in Q3 units, as `viewpos` prints them, or taken from the map's first
-     spawn spot, and converted to the octree's frame.
+     spawn spot, and converted to the octree's frame;
+  5. `--box`, in Q3 units, crops what is voxelised: splat-transform's `--filter-box`, which
+     reads its corners in the octree's frame, as the seed is read. A trained capture holds stray
+     splats far past what was filmed, and the grid spans them all;
+  6. `--outdoor` bakes with no exterior fill, for a capture with no hull to seal: outdoors the
+     fill floods in through the open sky and closes everything. Outside the grid is solid, so
+     the box's sides and top then bound the map.
 
 Then it loads the octree back and measures it: the port's own structural checks, whether
 splat-transform skipped a step (a leak skips the exterior fill without an error), every spawn
@@ -20,7 +26,7 @@ and the measurements.
 
 Usage:
     splat-maps bake <map.sog> [--voxel 8] [--fill auto|UNITS] [--seed x,y,z] [--ent FILE]
-                    [--mesh smooth|faces] [--out-dir DIR]
+                    [--box=x0,y0,z0,x1,y1,z1] [--outdoor] [--mesh smooth|faces] [--out-dir DIR]
 
 Outputs, beside the .sog unless --out-dir is given: <stem>.voxel.json, <stem>.voxel.bin,
 <stem>.collision.glb, <stem>.bake.json and <stem>.bake.log (splat-transform's own output).
@@ -69,6 +75,19 @@ SKIPPED = {
 FLOOR_BAND = 48
 
 
+def filter_box(text):
+    """`--box`'s corners, `x0,y0,z0,x1,y1,z1` in Q3 units, as splat-transform's `--filter-box`
+    takes them: in the octree's frame, the lower corner first."""
+    try:
+        values = [float(c) for c in text.split(",")]
+    except ValueError:
+        values = []
+    if len(values) != 6 or any(lo >= hi for lo, hi in zip(values[:3], values[3:])):
+        raise ValueError(f"--box {text!r} is not x0,y0,z0,x1,y1,z1 with each 0 below its 1")
+    a, b = sm.sim_to_octree(values[:3]), sm.sim_to_octree(values[3:])
+    return ",".join(sm.fmt_num(c) for c in (*map(min, a, b), *map(max, a, b)))
+
+
 def main(argv=None, prog=None):
     ap = argparse.ArgumentParser(
         prog=prog, description="Bake a splat map's collision in Quake units.")
@@ -83,17 +102,25 @@ def main(argv=None, prog=None):
                                    "prints it: x,y,z. Default: the .ent's first spawn spot")
     ap.add_argument("--ent", help="the map's entity text (default <stem>.ent beside the .sog, "
                                   "if it exists); its spawn spots are checked after the bake")
+    ap.add_argument("--box", help="what to voxelise, in Q3 units: x0,y0,z0,x1,y1,z1, the "
+                                  "corners of a box about the map; the rest is cut")
+    ap.add_argument("--outdoor", action="store_true",
+                    help="no exterior fill, for a capture with no hull to seal, such as one "
+                         "outdoors; the --box then bounds the map")
     ap.add_argument("--mesh", default="smooth", choices=("smooth", "faces"),
                     help="the debug overlay's shape (default smooth)")
     ap.add_argument("--out-dir", help="where to write (default beside the .sog)")
     args = ap.parse_args(argv)
     sys.stdout.reconfigure(line_buffering=True, encoding="utf-8")
 
-    auto = args.fill == "auto"
+    if args.outdoor and args.fill != "auto":
+        sys.exit("ERROR: --fill sizes the exterior fill, which --outdoor leaves out")
+    auto = args.fill == "auto" and not args.outdoor
     try:
         exe = sm.require_splat_transform()
         v = args.voxel
-        sizes = sm.bake_sizes(v, DEFAULT_FILL_UNITS if auto else float(args.fill))
+        sizes = sm.bake_sizes(v, float(args.fill) if args.fill != "auto" else DEFAULT_FILL_UNITS)
+        crop = ["--filter-box", filter_box(args.box)] if args.box else []
     except (sm.FormatError, ValueError) as e:
         sys.exit(f"ERROR: {e}")
     v = int(v)
@@ -138,8 +165,8 @@ def main(argv=None, prog=None):
           f"octree ({', '.join(sm.fmt_num(c) for c in seed_oct)})")
 
     def flags_for(s):
-        return ["--voxel-size", sm.fmt_num(s["voxel_m"]),
-                "--voxel-external-fill", sm.fmt_num(s["fill_m"]),
+        fill = [] if args.outdoor else ["--voxel-external-fill", sm.fmt_num(s["fill_m"])]
+        return ["--voxel-size", sm.fmt_num(s["voxel_m"]), *fill,
                 "--voxel-carve", f"{sm.fmt_num(s['carve_h_m'])},{sm.fmt_num(s['carve_r_m'])}",
                 "--seed-pos", ",".join(sm.fmt_num(c) for c in seed_oct),
                 "--collision-mesh", args.mesh]
@@ -147,7 +174,8 @@ def main(argv=None, prog=None):
     def bake(s, where):
         """One splat-transform run into `where`: (its output, seconds, whether it leaked)."""
         os.makedirs(where, exist_ok=True)
-        cmd = [exe, "-w", "--no-tty", *flags_for(s), args.sog,
+        # The crop is an action on the input, so it follows it.
+        cmd = [exe, "-w", "--no-tty", *flags_for(s), args.sog, *crop,
                os.path.join(where, f"{stem}.voxel.json")]
         print(f"  splat-transform {' '.join(cmd[1:])}")
         t0 = time.time()
@@ -160,8 +188,14 @@ def main(argv=None, prog=None):
             sys.exit(f"ERROR: splat-transform failed ({proc.returncode}); see {where}")
         return proc.stdout, time.time() - t0, LEAK in proc.stdout
 
+    if args.box:
+        print(f"  cropped to the box ({args.box}) in Q3 units, octree ({crop[1]})")
     trail = []
-    if not auto:
+    if args.outdoor:
+        print("  no exterior fill (--outdoor): " + ("the box bounds the map" if args.box else
+                                                    "the capture's own extent bounds the map"))
+        text, seconds, leaked = bake(sizes, out_dir)
+    elif not auto:
         print(f"  external fill {sizes['fill_voxels']} voxels: seals hull holes under "
               f"{sizes['fill_seals_under_units']} units")
         text, seconds, leaked = bake(sizes, out_dir)
@@ -209,7 +243,7 @@ def main(argv=None, prog=None):
         shutil.rmtree(search, ignore_errors=True)
         print(f"  external fill {lo} voxels ({lo * v} units): seals hull holes under "
               f"{sizes['fill_seals_under_units']} units")
-    flags = flags_for(sizes)
+    flags = [*flags_for(sizes), *crop]
     log_path = os.path.join(out_dir, f"{stem}.bake.log")
     print(f"  baked in {seconds:.1f} s; log {log_path}")
 
@@ -325,9 +359,10 @@ def main(argv=None, prog=None):
         "input": os.path.basename(args.sog),
         "voxel_units": v,
         "carve_box_units": list(got_box),
-        "fill_units": sizes["fill_voxels"] * v,
-        "fill_seals_under_units": sizes["fill_seals_under_units"],
+        "fill_units": None if args.outdoor else sizes["fill_voxels"] * v,
+        "fill_seals_under_units": None if args.outdoor else sizes["fill_seals_under_units"],
         "fill_search": trail if auto else None,
+        **({"box_sim": [float(c) for c in args.box.split(",")]} if args.box else {}),
         "seed_sim": list(seed_sim),
         "seed_from": seed_from,
         "seed_octree": list(seed_oct),

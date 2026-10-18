@@ -20,13 +20,16 @@ LICENCE = (b"Title: Test Room\nAuthor: A Capturer (a note)\nSource: https://exam
            b"License: CC BY 4.0\nLicense URL: https://creativecommons.org/licenses/by/4.0/\n")
 
 
-def room_centres(count=40_000, seed=0):
-    """`count` points over the room's faces, each face's share by its area, 2 mm of noise."""
+def room_centres(count=40_000, seed=0, ceiling=True):
+    """`count` points over the room's faces, each face's share by its area, 2 mm of noise.
+    With no `ceiling`, the room is open to the sky, as a yard is."""
     rng = np.random.default_rng(seed)
     w, h, d = ROOM
     # Each face: the axis it is flat on, where, and its area.
     faces = [(1, 0.0, w * d), (1, h, w * d), (0, -w / 2, h * d), (0, w / 2, h * d),
              (2, -d / 2, w * h), (2, d / 2, w * h)]
+    if not ceiling:
+        del faces[1]
     areas = np.array([a for _, _, a in faces])
     face = rng.choice(len(faces), count, p=areas / areas.sum())
     pts = rng.uniform((-w / 2, 0.0, -d / 2), (w / 2, h, d / 2), (count, 3))
@@ -46,9 +49,10 @@ def webp(rgba, width=256):
     return out.getvalue()
 
 
-def write_capture(path, licence=None):
-    """The room's SOG at `path`, with `licence` as its `license.txt` if given; returns `path`."""
-    pts = room_centres()
+def write_capture(path, licence=None, ceiling=True):
+    """The room's SOG at `path`, with `licence` as its `license.txt` if given, and open to the
+    sky unless `ceiling`; returns `path`."""
+    pts = room_centres(ceiling=ceiling)
     n = len(pts)
     # Positions are stored log-scaled, as 16 bits split over two planes.
     v = np.sign(pts) * np.log1p(np.abs(pts))

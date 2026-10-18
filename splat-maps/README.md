@@ -13,9 +13,10 @@ SOG ─▶ polish ─▶ bake ─▶ entities ─▶ levelshot ─▶ arena ─�
   the scripts here, splat-transform, optionally NetRadiant-custom
 ```
 
-The scripts are Windows batch files over a Python package, `splat_maps`, whose CLI runs the map
-stages: `uv run splat-maps --help` lists them. The training half needs an NVIDIA GPU with CUDA.
-Every stage has been run on Windows 11; macOS and Linux are untried.
+Every stage is a command of one Python package's CLI, `splat-maps`, and `all` runs them in order
+from a video: `uv run splat-maps --help` lists them. The Windows batch files are wrappers over
+it. The training half needs an NVIDIA GPU with CUDA. Every stage has been run on Windows 11;
+macOS and Linux are untried.
 
 ## The docs
 
@@ -29,26 +30,34 @@ Every stage has been run on Windows 11; macOS and Linux are untried.
 
 ## Quick start (Windows)
 
-Install the prerequisites in [training.md](docs/training.md#windows), then run from `splat-maps\`:
+Install the prerequisites in [training.md](docs/training.md#the-environment), then run from
+`splat-maps\`:
 
 ```bat
 :: once
 scripts\windows\setup-env.bat
 
-:: a capture to a trained splat
-scripts\windows\process.bat  "C:\path\to\video.mov"  myroom  1.5
-scripts\windows\train.bat    myroom
-nvm use 24 && scripts\windows\deliver.bat  myroom
+:: once a command prompt: the settings, and the package on PYTHONPATH
+call scripts\windows\settings.bat
+
+:: a video to a map in the game, in one run
+"%SPLAT_PYTHON%" -m splat_maps all "C:\path\to\video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
 ```
 
-Then follow [maps.md](docs/maps.md) from step 1, which checks each step's output before the next:
+`2.4` is the room's floor-to-ceiling height in metres, `--box` the map's corners in Q3 units
+(32 to the metre, about the plan's centre, the floor at 0), which cut the stray splats a trained
+capture holds, and `--license` the capture's credit. A capture outdoors adds `--outdoor`
+([training.md](docs/training.md), "Quick start"). `all`'s map has starter entities: one spawn over the floor and the intermission above it.
+[maps.md](docs/maps.md) walks each step from step 1, checking each one's output before the next:
 the polish, a first bake from a seed, the entities, the bake again from the spawn, the levelshot,
-the arena block, the package and the delivery into the port's `public\maps\`.
+the arena block, the package and the delivery into the port's `public\maps\`. Its step 4 places
+the real entities. [training.md](docs/training.md) runs the training stages one at a time.
 
 ## Settings
 
 The scripts find their tools through `scripts\windows\settings.bat`. Each setting has a default,
-and a value already in the environment wins. A machine's own paths go in
+and a value already in the environment wins. The CLI reads `SPLAT_FFMPEG`, `SPLAT_COLMAP` and
+`SPLAT_GSPLAT` itself, so they serve it outside the wrappers too. A machine's own paths go in
 `scripts\windows\settings.local.bat`, which git ignores:
 
 ```bat
@@ -60,7 +69,7 @@ set "SPLAT_FFMPEG=C:\Tools\ffmpeg\bin\ffmpeg.exe"
 | Setting | Default | What it is |
 |---|---|---|
 | `SPLAT_PYTHON` | `%USERPROFILE%\miniconda3\envs\gsplat\python.exe` | The Python every script runs on: the conda env `setup-env.bat` makes |
-| `SPLAT_GSPLAT` | `gsplat\` beside this checkout | gsplat's clone, which `setup-env.bat` makes and builds and `train.bat` runs |
+| `SPLAT_GSPLAT` | `gsplat\` beside this checkout | gsplat's clone, which `setup-env.bat` makes and builds and `train` runs |
 | `SPLAT_COLMAP` | `colmap`, from `PATH` | COLMAP 4.1.1's `colmap.exe` |
 | `SPLAT_FFMPEG` | `ffmpeg`, from `PATH` | ffmpeg |
 | `SPLAT_VCVARS` | Visual Studio 2022 Community's `vcvars64.bat` | The compiler environment gsplat is built in |
@@ -76,9 +85,10 @@ and its README rebuilds the map from the capture it was made from.
 
 ## Tests
 
-The stages that need no GPU and no external tool are tested with pytest, on a tiny map the tests
-build: the format's shared pieces, the entities, the arena block, the package, the lint and the
-delivery. Their environment is a [uv](https://docs.astral.sh/uv/) project: `pyproject.toml` and
+The stages are tested with pytest, on a tiny map and capture the tests build: the format's shared
+pieces, the polish's measure, the entities, the arena block, the package, the lint and the
+delivery. The ones that need a GPU or an outside tool, ffmpeg, COLMAP, gsplat's trainer and
+splat-transform, run against stand-ins that record what they were given. Their environment is a [uv](https://docs.astral.sh/uv/) project: `pyproject.toml` and
 its lock, `uv.lock`, on the Python in `.python-version`, which uv fetches if it is missing. From
 `splat-maps/`:
 
