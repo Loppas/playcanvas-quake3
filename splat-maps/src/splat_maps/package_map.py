@@ -2,14 +2,14 @@
 
 The working folder holds each part under the map's stem, as the steps write them:
 
-    <stem>.sog              the polished splat (polish.bat)
+    <stem>.sog              the polished splat (polish)
     <stem>.polish.json      what the polish did, and the source's licence
-    <stem>.voxel.json/.bin  the collision octree (bake.bat)
+    <stem>.voxel.json/.bin  the collision octree (bake)
     <stem>.collision.glb    its debug mesh
     <stem>.bake.json        the bake's flags and measurements
     <stem>.ent              the entity text, written by a person
-    <stem>.arena            the arena block (arena.bat)
-    <stem>.tga              the levelshot (levelshot.bat)
+    <stem>.arena            the arena block (arena)
+    <stem>.tga              the levelshot (levelshot)
 
 This puts each at its Q3 path (`map-format.md` §2.1). It writes the `_pcq_*` keys into the
 packed `.ent`'s worldspawn, replacing any it finds, as q3map2 writes its own keys at compile
@@ -44,7 +44,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def pipeline_commit():
-    """This repo's short commit, with -dirty when the scripts have uncommitted changes."""
+    """The short commit of this repository that built the map, with -dirty when the package
+    has uncommitted changes."""
     def git(*a):
         run = subprocess.run(["git", "-C", HERE, *a], capture_output=True, text=True)
         return run.stdout.strip()
@@ -107,7 +108,7 @@ def main(argv=None, prog=None):
         ("_pcq_pipeline", pipeline_commit()),
     ]
     if pcq[-1][1].endswith("-dirty"):
-        warnings.append("the scripts have uncommitted changes, so _pcq_pipeline names a commit "
+        warnings.append("splat_maps has uncommitted changes, so _pcq_pipeline names a commit "
                         "that did not build this")
     kept = [(k, v) for k, v in world.pairs if not k.lower().startswith("_pcq_")]
     world.pairs = kept + pcq

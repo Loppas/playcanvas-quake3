@@ -2,7 +2,7 @@
 
 This turns a trained splat into `map-<stem>.pk3`, a Quake 3 map the port loads: the splat for its
 surfaces, a voxel octree for its collision, and Q3's own entity text, arena block and levelshot
-beside them (`map-format.md` §2.1). Every script writes its output, reads it back and measures it,
+beside them (`map-format.md` §2.1). Every step writes its output, reads it back and measures it,
 and stops on an error. So a step that finishes without an `ERROR` line has been checked. Read its
 `WARNING` lines before moving on.
 
@@ -29,7 +29,7 @@ already the game's.
 
 | Tool | What for |
 |---|---|
-| The training environment, from [training.md](training.md#the-environment) | the `gsplat` Python, which has everything these scripts import: numpy, Pillow, and scipy, which comes in only as scikit-learn's dependency |
+| The training environment, from [training.md](training.md#the-environment) | the `gsplat` env, with this package installed in it: the `splat-maps` command. Without it, `uv run splat-maps` from `splat-maps\` runs these steps in the tests' environment ([README](../README.md#tests)), which needs none of the GPU stack |
 | **Node ≥ 24** through nvm-windows | splat-transform. Run `nvm use 24` once per shell before the polish, the bake and the levelshot |
 | **splat-transform 3.1.6** | The polish, the bake and the levelshot install it with npm if it is missing, and refuse any other version, since the frames and the bake were calibrated on 3.1.6 ([conventions.md](conventions.md), "Current answer") |
 | **The port**, the checkout `splat-maps\` sits in | delivery writes to its `public\maps\`. `--port DIR` names another checkout |
@@ -89,7 +89,7 @@ splat from then on. A source that carries its own licence keeps it: the polish r
 
 ```bat
 nvm use 24
-scripts\windows\polish.bat data\<project>\results\mcmc\<project>.sog data\<project>\map\<stem>.sog <height_m> --player-height <m>
+splat-maps polish data\<project>\results\mcmc\<project>.sog data\<project>\map\<stem>.sog <height_m> --player-height <m>
 ```
 
 - `<height_m>` is the room's real floor-to-ceiling height in metres, the scale reference.
@@ -114,7 +114,7 @@ above, square to the page, and the two sections a level floor at 0. It writes `<
 ### 3. Bake, from a seed
 
 ```bat
-scripts\windows\bake.bat data\<project>\map\<stem>.sog --seed x,y,z
+splat-maps bake data\<project>\map\<stem>.sog --seed x,y,z
 ```
 
 The bake keeps open only what a player-sized box can reach from the seed, so the seed must be in
@@ -167,7 +167,7 @@ the map, and the port starts a map only with a spawn spot in it (see "Known gaps
 1. Turn the collision mesh into the editor's reference model, in the editor's own folder:
 
    ```bat
-   scripts\windows\glb_to_editor.bat data\<project>\map\<stem>.collision.glb --out data\editor\baseq3\models\splatmaps\<stem>_collision.obj
+   splat-maps entities reference data\<project>\map\<stem>.collision.glb --out data\editor\baseq3\models\splatmaps\<stem>_collision.obj
    ```
 
    It should report the vertices `within 0.0000 units of the glb in Q3's frame`.
@@ -190,7 +190,7 @@ the map, and the port starts a map only with a spawn spot in it (see "Known gaps
 6. Save as `data\editor\baseq3\maps\<stem>.map`, then keep its point entities:
 
    ```bat
-   scripts\windows\map_to_ent.bat data\editor\baseq3\maps\<stem>.map data\<project>\map\<stem>.ent
+   splat-maps entities from-map data\editor\baseq3\maps\<stem>.map data\<project>\map\<stem>.ent
    ```
 
    It lists what it dropped: the `func_group`s and the reference `misc_model`. Keep the `.map`
@@ -209,7 +209,7 @@ arrive. Keep the yaw: it is the spot's angle. Frame the intermission with `cg_fo
 the readings as they are printed:
 
 ```bat
-scripts\windows\write_ent.bat data\<project>\map\<stem>.ent --message "The Garage" --spawn "(-4 -4 69) : 0" --intermission "(1056 2016 868) : 242" --look-at "(0 0 100) : 0" --octree data\<project>\map\<stem>.voxel.json
+splat-maps entities readings data\<project>\map\<stem>.ent --message "The Garage" --spawn "(-4 -4 69) : 0" --intermission "(1056 2016 868) : 242" --look-at "(0 0 100) : 0" --octree data\<project>\map\<stem>.voxel.json
 ```
 
 It applies §3.4's rules (a spawn spot is its reading less 26 in z), gives the first spawn
@@ -218,7 +218,7 @@ It applies §3.4's rules (a spawn spot is its reading less 26 in z), gives the f
 ### 5. Bake again, from the spawn
 
 ```bat
-scripts\windows\bake.bat data\<project>\map\<stem>.sog
+splat-maps bake data\<project>\map\<stem>.sog
 ```
 
 With no `--seed`, the bake seeds from the `.ent`'s first spawn spot, so the carve keeps open
@@ -234,7 +234,7 @@ A spot `in solid` must move. One that `thuds` or `lands hurt` is too high above 
 ### 6. The levelshot
 
 ```bat
-scripts\windows\levelshot.bat data\<project>\map\<stem>.sog
+splat-maps levelshot data\<project>\map\<stem>.sog
 ```
 
 It renders the view from the intermission point as Q3's `levelshot` command does, and writes
@@ -246,7 +246,7 @@ this again.
 ### 7. The arena block
 
 ```bat
-scripts\windows\arena.bat data\<project>\map\<stem>.arena --ent data\<project>\map\<stem>.ent
+splat-maps arena data\<project>\map\<stem>.arena --ent data\<project>\map\<stem>.ent
 ```
 
 The long name comes from worldspawn's `message`, and the gametypes default to `ffa`. Add
@@ -261,7 +261,7 @@ They name three bots each, as q3dm17 does, which Server Options seeds a skirmish
 ### 8. Package
 
 ```bat
-scripts\windows\package_map.bat data\<project>\map\<stem>.sog --author "<who made the map>"
+splat-maps package data\<project>\map\<stem>.sog --author "<who made the map>"
 ```
 
 It writes `map-<stem>.pk3` beside the `.sog`: every part at its Q3 path, the `_pcq_*` keys in the
@@ -275,7 +275,7 @@ scripts had uncommitted changes, so commit them and package again before a relea
 ### 9. Deliver
 
 ```bat
-scripts\windows\deliver_map.bat data\<project>\map\map-<stem>.pk3
+splat-maps deliver data\<project>\map\map-<stem>.pk3
 ```
 
 It lints the pk3 again and refuses it on any error, copies it into the port's `public\maps\`

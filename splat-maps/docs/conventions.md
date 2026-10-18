@@ -202,13 +202,3 @@ deliverable's warrant. The record step fails the polish unless it shows tilt and
 - **A re-encode reproduces geometry, not the SH codebook.** Positions, rotations, scales and
   base colour come out byte-identical. The SH codebook is chosen by k-means, so compare a
   re-polish by its bake, or by its measured transform.
-
-**Batch files are where arguments get lost.** Three bugs kept `polish.bat` from ever running end
-to end:
-- **Quote any value with a comma.** cmd splits arguments on commas as well as spaces, so
-  `--up-hint 0,-1,0` arrives as three arguments. `%*` keeps them, and `%1` with `shift` does not.
-- **`call` every `.cmd`**, npm and splat-transform among them. Without it the calling batch
-  ends when the `.cmd` does, with exit code 0, so every step after it silently never runs
-  (measured: npm installs splat-transform on Windows as a `.cmd`).
-- **Start a `for /f` command with `call`** when it begins with a quoted path. `for /f` strips the
-  first and last quote of such a command, which breaks the path.

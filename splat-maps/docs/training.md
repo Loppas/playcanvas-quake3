@@ -24,11 +24,12 @@ capture ──▶ frames (ffmpeg) ──▶ sfm (COLMAP) ──▶ train (gsplat
 Set up the environment once ([below](#the-environment)), then from `splat-maps\`:
 
 ```bat
-:: once a command prompt: the settings, and the package on PYTHONPATH
-call scripts\windows\settings.bat
+:: once a command prompt: the environment, and where gsplat is
+conda activate gsplat
+set SPLAT_GSPLAT=C:\src\gsplat
 
 :: a video to a map in the game, in one run
-"%SPLAT_PYTHON%" -m splat_maps all "C:\path\to\video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
+splat-maps all "C:\path\to\video.mov" myroom 2.4 --box=-128,-128,-32,128,128,96 --license "Title: My Room; Author: Your Name; Source: <link>; License URL: https://creativecommons.org/licenses/by/4.0/" --author "Your Name"
 ```
 
 `all` runs this doc's stages and then [maps.md](maps.md)'s, and delivers `map-myroom.pk3` to
@@ -51,15 +52,11 @@ detail, below).
 Or the training stages one at a time, each on the capture's folder:
 
 ```bat
-"%SPLAT_PYTHON%" -m splat_maps frames "C:\path\to\video.mov" data\myroom --fps 1.5
-"%SPLAT_PYTHON%" -m splat_maps sfm    data\myroom
-"%SPLAT_PYTHON%" -m splat_maps train  data\myroom
-"%SPLAT_PYTHON%" -m splat_maps export data\myroom
+splat-maps frames "C:\path\to\video.mov" data\myroom --fps 1.5
+splat-maps sfm    data\myroom
+splat-maps train  data\myroom
+splat-maps export data\myroom
 ```
-
-The batch wrappers run the same on `data\<project>`: `process.bat <video> <project> [fps]
-[width]` is `frames` and `sfm`, `train.bat <project> [cap_max] [max_steps]` is `train`, and
-`deliver.bat <project>` is `export`.
 
 Outputs land in `data\<project>\results\mcmc\`: `ply\point_cloud_<step>.ply`,
 `<project>.sog` (the polish's input), `<project>_viewer.html` (open in a browser to fly around).
@@ -72,8 +69,8 @@ large kitchen over 2–3 min → `--fps 2.0`+ for 300–400 frames.
 
 ## The environment
 
-What the stages need, and the versions validated together. On Windows, `setup-env.bat` builds
-the Python side; the rest is installed by hand. Elsewhere it is the same list, untried.
+What the stages need, and the versions validated together. The steps below the table build the
+Python side on Windows; the rest is installed by hand. Elsewhere it is the same list, untried.
 
 | Need | Validated | Why, and what to watch |
 |---|---|---|
@@ -83,48 +80,47 @@ the Python side; the rest is installed by hand. Elsewhere it is the same list, u
 | **Python** | **3.11**, the conda env `gsplat` (Miniconda) | numpy below 2, Pillow and scipy for the map stages |
 | **torch / torchvision** | **2.8.0+cu128 / 0.23.0** | torch **2.9.x breaks** `fused_ssim` (`compiled_autograd.h C2872 'std' ambiguous`) |
 | **gsplat** | **v1.5.3**, built from source | **main HEAD is Windows-broken** (`std::isfinite` in device code). No prebuilt wheel exists for this torch and CUDA on Windows |
-| gsplat's example dependencies | `scripts/windows/requirements-min.txt` | `fused_ssim` built from source, which `simple_trainer.py` needs; **`fused_bilagrid` skipped**: a narrowing-conversion build error, so `--use-bilateral-grid` takes the pure-Python `lib_bilagrid` |
+| gsplat's example dependencies | `gsplat-requirements.txt` | `fused_ssim` built from source, which `simple_trainer.py` needs; **`fused_bilagrid` skipped**: a narrowing-conversion build error, so `--use-bilateral-grid` takes the pure-Python `lib_bilagrid` |
 | **The pycolmap patch** | `python -m splat_maps.patch_pycolmap` | [below](#the-pycolmap-patch-automatic-via-patch_pycolmappy) |
 | **COLMAP** | **4.1.1**, the CUDA build | the official binary from github.com/colmap/colmap releases; conda-forge's is DLL-broken on Windows. `sfm` uses 4.1's option names |
 | **ffmpeg** | | e.g. `conda create -n colmap -c conda-forge ffmpeg` |
 | **Node and splat-transform** | **Node ≥ 24**, splat-transform at the pin | via nvm-windows (`nvm install 24` / `nvm use 24`). `export` and the map stages install the pinned splat-transform with npm when it is missing, and refuse another version |
 | **git** | | to clone gsplat |
 
-The steps `setup-env.bat` takes, in a normal command prompt, its paths from `settings.bat`:
+The steps, in Visual Studio 2022's x64 Native Tools Command Prompt, since gsplat's build needs
+its compiler; `<splat-maps>` is this folder:
 
 ```bat
 conda create -y -n gsplat python=3.11
+conda activate gsplat
 python -m pip install torch==2.8.0+cu128 torchvision==0.23.0+cu128 --index-url https://download.pytorch.org/whl/cu128
 python -m pip install ninja jaxtyping rich
-git clone --recursive https://github.com/nerfstudio-project/gsplat.git ..\..\gsplat
-cd ..\..\gsplat && git checkout v1.5.3 && git submodule update --init --recursive
-:: in the compiler's environment: vcvars64.bat, DISTUTILS_USE_SDK=1, NVCC_APPEND_FLAGS=-allow-unsupported-compiler
+git clone --recursive https://github.com/nerfstudio-project/gsplat.git C:\src\gsplat
+cd /d C:\src\gsplat && git checkout v1.5.3 && git submodule update --init --recursive
+set DISTUTILS_USE_SDK=1
+set MAX_JOBS=8
+set NVCC_APPEND_FLAGS=-allow-unsupported-compiler
 python -m pip install . --no-build-isolation --no-cache-dir
-python -m pip install -r <splat-maps>\scripts\windows\requirements-min.txt --no-build-isolation
+python -m pip install -r <splat-maps>\gsplat-requirements.txt --no-build-isolation
+python -m pip install -e <splat-maps>
 python -m splat_maps.patch_pycolmap
 ```
 
-Each `python` is the env's own, and the last needs `splat-maps\src` on `PYTHONPATH`. The CLI
-then finds its tools by these settings, each from the environment, which `settings.bat` sets on
-Windows ([README](../README.md#settings)):
-
-| Setting | Read by | What it names |
-|---|---|---|
-| `SPLAT_FFMPEG` | `frames` | ffmpeg; `ffmpeg` on `PATH` if unset |
-| `SPLAT_COLMAP` | `sfm` | COLMAP; `colmap` on `PATH` if unset |
-| `SPLAT_GSPLAT` | `train` | gsplat's checkout, whose `examples/simple_trainer.py` it runs, in the CLI's own Python |
+`pip install -e` puts this package and its `splat-maps` command in the env, running from this
+checkout, so `train` runs gsplat's trainer in the same Python. The CLI finds its tools by the
+settings the [README](../README.md#settings) lists.
 
 ---
 
 <a id="windows"></a>
 ## Windows — gotchas
 
-Everything in this section is Windows-specific. The stages and `setup-env.bat` encapsulate it;
+Everything in this section is Windows-specific. The stages and the setup's steps encapsulate it;
 this documents what they do and why, so it is debuggable.
 
 ### The pycolmap patch (automatic, via `patch_pycolmap.py`)
 
-gsplat's bundled pycolmap (rmbrualla fork) is broken on Windows+Py3. `setup-env.bat` runs
+gsplat's bundled pycolmap (rmbrualla fork) is broken on Windows+Py3. The setup's last step runs
 `patch_pycolmap.py`, which idempotently fixes:
 - `scene_manager.py`: uint64 count reads use native `'L'` (4 bytes on Windows) → `'Q'`; camera
   header `'IiLL'` → `'<IiQQ'`.

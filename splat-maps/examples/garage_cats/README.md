@@ -8,13 +8,13 @@ below make it again from the capture.
 | File | Written by | What it is |
 |---|---|---|
 | `garage_cats.ent` | a person, from `viewpos` readings | The entities: worldspawn, four spawn spots, the intermission point and what it faces. Each comment gives the reading the entity came from |
-| `garage_cats.polish.json` | `polish.bat` | What the polish did, measured again: its arguments as `_pcq_polish`, the transform, the verify, and the source's licence |
-| `garage_cats.voxel.json`, `.voxel.bin` | `bake.bat` | The collision octree: the header, and the octree itself |
-| `garage_cats.collision.glb` | `bake.bat` | The octree as a mesh, for looking at and for the map editor |
-| `garage_cats.bake.json` | `bake.bat` | The bake's flags as `_pcq_bake`, the fill it searched for, and each spawn spot measured |
-| `garage_cats.tga` | `levelshot.bat` | The levelshot, 128 × 128, as Q3's `levelshot` command makes one |
-| `garage_cats.levelshot.png` | `levelshot.bat` | The full frame the levelshot is sampled from |
-| `garage_cats.arena` | `arena.bat` | The arena block: the map's name, its long name, its modes and its bots |
+| `garage_cats.polish.json` | `splat-maps polish` | What the polish did, measured again: its arguments as `_pcq_polish`, the transform, the verify, and the source's licence |
+| `garage_cats.voxel.json`, `.voxel.bin` | `splat-maps bake` | The collision octree: the header, and the octree itself |
+| `garage_cats.collision.glb` | `splat-maps bake` | The octree as a mesh, for looking at and for the map editor |
+| `garage_cats.bake.json` | `splat-maps bake` | The bake's flags as `_pcq_bake`, the fill it searched for, and each spawn spot measured |
+| `garage_cats.tga` | `splat-maps levelshot` | The levelshot, 128 × 128, as Q3's `levelshot` command makes one |
+| `garage_cats.levelshot.png` | `splat-maps levelshot` | The full frame the levelshot is sampled from |
+| `garage_cats.arena` | `splat-maps arena` | The arena block: the map's name, its long name, its modes and its bots |
 
 ## Rebuilding it
 
@@ -25,12 +25,12 @@ licence inside it, which the polish keeps. Then, from `splat-maps\`, with `nvm u
 ```bat
 mkdir data\garage_cats\map
 copy examples\garage_cats\garage_cats.ent data\garage_cats\map\
-scripts\windows\polish.bat data\garage\garage.sog data\garage_cats\map\garage_cats.sog 3.0 --player-height 0.5 --up-hint "0,-1,0"
-scripts\windows\bake.bat data\garage_cats\map\garage_cats.sog
-scripts\windows\levelshot.bat data\garage_cats\map\garage_cats.sog
-scripts\windows\arena.bat data\garage_cats\map\garage_cats.arena --ent data\garage_cats\map\garage_cats.ent --type "ffa tourney team clanarena" --bots "mynx orbb bitterman"
-scripts\windows\package_map.bat data\garage_cats\map\garage_cats.sog --author "<your name>"
-scripts\windows\deliver_map.bat data\garage_cats\map\map-garage_cats.pk3
+splat-maps polish data\garage\garage.sog data\garage_cats\map\garage_cats.sog 3.0 --player-height 0.5 --up-hint "0,-1,0"
+splat-maps bake data\garage_cats\map\garage_cats.sog
+splat-maps levelshot data\garage_cats\map\garage_cats.sog
+splat-maps arena data\garage_cats\map\garage_cats.arena --ent data\garage_cats\map\garage_cats.ent --type "ffa tourney team clanarena" --bots "mynx orbb bitterman"
+splat-maps package data\garage_cats\map\garage_cats.sog --author "<your name>"
+splat-maps deliver data\garage_cats\map\map-garage_cats.pk3
 ```
 
 The garage's capture is upside down in its file, hence `--up-hint`. The bake seeds from the

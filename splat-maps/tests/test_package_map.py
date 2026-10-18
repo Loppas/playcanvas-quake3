@@ -209,7 +209,7 @@ def git(folder, *args):
                     "-c", "user.email=test", *args], check=True, capture_output=True)
 
 
-def test_pipeline_commit_names_the_scripts_commit_and_whether_they_changed(tmp_path, monkeypatch):
+def test_pipeline_commit_names_the_commit_and_whether_the_package_changed(tmp_path, monkeypatch):
     monkeypatch.setattr(package_map, "HERE", str(tmp_path))
     assert package_map.pipeline_commit() == "unknown"
     git(tmp_path, "init", "-q")
@@ -223,8 +223,8 @@ def test_pipeline_commit_names_the_scripts_commit_and_whether_they_changed(tmp_p
     assert package_map.pipeline_commit() == head + "-dirty"
 
 
-def test_package_warns_when_the_scripts_have_changed(room, monkeypatch, capsys):
+def test_package_warns_when_the_package_has_changed(room, monkeypatch, capsys):
     monkeypatch.setattr(package_map, "pipeline_commit", lambda: "abc1234-dirty")
     monkeypatch.setattr("sys.argv", ["package_map.py", str(room), "--author", "A Mapper"])
     package_map.main()
-    assert "WARNING: the scripts have uncommitted changes" in capsys.readouterr().out
+    assert "WARNING: splat_maps has uncommitted changes" in capsys.readouterr().out

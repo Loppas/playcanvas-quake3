@@ -80,7 +80,7 @@ would be: `maps/<n>.sog`, `maps/<n>.voxel.*`, the entities in `maps/<n>.ent`, an
 space and delivers it here, from `splat-maps\`:
 
 ```bat
-scripts\windows\deliver_map.bat data\garage_rats\map\map-garage_rats.pk3
+splat-maps deliver data\garage_rats\map\map-garage_rats.pk3
 ```
 
 Every `public/maps/*.pk3` is mounted at the bottom of the search path, under the Quake 3 paks,
