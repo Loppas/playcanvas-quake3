@@ -17,8 +17,8 @@ every check. The tools are looked for, and the arguments checked, before the fra
 Usage:
     splat-maps all <video> <stem> <metric_height_m> --license FILE|FIELDS --author WHO
                    --box=x0,y0,z0,x1,y1,z1 [--outdoor] [--message TEXT] [--data DIR] [--fps 1.5]
-                   [--width 1920] [--cap-max N] [--max-steps N] [--port DIR] [--replace]
-                   [the polish's arguments]
+                   [--width 1920] [--min-sharpness 0.25] [--cap-max N] [--max-steps N]
+                   [--port DIR] [--replace] [the polish's arguments]
 
 `--box` is the bake's: the corners of the map in Q3 units, about the polished plan's centre,
 the floor at z = 0. A trained capture holds stray splats far past what was filmed, so every run
@@ -126,6 +126,9 @@ def main(argv=None, prog=None):
     ap.add_argument("--data", default="data", help="where the capture's folder goes (default data)")
     ap.add_argument("--fps", default="1.5", help="frames a second (default 1.5)")
     ap.add_argument("--width", default="1920", help="frame width in pixels (default 1920)")
+    ap.add_argument("--min-sharpness", default=str(frames.MIN_SHARPNESS),
+                    help="set aside frames under this fraction of the median sharpness "
+                         f"(default {frames.MIN_SHARPNESS}; 0 keeps every frame)")
     ap.add_argument("--cap-max", default="1000000", help="the most splats (default 1000000)")
     ap.add_argument("--max-steps", default="30000", help="training steps (default 30000)")
     ap.add_argument("--port", default=deliver_map.DEFAULT_PORT,
@@ -172,7 +175,8 @@ def main(argv=None, prog=None):
         print(f"\n########## all {n}/12: {name}", flush=True)
         module.main([str(a) for a in stage_argv], prog=f"{prog or 'all'}: {name}")
 
-    stage(1, "frames", frames, [args.video, dataset, "--fps", args.fps, "--width", args.width])
+    stage(1, "frames", frames, [args.video, dataset, "--fps", args.fps, "--width", args.width,
+                                "--min-sharpness", args.min_sharpness])
     stage(2, "sfm", sfm, [dataset])
     stage(3, "train", train, [dataset, "--cap-max", args.cap_max, "--max-steps", args.max_steps])
     stage(4, "export", export, [dataset, "--name", args.stem])

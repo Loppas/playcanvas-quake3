@@ -114,7 +114,8 @@ def test_all_runs_every_stage_in_order(tmp_path, stages):
     folder = dataset / "map"
     sog, ent, octree = (str(folder / f"yard{ext}") for ext in (".sog", ".ent", ".voxel.json"))
     assert stages == [
-        ("frames", [str(tmp_path / "yard.mov"), str(dataset), "--fps", "1.5", "--width", "1920"]),
+        ("frames", [str(tmp_path / "yard.mov"), str(dataset), "--fps", "1.5", "--width", "1920",
+                    "--min-sharpness", "0.25"]),
         ("sfm", [str(dataset)]),
         ("train", [str(dataset), "--cap-max", "1000000", "--max-steps", "10000"]),
         ("export", [str(dataset), "--name", "yard"]),
@@ -132,8 +133,10 @@ def test_all_runs_every_stage_in_order(tmp_path, stages):
     ]
 
 
-def test_all_names_the_map_and_replaces_a_delivered_one_when_told(tmp_path, stages):
-    run(tmp_path, "--message", "Out the Back", "--replace")
+def test_all_names_the_map_keeps_every_frame_and_replaces_a_delivered_one_when_told(
+        tmp_path, stages):
+    run(tmp_path, "--message", "Out the Back", "--replace", "--min-sharpness", "0")
+    assert dict(stages)["frames"][-2:] == ["--min-sharpness", "0"]
     entities = dict(stages)["entities"]
     assert entities[entities.index("--message") + 1] == "Out the Back"
     assert stages[-1][1][-1] == "--replace"

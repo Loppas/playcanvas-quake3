@@ -44,7 +44,9 @@ ceiling or hull, add `--outdoor` and give the height of its tallest thing instea
 starters: one spawn over the most densely captured floor, facing +X, and the intermission above
 it. Place the real ones afterwards ([maps.md](maps.md), step 4) and run its steps 5 to 9 again.
 It checks its tools and arguments before the frames, and stops at the first stage whose output
-fails its checks.
+fails its checks. It takes the training stages' own options too: `--fps`, `--width` and
+`--min-sharpness` for the frames, and `--cap-max` and `--max-steps` for the trainer (stage
+detail, below).
 
 Or the training stages one at a time, each on the capture's folder:
 
