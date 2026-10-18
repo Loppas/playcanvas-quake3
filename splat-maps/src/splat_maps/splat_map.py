@@ -11,7 +11,8 @@ What is here:
   - the four frames and the conversions between them;
   - the bake's sizes, chosen in Quake units and rounded as splat-transform rounds them;
   - a reader for the collision octree, answering in the sim's own voxels as the port does;
-  - the splat-transform version these scripts are pinned to.
+  - the splat-transform these scripts are pinned to: found, its version checked, and installed
+    with npm when it is missing.
 
 Requires numpy (present in the `gsplat` conda env).
 """
@@ -68,17 +69,10 @@ MAX_SPAWN_VARS_CHARS = 4096
 #: longest path, `maps/<n>.collision.glb`, fits `MAX_QPATH` with its NUL (§2.3).
 STEM_RE = re.compile(r"^[a-z0-9_]{1,44}$")
 
-def _pinned_version():
-    """`ST_VERSION` from pin-splat-transform.bat, the one place the pin is written."""
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "scripts",
-                        "windows", "pin-splat-transform.bat")
-    with open(path, encoding="utf-8") as fh:
-        return re.search(r"^set ST_VERSION=(\S+)", fh.read(), re.M).group(1)
-
-
 #: The splat-transform version these scripts' frame calibration and bake sizing were measured on
-#: (`docs/conventions.md`, "Current answer"). Anything else is refused until re-calibrated.
-SPLAT_TRANSFORM_VERSION = _pinned_version()
+#: (`docs/conventions.md`, "Current answer"). Anything else is refused, so moving the pin means
+#: re-running calibrate_transform and re-measuring a bake first.
+SPLAT_TRANSFORM_VERSION = "3.1.6"
 
 #: Twelve classnames that bind an inline model, which a splat map does not have (§3.3):
 #: `g_mover.c:978-1610`, and `InitTrigger` (g_trigger.c:26-33).
@@ -801,33 +795,49 @@ class Octree:
 # ------------------------------------------------------------------------------ splat-transform
 
 
+def _npm_command(name):
+    """The command npm put on PATH as `name`, in the form a subprocess can start, or None.
+
+    On Windows npm writes a `.cmd` beside a bare shell script, which CreateProcess cannot run
+    (WinError 2) and which some Pythons' `shutil.which` finds first, so the `.cmd` is asked for.
+    """
+    return shutil.which(f"{name}.cmd" if os.name == "nt" else name)
+
+
 def find_splat_transform():
-    return shutil.which("splat-transform") or shutil.which("splat-transform.cmd")
+    """splat-transform on PATH, whatever its version, or None."""
+    return _npm_command("splat-transform")
 
 
-def splat_transform_version(exe=None):
-    """The installed version, e.g. "3.1.6", from `splat-transform --version`."""
-    exe = exe or find_splat_transform()
-    if not exe:
-        return None
-    # 3.1.6 prints its version on stderr
+def splat_transform_version(exe):
+    """The version `exe --version` prints, e.g. "3.1.6", or None."""
     run = subprocess.run([exe, "--version"], capture_output=True, text=True)
     m = re.search(r"v(\d+\.\d+\.\d+)", run.stdout + run.stderr)
     return m.group(1) if m else None
 
 
 def require_splat_transform():
-    """The pinned splat-transform, or a FormatError naming what to install."""
+    """The pinned splat-transform, installed with npm if none is on PATH. A FormatError if
+    another version is, or if npm cannot install it."""
+    package = f"@playcanvas/splat-transform@{SPLAT_TRANSFORM_VERSION}"
     exe = find_splat_transform()
     if not exe:
-        raise FormatError("splat-transform is not on PATH: run `nvm use 24`, then "
-                          f"`npm install -g @playcanvas/splat-transform@{SPLAT_TRANSFORM_VERSION}`")
+        npm = _npm_command("npm")
+        if not npm:
+            raise FormatError(f"splat-transform is not on PATH, and nor is npm to install "
+                              f"{package}: put Node >= 24 on PATH (`nvm use 24`)")
+        print(f"  splat-transform is not on PATH: npm install -g {package}", flush=True)
+        if subprocess.run([npm, "install", "-g", package]).returncode != 0:
+            raise FormatError(f"npm could not install {package}")
+        exe = find_splat_transform()
+        if not exe:
+            raise FormatError(f"npm installed {package}, but not into a folder on PATH")
     got = splat_transform_version(exe)
     if got != SPLAT_TRANSFORM_VERSION:
-        raise FormatError(f"splat-transform {got} is installed, but these scripts are calibrated "
+        raise FormatError(f"splat-transform {got} is on PATH, but these scripts are calibrated "
                           f"for {SPLAT_TRANSFORM_VERSION}. Install it with `npm install -g "
-                          f"@playcanvas/splat-transform@{SPLAT_TRANSFORM_VERSION}`, or re-run "
-                          "calibrate_transform.py and re-measure the bake before moving the pin")
+                          f"{package}`, or re-run calibrate_transform and re-measure the bake "
+                          "before moving the pin")
     return exe
 
 

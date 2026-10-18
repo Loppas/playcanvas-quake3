@@ -25,7 +25,8 @@ import sys
 
 import numpy as np
 
-from .sog_inspect import find_splat_transform, load_sog
+from .sog_inspect import load_sog
+from .splat_map import find_splat_transform
 
 PROBES = [(30.0, 0.0, 0.0), (0.0, 30.0, 0.0), (0.0, 0.0, 30.0), (30.0, 20.0, 10.0)]
 CAP = 1_000_000        # covariance and third moments converge long before this

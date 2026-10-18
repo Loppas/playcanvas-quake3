@@ -27,7 +27,7 @@ already the game's.
 |---|---|
 | The training environment, from [training.md](training.md) → Windows | the `gsplat` Python, which has everything these scripts import: numpy, Pillow, and scipy, which comes in only as scikit-learn's dependency |
 | **Node ≥ 24** through nvm-windows | splat-transform. Run `nvm use 24` once per shell before the polish, the bake and the levelshot |
-| **splat-transform 3.1.6** | `pin-splat-transform.bat` installs it if it is missing and refuses any other version, since the frames and the bake were calibrated on 3.1.6 ([conventions.md](conventions.md), "Current answer") |
+| **splat-transform 3.1.6** | The polish, the bake and the levelshot install it with npm if it is missing, and refuse any other version, since the frames and the bake were calibrated on 3.1.6 ([conventions.md](conventions.md), "Current answer") |
 | **The port**, the checkout `splat-maps\` sits in | delivery writes to its `public\maps\`. `--port DIR` names another checkout |
 | **NetRadiant-custom 20260114**, only for the editor route | unzipped into `editor\netradiant-custom-20260114\`, which git ignores. It bundles q3map2 |
 

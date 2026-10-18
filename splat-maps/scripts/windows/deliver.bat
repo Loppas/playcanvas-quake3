@@ -21,7 +21,8 @@ for /f "delims=" %%F in ('dir /b /o-n "%PLYDIR%\point_cloud_*.ply"') do set PLY=
 if "%PLY%"=="" echo No PLY found in %PLYDIR% & exit /b 1
 
 echo Converting !PLY!
-call "%SCRIPT_DIR%pin-splat-transform.bat" || exit /b 1
+REM The pinned splat-transform, installed with npm if it is missing.
+"%SPLAT_PYTHON%" -c "from splat_maps import splat_map; splat_map.require_splat_transform()" || exit /b 1
 call splat-transform "!PLY!" "%OUT%\%PROJ%.sog" || exit /b 1
 call splat-transform "!PLY!" "%OUT%\%PROJ%_viewer.html" || exit /b 1
 echo.

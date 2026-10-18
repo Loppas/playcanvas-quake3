@@ -1,31 +1,40 @@
-"""Record what the polish did, keep the source's licence, and check the verify.
+"""Polish a trained SOG: level it, square it, scale it to metres, and put its floor at y = 0.
 
-The last step of polish.bat. The polish's parameters used to survive nowhere (the port's garage
-had to be reconstructed from a log), and `splat-transform -w` drops a SOG bundle's
-`license.txt`, which is how the source's CC BY credit was lost. This:
-  1. puts the input's `license.txt` back into the output bundle, stored, as the source had it.
-     A capture with none, such as these scripts' own `deliver.bat` writes, takes one from
-     `--license`: a file in superspl.at's layout, or the same `Key: value` fields in one string,
-     separated by semicolons. A source that carries its own is never replaced;
-  2. writes `<output stem>.polish.json`, holding the `_pcq_*` keys the polish owns
-     (`map-format.md` §7) and what the verify measured;
-  3. refuses the output unless the verify found it level, square, with its floor at 0 and its
-     clear height kept.
+The headless replacement for the manual SuperSplat pass. Its four steps check the output rather
+than assume it:
+  1. measure: `sog_inspect` measures the input and derives the transform;
+  2. apply: splat-transform writes the output through it;
+  3. verify: `sog_inspect` measures the output, as it now stands;
+  4. record:
+     - the input's `license.txt` goes back into the output, stored, as the source had it, since
+       `splat-transform -w` drops a SOG bundle's. A capture with none, such as one these
+       scripts trained, takes one from `--license`: a file in superspl.at's layout, or the same
+       `Key: value` fields in one string, separated by semicolons. A source that carries its
+       own is never replaced;
+     - `<output stem>.polish.json` holds the `_pcq_*` keys the polish owns (`map-format.md` §7)
+       and what the verify measured;
+     - the output is refused unless the verify found it level, square, with its floor at 0 and
+       its clear height kept.
 
 Usage:
-    python -m splat_maps.polish_record <input.sog> <output.sog> [--license FILE|FIELDS]
-                                       [the sog_inspect arguments polish.bat ran]
+    splat-maps polish <input.sog> <output.sog> <metric_height_m> [--license FILE|FIELDS]
+                      [sog_inspect's arguments, e.g. --player-height 0.5 --up-hint 0,-1,0]
 
-It reads the two reports sog_inspect wrote: `<input>_inspect/report.json` (the measure) and
-`<output>_inspect/report.json` (the verify).
+The three positional arguments come first. Any other argument is sog_inspect's, given to both
+measures. Outputs: <output.sog>, <output stem>.polish.json, and each measure's report and
+drawings, in <input stem>_inspect/ and <output stem>_inspect/.
+Requires numpy and Pillow, and splat-transform at the pinned version on PATH (Node >= 24).
 """
 
+import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 import zipfile
 
+from . import sog_inspect
 from . import splat_map as sm
 
 #: What a verify must show. The shipped garage verifies at 0.044 deg of tilt, -0.02 deg of yaw
@@ -77,23 +86,55 @@ def given_license(value):
     return "\n".join(lines).encode("utf-8")
 
 
-def main():
-    if len(sys.argv) < 3:
-        sys.exit(__doc__)
-    sys.stdout.reconfigure(encoding="utf-8")
-    src, out = sys.argv[1], sys.argv[2]
-    inspect_args = sys.argv[3:]
-    errors, warnings = [], []
-    given = None
-    if "--license" in inspect_args:
-        i = inspect_args.index("--license")
-        if i + 1 >= len(inspect_args):
-            sys.exit("ERROR: --license needs a file or 'Key: value; ...' fields")
-        given = given_license(inspect_args[i + 1])
-        del inspect_args[i:i + 2]
+def main(argv=None, prog=None):
+    ap = argparse.ArgumentParser(
+        prog=prog, description="Level, square and scale a trained SOG, and record the polish.",
+        epilog="Any other argument is sog_inspect's, given to both measures: --player-height, "
+               "--up-hint, --opacity, --no-yaw or --render, say.")
+    ap.add_argument("input", help="the trained .sog")
+    ap.add_argument("output", help="the polished .sog to write")
+    ap.add_argument("metric_height", metavar="metric_height_m",
+                    help="the real floor-to-ceiling height in metres, the scale's reference")
+    ap.add_argument("--license", help="the source's credit, for a capture with no license.txt of "
+                                      "its own: a file in superspl.at's layout, or its fields in "
+                                      "one string, \"Title: ...; Author: ...; Source: <link>; "
+                                      "License URL: <link>\"")
+    args, extra = ap.parse_known_args(argv)
+    sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
+    given = given_license(args.license) if args.license else None
+    try:
+        exe = sm.require_splat_transform()
+    except sm.FormatError as e:
+        sys.exit(f"ERROR: {e}")
+    inspect_args = ["--metric-height", args.metric_height, *extra]
 
-    measure = json.load(open(os.path.splitext(src)[0] + "_inspect/report.json", encoding="utf-8"))
-    verify = json.load(open(os.path.splitext(out)[0] + "_inspect/report.json", encoding="utf-8"))
+    print(f"\n=== 1/4  measuring {args.input}")
+    measure = sog_inspect.main([args.input, *inspect_args], prog=prog)
+
+    st_args = measure["splat_transform_args"]
+    print(f"\n=== 2/4  applying: splat-transform -w {args.input} {' '.join(st_args)} {args.output}")
+    if subprocess.run([exe, "-w", args.input, *st_args, args.output]).returncode != 0:
+        sys.exit("ERROR: splat-transform failed")
+
+    # The output is +Y up by construction, so the verify always hints +Y: the input's
+    # --up-hint 0,-1,0 would make it lock onto the ceiling. argparse keeps the last one given.
+    print(f"\n=== 3/4  verifying {args.output}   (expect tilt ~0, yaw ~0, floor y ~0)")
+    verify = sog_inspect.main([args.output, "--scale", "1.0", *extra, "--up-hint", "0,1,0"],
+                              prog=prog)
+
+    print("\n=== 4/4  recording the polish and keeping the source's licence")
+    record_polish(args.input, args.output, measure, verify, inspect_args, given)
+    print("\nDone. Compare the two report.json files and the plan/section drawings.")
+
+
+def record_polish(src, out, measure, verify, inspect_args, given):
+    """The polish's last step: `src`'s licence, or else `given`'s bytes, into `out`; the record
+    written beside `out`; and the verify checked. Exits 1 if anything is wrong.
+
+    `measure` and `verify` are sog_inspect's reports on `src` and `out`, and `inspect_args` the
+    measure's arguments, as given.
+    """
+    errors, warnings = [], []
 
     # The arguments that made the transform, as given, minus paths and displays.
     kept, skip = [], 0
@@ -109,7 +150,7 @@ def main():
     st_args = measure["splat_transform_args"]
     scale = st_args[st_args.index("-s") + 1]
 
-    # 1. The licence, back into the bundle: the source's own, or else the one given.
+    # The licence, back into the bundle: the source's own, or else the one given.
     with zipfile.ZipFile(src) as zin:
         lic_bytes = zin.read("license.txt") if "license.txt" in zin.namelist() else None
     if lic_bytes is not None and given is not None and given != lic_bytes:
@@ -137,7 +178,7 @@ def main():
         lic = read_license(lic_bytes.decode("utf-8", errors="replace"))
 
     record = {"_pcq_polish": polish, "_pcq_scale": scale,
-              "_pcq_splat_transform": sm.splat_transform_version()}
+              "_pcq_splat_transform": sm.SPLAT_TRANSFORM_VERSION}
     if lic_bytes is not None:
         missing = [k for k in NEEDED if not lic.get(k)]
         if missing:
@@ -157,7 +198,7 @@ def main():
             if record.get(key) and ('"' in record[key] or len(record[key]) > 1023):
                 errors.append(f"{key} cannot ride in an entity token: {record[key]!r}")
 
-    # 3. The verify, checked.
+    # The verify, checked.
     tilt = verify["tilt_from_hint_deg"]
     yaw = verify["yaw_deg"]
     floor_units = verify["floor_y_units"] * sm.UNITS_PER_METRE  # the output is in metres

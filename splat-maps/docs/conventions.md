@@ -116,7 +116,7 @@ against another hungry process.
 ## Scale and game units
 
 **32 units = 1 m; the player is 1.75 m** (Quake 3's 56-unit box; the port's `src/coords.ts`).
-Kept in `sog_inspect` as `UNITS_PER_METRE` / `PLAYER_HEIGHT_M`.
+Kept as `UNITS_PER_METRE` in `splat_map`, and `PLAYER_HEIGHT_M` in `sog_inspect`.
 
 **A "rats" map scales the world, not the player.** Because the player stays 1.75 m in world
 units, the player's box, step height and speeds all keep working, and the map's feel follows
@@ -190,7 +190,7 @@ binary, so the consumer still needs a reader — the port's is `readOctree`
 - **Bake the file that ships**, so the player collides with what they see.
 
 **Polish runs measure → apply → verify → record**, and the second measurement is the
-deliverable's warrant. `polish_record.py` fails the polish unless it shows tilt and yaw within
+deliverable's warrant. The record step fails the polish unless it shows tilt and yaw within
 0.1°, the floor within 1 unit of y = 0, and the clear height kept within 0.5%.
 - **The verify always hints +Y.** The output is +Y up by construction. Handing it the input's
   `--up-hint 0,-1,0` makes `sog_inspect` lock onto the ceiling and report the map upside down.
