@@ -56,8 +56,8 @@ theirs, except Unlagged's, which is GPL and translated (see [NOTICE](NOTICE)).
 ["Garage - High Detail Test"](https://superspl.at/scene/8f4d8e05) by
 [Ethan](https://superspl.at/user?id=ethan3111), licensed
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes: levelled, rescaled, voxel
-collision baked, and Quake 3 entities added. `garage_cats`' parts are in
-`splat-maps/examples/garage_cats/`, under the same licence.
+collision baked, and Quake 3 entities added. Both maps' parts are in `splat-maps/examples/`,
+under the same licence.
 
 ## Papers, specifications, formats and posts
 

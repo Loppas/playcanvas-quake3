@@ -66,12 +66,13 @@ set SPLAT_COLMAP=C:\Tools\colmap\bin\colmap.exe
 set SPLAT_FFMPEG=C:\Tools\ffmpeg\bin\ffmpeg.exe
 ```
 
-## The example
+## The examples
 
-[`examples/garage_cats/`](examples/garage_cats/) holds the parts of `garage_cats`, one of the
-port's maps, as the map steps wrote them: its hand-placed entities, its arena block, its bake and
-its levelshot, with what the polish and the bake recorded. The splat itself is left out, at 178 MB,
-and its README rebuilds the map from the capture it was made from.
+[`examples/`](examples/) holds the parts of the port's two garage maps, `garage_cats` and
+`garage_rats`, as the map steps wrote them: their hand-placed entities, their arena blocks and their
+levelshots, with what the polish and the bake recorded. The splats, at about 175 MB each, are left
+out with the octrees and the meshes. Each map's README rebuilds its map from the garage aligned at
+life size, which [`examples/README.md`](examples/README.md) makes from the capture.
 
 ## Tests
 
@@ -100,7 +101,7 @@ splat-maps/
 ├── tests/                   pytest for the stages that need no GPU, on a map they build
 ├── pyproject.toml, uv.lock  the package and its locked environment, which the tests run in
 ├── gsplat-requirements.txt  gsplat's example dependencies, for the training environment
-├── examples/garage_cats/    a map's parts, from polish to package
+├── examples/                two maps' parts, and the garage they start from
 ├── data/                    per-capture working data and outputs (git-ignored)
 └── editor/                  NetRadiant-custom, for placing entities (git-ignored)
 ```

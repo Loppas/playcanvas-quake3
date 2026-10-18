@@ -348,6 +348,7 @@ changes to one, bound to a key in `q3config.cfg` (`bind F9 "map <stem>"`).
     `viewpos` readings, and reproduced its octree byte for byte. Steps 4b–10 then placed its nine
     spawn spots, and the port played them.
   - Steps 2–9 built `garage_cats` from the same source in a row, with its spots scaled from
-    `garage_rats`' by a script outside the runbook. Its parts are in
-    [`examples/garage_cats/`](../examples/garage_cats/).
+    `garage_rats`' by a script outside the runbook.
+  - Both are rebuilt from the garage aligned at life size, and their parts are in
+    [`examples/`](../examples/).
   - A second capture, placed in the editor, is still to go through cold.
