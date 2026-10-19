@@ -17,6 +17,35 @@ capture ──▶ frames (ffmpeg) ──▶ sfm (COLMAP) ──▶ train (gsplat
 > `frames`, `sfm`, `train` and `export` run gsplat, COLMAP and splat-transform on the GPU, and
 > none of them has been tried on macOS or Linux.
 
+## What a splat is
+
+A Gaussian splat stores a scene as millions of soft, coloured blobs called Gaussians, with no
+surfaces or polygons. Each one has:
+
+- **a centre**;
+- **three sizes**, one along each of its own axes. Each is a standard deviation, σ: how far out
+  its density has fallen to 61% of its peak. So a Gaussian can be a ball, a flat disc or a
+  needle;
+- **a rotation**, which turns those axes;
+- **an opacity**, how much it blocks at its centre;
+- **a colour that can change with the angle it is seen from**, stored as spherical harmonics, so
+  a shiny surface can look different from each side.
+
+Its density falls off from its centre in a bell curve, e^(−½d²): d is how many of its own
+standard deviations out a point is, and e is Euler's number, about 2.718. That is 61% of its
+peak at one standard deviation, 14% at two and 1% at three. Flat Gaussians lying along a surface
+make up that surface.
+
+![What a splat is made of: one Gaussian with its centre, its two sizes as standard deviations, its turn, an opacity and a colour; its density across it, a bell curve at 61% of its peak at one standard deviation, 14% at two and 1% at three; and many flat Gaussians lying along a wall and a floor](images/splat-makeup.svg)
+
+A renderer draws a splat by projecting every Gaussian onto the screen as a soft ellipse, and
+blending them front to back. Training finds the Gaussians. It starts with one at each point
+structure from motion found, draws them from each frame's camera, compares the picture with the
+frame, and nudges every Gaussian's values to close the difference. gsplat's MCMC strategy, which
+`train` runs, also moves faint Gaussians to where they are needed and adds more, up to
+`--cap-max`, a million by default. The trainer writes the Gaussians to a PLY, and `export`
+compresses them into a SOG, the format the polish reads and the port draws.
+
 ---
 
 ## Quick start

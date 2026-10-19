@@ -131,7 +131,26 @@ above, square to the page, and the two sections a level floor at 0. It writes `<
 splat-maps bake data/<project>/map/<stem>.sog --seed x,y,z
 ```
 
-The seed is the bake's one point inside the room, and both of its passes go by it:
+**First, the splat becomes voxels**: cubes `--voxel` units on a side, 8 by default, each solid
+or empty. For each voxel, every Gaussian near it adds to a total
+([training.md](training.md#what-a-splat-is) says what a Gaussian is):
+- **Only if it reaches.** A Gaussian is cut off at three standard deviations. One whose box at
+  that distance misses the voxel adds nothing.
+- **At the voxel's nearest point.** It measures d, how many of its own standard deviations out
+  the voxel's point nearest its centre is.
+- **Its opacity × e^(−½d²)**: all of its opacity at d = 0, 61% at one standard deviation, 14%
+  at two.
+
+The total becomes an opacity the way light fades through fog, 1 − e^(−total), and the voxel is
+solid at 0.1 or more, splat-transform's default. Then a lone solid voxel is cleared, and an
+empty one walled in on all six sides is filled. So faint splats add up: a few floaters in the
+room's air can make a solid voxel the player bumps into unseen.
+
+![The bake, one Gaussian and one voxel: the Gaussian's box at three standard deviations reaches the voxel; in the Gaussian's own frame the voxel's nearest point is d standard deviations out; it adds its opacity times e to the minus half d squared](images/voxelise-one-gaussian.svg)
+
+![The bake, every voxel's total: the total becomes an opacity, 1 minus e to the minus total, solid from 0.105; summed in every voxel of a slice, the solid ones outlined](images/voxelise-slice.svg)
+
+Then the seed. It is the bake's one point inside the room, and both of its next passes go by it:
 - **The exterior fill** seals the room. It thickens the walls to close small holes, floods inward
   from the grid's edges, and fills everything the flood reaches. If the flood reaches the seed,
   the walls leak: splat-transform skips the fill, and the bake reports a `LEAK`.
