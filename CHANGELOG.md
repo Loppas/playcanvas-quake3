@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/Loppas/playcanvas-quake3/compare/v0.1.0...v0.2.0) (2026-10-19)
+
+
+### Features
+
+* **splat-maps:** make the scripts one package with a CLI ([#24](https://github.com/Loppas/playcanvas-quake3/issues/24)) ([e004336](https://github.com/Loppas/playcanvas-quake3/commit/e004336a264760f8ec4aa67f9c35ff84605d5958))
+
+
+### Bug Fixes
+
+* **pak:** end an entry's read at the next local header ([#34](https://github.com/Loppas/playcanvas-quake3/issues/34)) ([6ec0453](https://github.com/Loppas/playcanvas-quake3/commit/6ec04532ed282aed89c7f97384ff001305bcd634))
+
 ## 0.1.0 (2026-10-18)
 
 
