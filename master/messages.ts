@@ -59,7 +59,7 @@ export interface MessagesOptions {
   now: () => number;
   /** `rand()`'s draw, from 0 up to 1. */
   random: () => number;
-  /** A `getinfo` to a server, sent down a data channel the master dials to it. */
+  /** A `getinfo` to a server: down a data channel the master dials to it, or the server's link. */
   sendGetInfo: (to: NetAdr, data: Uint8Array) => void;
   /** Every server registered with the master, which `local` lists from. */
   registered: () => NetAdr[];

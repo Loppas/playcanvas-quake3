@@ -3,7 +3,15 @@ import type { LookupAddress } from 'node:dns';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { encodeFrame, type Resolved } from '../src/net/master-protocol';
-import { adrToStringWithPort, NA, netadr, PORT_MASTER, type NetAdr } from '../src/net/net';
+import {
+  adrToStringWithPort,
+  NA,
+  netadr,
+  PORT_MASTER,
+  type NetAdr,
+  type NetPacket
+} from '../src/net/net';
+import type { PeerConnectionFactory } from '../src/net/peer-signalling';
 import { FakeRtc, settle } from '../src/net/peer-test-fixtures';
 import {
   connectionAddress,
@@ -15,6 +23,7 @@ import {
   RELAY_PERIOD
 } from './master-server';
 import { MASTER_ADR, masterPeer, oob, read, readList, text } from './master-test-fixtures';
+import { TIMEOUT_HEARTBEAT } from './servers';
 
 describe('the master', () => {
   let rtc: FakeRtc;
@@ -25,13 +34,13 @@ describe('the master', () => {
   let master: MasterServer;
   const clock = () => now;
 
-  beforeEach(() => {
-    rtc = new FakeRtc();
-    now = 0;
-    lines = [];
-    names = new Map();
-    master = new MasterServer({
-      createPeerConnection: rtc.create,
+  /**
+   * A master that dials a heartbeating server with these peer connections, or else checks it down
+   * the server's own link.
+   */
+  function newMaster(createPeerConnection?: PeerConnectionFactory): MasterServer {
+    return new MasterServer({
+      createPeerConnection,
       now: clock,
       random: () => 0,
       lookup: async (name) => {
@@ -41,6 +50,14 @@ describe('the master', () => {
       },
       print: (line) => lines.push(line)
     });
+  }
+
+  beforeEach(() => {
+    rtc = new FakeRtc();
+    now = 0;
+    lines = [];
+    names = new Map();
+    master = newMaster(rtc.create);
   });
 
   /** A program's socket at the master, from `ip`. */
@@ -66,24 +83,44 @@ describe('the master', () => {
     return read(client.socket).map(({ data }) => readList(data));
   }
 
-  /**
-   * A server's heartbeat, and the `getinfo` it earns read and answered as a host answers one.
-   *
-   * @returns the `getinfo`, as the server read it
-   */
-  async function heartbeat(program: ReturnType<typeof peer>, clients = '1') {
+  /** A server's heartbeat, and the `getinfo` it earns, as the server read it. */
+  async function getInfo(program: ReturnType<typeof peer>) {
     program.socket.send(oob('heartbeat DarkPlaces\n'), MASTER_ADR);
     await settle();
     // One down a channel already open reaches the master's own socket, which it reads by frames.
     master.frame();
     await settle();
     const [getinfo] = read(program.socket);
-    const challenge = text(getinfo.data).slice('\xff\xff\xff\xffgetinfo '.length);
+    return getinfo;
+  }
+
+  /** The challenge a `getinfo` carries. */
+  function challengeOf(getinfo: NetPacket): string {
+    return text(getinfo.data).slice('\xff\xff\xff\xffgetinfo '.length);
+  }
+
+  /** An `infoResponse` with this challenge, sent back where a `getinfo` came from. */
+  async function infoResponse(
+    program: ReturnType<typeof peer>,
+    getinfo: NetPacket,
+    challenge: string,
+    clients = '1'
+  ) {
     const keys = `\\challenge\\${challenge}\\gamename\\PlayCanvasQuake\\protocol\\1`;
     const counts = `\\clients\\${clients}\\sv_maxclients\\8`;
     program.socket.send(oob(`infoResponse\n${keys}${counts}`), getinfo.from);
     await settle();
     master.frame();
+  }
+
+  /**
+   * A server's heartbeat, and the `getinfo` it earns read and answered as a host answers one.
+   *
+   * @returns the `getinfo`, as the server read it
+   */
+  async function heartbeat(program: ReturnType<typeof peer>, clients = '1') {
+    const getinfo = await getInfo(program);
+    await infoResponse(program, getinfo, challengeOf(getinfo), clients);
     return getinfo;
   }
 
@@ -202,6 +239,65 @@ describe('the master', () => {
       program.socket.send(oob('heartbeat DarkPlaces\n'), MASTER_ADR);
       await settle();
       expect(read(program.socket)).toEqual([]);
+      expect(await ask('getservers PlayCanvasQuake 1 empty full')).toEqual([[]]);
+    });
+  });
+
+  describe("a heartbeat, at a master that checks down the server's own link", () => {
+    beforeEach(() => {
+      master = newMaster();
+    });
+
+    it("earns a getinfo as from the master's address, and its answer lists it", async () => {
+      const program = await server('203.0.113.9');
+      const getinfo = await heartbeat(program);
+
+      expect(getinfo.from).toEqual(MASTER_ADR);
+      expect(rtc.connections).toEqual([]);
+      expect(await ask('getservers PlayCanvasQuake 1')).toEqual([['203.0.113.9:27960']]);
+    });
+
+    it('drops a signal for the master, which dials nobody', async () => {
+      const client = peer('198.51.100.4');
+      await settle();
+      const signal = { dial: 1, description: { type: 'answer' as const, sdp: '' } };
+      client.ws.send(encodeFrame({ kind: 'signal', peer: null, signal }));
+      await settle();
+      expect(client.ws.readyState).toBe(1);
+      expect(rtc.connections).toEqual([]);
+    });
+
+    it('closes every socket when it closes', async () => {
+      const program = await server('203.0.113.9');
+      await heartbeat(program);
+      master.close();
+      await settle();
+      expect(program.ws.readyState).toBe(3);
+    });
+  });
+
+  describe.each([
+    ['down a channel the master dials', true],
+    ["down the server's own link", false]
+  ])('a server checked %s', (_, dials) => {
+    beforeEach(() => {
+      if (!dials) master = newMaster();
+    });
+
+    it('is not listed for an answer with the wrong challenge', async () => {
+      const program = await server('203.0.113.9');
+      await infoResponse(program, await getInfo(program), 'wrong');
+      expect(lines).toContain('> WARNING: invalid challenge from 203.0.113.9:27960 (wrong)');
+      expect(await ask('getservers PlayCanvasQuake 1 empty full')).toEqual([[]]);
+    });
+
+    it('is forgotten with no answer within 2 seconds', async () => {
+      const program = await server('203.0.113.9');
+      const getinfo = await getInfo(program);
+      // In dpmaster's whole seconds, a new server is forgotten once its third second has begun.
+      now += (TIMEOUT_HEARTBEAT + 1) * 1000;
+      await infoResponse(program, getinfo, challengeOf(getinfo));
+      expect(lines).toContain('> WARNING: infoResponse from unknown server 203.0.113.9:27960');
       expect(await ask('getservers PlayCanvasQuake 1 empty full')).toEqual([[]]);
     });
   });

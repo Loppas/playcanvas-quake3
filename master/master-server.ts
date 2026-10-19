@@ -38,10 +38,13 @@ import { MAX_SERVERS_PER_ADDRESS, ServerList } from './servers';
  * a server the port it asks for, looks a name up for a client, and passes signals and
  * connectionless datagrams between sockets that have no data channel to each other.
  *
- * It has a socket of its own, as dpmaster has its UDP one: a heartbeat's `getinfo` goes down a
- * data channel the master dials to the server, so a server is listed only once a channel to
- * it opens. That socket's signals pass through the master as any socket's do, naming no address,
- * as a frame to or from the master itself does.
+ * A heartbeat's `getinfo` goes one of two ways:
+ * - given peer connections, the master has a socket of its own, as dpmaster has its UDP one, and
+ *   sends it down a data channel it dials to the server, so a server is listed only once the
+ *   master can reach it as a player would. That socket's signals pass through the master as any
+ *   socket's do, naming no address, as a frame to or from the master itself does;
+ * - without them, down the server's own WebSocket, as a datagram from the master, which shows
+ *   only that the server answers.
  */
 
 /** The ICE servers every greeting names: Cloudflare's free STUN. */
@@ -71,8 +74,12 @@ export const RELAY_PERIOD = 50;
 const OPEN = 1;
 
 export interface MasterServerOptions {
-  /** The peer connections of the master's own socket: node-datachannel's, or a test's. */
-  createPeerConnection: PeerConnectionFactory;
+  /**
+   * The peer connections of the master's own socket, which dials a heartbeating server for its
+   * `getinfo`: node-datachannel's, or a test's. Without them the `getinfo` goes down the server's
+   * own WebSocket.
+   */
+  createPeerConnection?: PeerConnectionFactory;
   /** The ICE servers the greetings name, and the master's own socket gathers through. */
   iceServers?: IceServer[];
   /** `Sys_Milliseconds`. */
@@ -97,6 +104,13 @@ interface Connection {
   bucket: LeakyBucket;
 }
 
+/** The master's own socket, its signalling, and the link that carries its signals. */
+interface OwnSocket {
+  socket: PeerSocket;
+  signalling: PeerSignalling;
+  link: SignallingLink;
+}
+
 export class MasterServer {
   private readonly iceServers: IceServer[];
   private readonly now: () => number;
@@ -106,8 +120,8 @@ export class MasterServer {
   private readonly connections = new Map<string, Connection>();
   private readonly servers: ServerList;
   private readonly messages: Messages;
-  /** The master's own socket, which dials a heartbeating server. */
-  private readonly own: { socket: PeerSocket; signalling: PeerSignalling; link: SignallingLink };
+  /** The master's own socket, which dials a heartbeating server, if it has peer connections. */
+  private readonly own: OwnSocket | null = null;
 
   constructor(options: MasterServerOptions) {
     this.iceServers = options.iceServers ?? ICE_SERVERS;
@@ -116,21 +130,23 @@ export class MasterServer {
     this.print = options.print ?? console.log;
     const random = options.random ?? Math.random;
 
-    // The master names itself as a program names itself: the loopback, which no peer is.
-    const link: SignallingLink = {
-      master: netadr(NA.LOOPBACK),
-      iceServers: this.iceServers,
-      onFrame: null,
-      send: (frame) => this.fromOwn(frame)
-    };
-    const { socket, signalling } = createPeerSocket({
-      links: [link],
-      createPeerConnection: options.createPeerConnection,
-      dials: true,
-      relays: false,
-      now: this.now
-    });
-    this.own = { socket, signalling, link };
+    if (options.createPeerConnection !== undefined) {
+      // The master names itself as a program names itself: the loopback, which no peer is.
+      const link: SignallingLink = {
+        master: netadr(NA.LOOPBACK),
+        iceServers: this.iceServers,
+        onFrame: null,
+        send: (frame) => this.fromOwn(frame)
+      };
+      const { socket, signalling } = createPeerSocket({
+        links: [link],
+        createPeerConnection: options.createPeerConnection,
+        dials: true,
+        relays: false,
+        now: this.now
+      });
+      this.own = { socket, signalling, link };
+    }
 
     this.servers = new ServerList(this.print);
     this.messages = new Messages({
@@ -138,7 +154,7 @@ export class MasterServer {
       throttle: new Throttle(),
       now: () => Math.floor(this.now() / 1000),
       random,
-      sendGetInfo: (to, data) => socket.send(data, to),
+      sendGetInfo: (to, data) => this.sendGetInfo(to, data),
       registered: () =>
         [...this.connections.values()].filter((c) => c.registered).map((c) => c.address),
       print: this.print
@@ -178,10 +194,11 @@ export class MasterServer {
   }
 
   /**
-   * What reached the master's own socket: whatever servers sent down the channels it dialled,
-   * their `infoResponse`s among it. Reading it is also what closes a channel gone idle.
+   * What reached the master's own socket, if it has one: whatever servers sent down the channels
+   * it dialled, their `infoResponse`s among it. Reading it is also what closes a channel gone idle.
    */
   frame(): void {
+    if (this.own === null) return;
     const { socket } = this.own;
     for (let packet; (packet = socket.receive()) !== null; ) {
       const { from } = packet;
@@ -191,7 +208,7 @@ export class MasterServer {
 
   /** Every connection and every channel, closed. */
   close(): void {
-    this.own.signalling.close();
+    this.own?.signalling.close();
     for (const connection of [...this.connections.values()]) connection.ws.close();
   }
 
@@ -223,7 +240,7 @@ export class MasterServer {
         if (this.overLimit(connection)) return;
         const { signal } = frame;
         const passed: MasterFrame = { kind: 'signal', peer: connection.address, signal };
-        if (frame.peer === null) this.own.link.onFrame?.(passed);
+        if (frame.peer === null) this.own?.link.onFrame?.(passed);
         else this.sendTo(frame.peer, passed);
         return;
       }
@@ -316,6 +333,15 @@ export class MasterServer {
       address = { ...address, port: address.port === 0xffff ? 1 : address.port + 1 };
     }
     return address;
+  }
+
+  /**
+   * A `getinfo` to a server: down a channel the master's own socket dials, or else down the
+   * server's link as a datagram from the master, which the server answers the same way.
+   */
+  private sendGetInfo(to: NetAdr, data: Uint8Array): void {
+    if (this.own !== null) this.own.socket.send(data, to);
+    else this.sendTo(to, { kind: 'datagram', data: data as Uint8Array<ArrayBuffer> });
   }
 
   /** A frame the master's own socket sends: a signal to a server it has dialled. */
