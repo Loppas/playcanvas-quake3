@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/Loppas/playcanvas-quake3/compare/v0.2.0...v0.3.0) (2026-10-19)
+
+
+### Features
+
+* refuse a splat map whose layout version the port doesn't know ([#45](https://github.com/Loppas/playcanvas-quake3/issues/45)) ([615df4b](https://github.com/Loppas/playcanvas-quake3/commit/615df4bbf10c72948b9b39ee3494732321a70f7b))
+
 ## [0.2.0](https://github.com/Loppas/playcanvas-quake3/compare/v0.1.0...v0.2.0) (2026-10-19)
 
 
