@@ -11,6 +11,8 @@ Good capture is the biggest quality lever — nail this and the cleanup after tr
 3. **Close the loop.** Return to your start and overlap the first frames so poses form a
    consistent ring.
 
+![Filming a room. From above: a ring along the walls that pauses at each corner and goes back over its start, and a slow pass over the whole floor. From the side: rings at low, eye and high heights, a pass tilted down at the floor, and one tilted up at the ceiling](images/capture-path.svg)
+
 ## Universal (both modalities)
 
 - [ ] Full manual: fixed shutter, ISO, focus, white balance — one setting all session

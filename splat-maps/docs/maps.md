@@ -117,6 +117,8 @@ splat-maps polish data/<project>/results/mcmc/<project>.sog data/<project>/map/<
   far above it; the section drawings show where it lies. The bake takes `--outdoor` too (step 3).
 - Add `--license …` for a capture with no `license.txt` of its own (step 1).
 
+![The polish on the garage: as trained, upside down and tilted in its own units; the floor and ceiling fitted, the up hint picking the floor; from above, turned to square the walls and centred; levelled with its floor at 0, and scaled 3.5 times for a 0.5 m player](images/polish.svg)
+
 **Check:** the last step prints four `ok` lines, tilt and yaw within 0.1°, the floor within 1
 unit of z = 0 and the clear height kept, and the source's credit as `_pcq_source` and
 `_pcq_license`. Look at the drawings in `<stem>_inspect\`: `plan.png` should show the room from
@@ -247,7 +249,7 @@ the readings as they are printed:
 splat-maps entities readings data/<project>/map/<stem>.ent --message "The Garage" --spawn "(-4 -4 69) : 0" --intermission "(1056 2016 868) : 242" --look-at "(0 0 100) : 0" --octree data/<project>/map/<stem>.voxel.json
 ```
 
-It applies §3.4's rules (a spawn spot is its reading less 26 in z), gives the first spawn
+It applies [§3.4](map-format.md#34-placing-entities-with-viewpos)'s rules (a spawn spot is its reading less 26 in z), gives the first spawn
 `spawnflags 1`, and with `--octree` checks each spot as the lint will. `--spawn` repeats.
 
 ### 5. Bake again, from the spawn

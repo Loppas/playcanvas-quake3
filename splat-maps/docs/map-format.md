@@ -301,6 +301,8 @@ Three rules turn a reading into a key:
   at. The game computes the angles from the two points (`g_main.c:974–981`).
 - **Other point entities** take the reading as it is.
 
+![A spawn spot from a viewpos reading: the view is 26 units above the origin and the box's foot 24 below it, so a reading at height 50 gives a spot at 24, whose box rests on the floor; the player spawns 9 units higher and drops](images/spawn-from-viewpos.svg)
+
 `write_ent.py` applies these rules to readings pasted as `viewpos` prints them. It notes each
 reading above its entity, and checks the spots in the bake as L20–L22 do.
 
@@ -516,6 +518,8 @@ crouch through.
 
   Each value sits half a voxel inside its rounding boundary, so floating point cannot tip it.
 
+![The carve's box beside the crouched player's 30 by 40 units: 3 by 5 voxels, 24 by 40 units, at 8-unit voxels; 7 by 9, 28 by 36, at 4; 15 by 19, 30 by 38, at 2](images/carve-box.svg)
+
 | Voxel | `--voxel-size` | `--voxel-carve h,r` | Carve box, in units |
 |---|---|---|---|
 | 8 units | 0.25 | 0.75,0.125 | 24 × 40 |
@@ -531,6 +535,8 @@ works in three steps (`fillExterior`, cli.mjs):
 1. It grows the solid voxels by ⌈d/v⌉ in every direction.
 2. It floods the grown grid from its boundary.
 3. It grows what the flood reached by the same amount and makes it solid.
+
+[maps.md](maps.md#3-bake-from-a-seed)'s step 3 draws it, and the carve, on a slice of a room.
 
 The consequences:
 - **A narrow hole stops the flood.** A hole in the hull narrower than 2⌈d/v⌉ voxels stops it,
