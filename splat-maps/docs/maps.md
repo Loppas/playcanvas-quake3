@@ -129,8 +129,16 @@ above, square to the page, and the two sections a level floor at 0. It writes `<
 splat-maps bake data/<project>/map/<stem>.sog --seed x,y,z
 ```
 
-The bake keeps open only what a player-sized box can reach from the seed, so the seed must be in
-the room's open air. With no entities yet, choose it from the polish:
+The seed is the bake's one point inside the room, and both of its passes go by it:
+- **The exterior fill** seals the room. It thickens the walls to close small holes, floods inward
+  from the grid's edges, and fills everything the flood reaches. If the flood reaches the seed,
+  the walls leak: splat-transform skips the fill, and the bake reports a `LEAK`.
+- **The carve** keeps the play space. It floods out from the seed wherever a crouching player's
+  box fits, and fills everything it doesn't reach: pockets behind and under the capture's
+  surfaces, and any space joined to the seed only through a gap the box can't pass.
+
+So the seed must be in the room's open air, where players will be. A seed in a sealed pocket
+keeps that pocket and fills the room. With no entities yet, choose it from the polish:
 - x and y from `plan.png`: a spot over open floor. `0,0` is the plan's centre.
 - z between the floor and the ceiling, in units. The polish prints the clear height in metres, and
   32 units make a metre.
