@@ -163,30 +163,32 @@ is appropriate: run the COLMAP commands `sfm` runs, with `exhaustive_matcher` in
 ## (d) HARD INTERIORS — white / glossy / low-texture rooms
 
 Modern kitchens, bathrooms, and laundries are the **worst case** for Gaussian splatting: white
-cabinets/walls/counters give almost no photometric gradient, and glossy surfaces, glass, and
-stainless add view-dependent reflections that corrupt SfM. One kitchen capture through this
-pipeline collapsed to fog — not a pipeline bug, but the capture. Each failure below maps to a
-fix.
+cabinets, walls and counters give almost no photometric gradient, and glossy surfaces, glass, and
+stainless add view-dependent reflections that corrupt SfM. Film them with more care than the
+checklists above ask:
 
-**What went wrong (measured over 413 frames), and the fix:**
+- **Lock exposure and white balance**, full manual, one setting the whole clip. On iPhone, the
+  free **Blackmagic Camera** app locks ISO, shutter, white balance and focus; the built-in
+  Camera's AE-lock still drifts, and can't lock white balance.
+- **Keep lights and windows out of frame.** Turn ceiling downlights off, curtain bright windows,
+  expose for the room, and never pan across a light.
+- **Stand back, 1.5–2 m**, so several surfaces and objects fill each frame. A lone flat wall
+  filling the frame has no geometry to match.
+- **Shoot mirrors, glass and stainless at an oblique angle**, never head-on, with yourself out of
+  the reflection, and expect to crop them in SuperSplat after training.
+- **Add temporary texture**: patterned props on counters (books, patterned cloths), or low-tack
+  painter's-tape crosses on blank walls, peeled off after.
+- **Move slowly** and pause at corners, with the shutter at 1/120 or faster. A high frame rate
+  (60 fps) helps only if the motion is slow.
 
-| Observed failure | Evidence | Fix on re-shoot |
-|---|---|---|
-| **Exposure not locked** | frame brightness swung **50 → 211** / 255 | Lock exposure **and** white balance, full manual, one setting the whole clip. On iPhone use the free **Blackmagic Camera** app (manual ISO/shutter/WB/focus) — the built-in Camera's AE-lock still drifts and can't lock WB. |
-| **Frames aimed at ceilings / downlights** | up to **33% of a frame** blown pure white | Never pan across ceiling lights or windows. Turn downlights off, curtain bright windows, expose for the room. Keep lights **out of frame**. |
-| **Camera point-blank on blank walls** | blurriest frames were a wall ~30 cm away | Hold the camera **back (1.5–2 m)** so several surfaces/objects fill the frame. A single flat wall filling the frame has zero geometry — skip it. |
-| **Your own reflection / mirrors / glass** | photographer visible in a glossy wall | Watch for mirrors, glass, stainless, gloss paint. Shoot them at an **oblique angle** (never head-on), keep yourself out of the reflection, expect to crop them in SuperSplat after training. |
-| **Low texture everywhere** | sharpest frame only var-Laplacian **95** (soft) | **Add temporary texture**: set out patterned props (books, patterned cloths — the one patterned towel in-frame was the single strongest region), or low-tack painter's-tape crosses on blank walls (peel off after). Removes the "blank white" ambiguity for both SfM and the splat. |
-| **Motion blur** | ~18% of frames below half-median sharpness | Move **slowly**, pause at corners, keep shutter ≥ 1/120. High source fps (60) helps only if motion is slow. |
+**Match frames in order, densely.** The `sfm` stage's sequential matching is right for a
+walk-through, but it needs frames close together in time: extract them about 0.6 s apart. Don't
+reach for `exhaustive` matching to make up for sparse frames in a repetitive room: identical
+cabinet doors and doorframes match falsely, into a reconstruction that is wrong but fits its
+frames well, and trains to fog. Fix the coverage at capture and extraction, not with a heavier
+matcher.
 
-**Matcher note.** Plain **sequential** matching (the validated default in `sfm`) is
-correct for a walk-through — but it needs enough temporal overlap, so extract dense frames
-(frames ≲ 0.6 s apart). Do **not** reach for `exhaustive` matching to paper over sparse
-frames in a repetitive room: identical cabinet doors / doorframes produce false matches and a
-geometrically wrong (but low-reprojection-error) reconstruction that trains to fog. Fix
-coverage at capture and extraction, not with a heavier matcher.
-
-### Kitchen / hard-interior re-shoot — printable
+### Hard interior — printable
 ```
 [ ] Blackmagic Camera (or equal): LOCK ISO, shutter (>=1/120), focus, white balance
 [ ] Turn OFF ceiling downlights; curtain/avoid bright windows; even ambient light
@@ -201,5 +203,20 @@ coverage at capture and extraction, not with a heavier matcher.
 [ ] Extract ~0.6 s apart (dense) -> sequential matcher; expect ~300-500 sharp frames
 ```
 
-> If a re-shot room still won't resolve because it is genuinely featureless, that surface may
-> be a poor splat subject — stage it with props, or accept heavy cleanup there.
+> If a room still won't resolve because it is genuinely featureless, that surface may be a poor
+> splat subject — stage it with props, or accept heavy cleanup there.
+
+### Example: a kitchen that trained to fog
+
+This is a real capture that failed: a kitchen filmed for this pipeline, whose splat trained to
+fog. Nothing in the pipeline was wrong; the capture was. Its 413 frames, measured, showed each
+mistake the advice above prevents:
+
+| What went wrong | What the frames showed | The advice that prevents it |
+|---|---|---|
+| Exposure not locked | brightness swung from 50 to 211, of 255 | Lock exposure and white balance |
+| Frames aimed at ceilings and downlights | up to a third of a frame blown pure white | Keep lights and windows out of frame |
+| The camera point-blank on blank walls | the blurriest frames were a wall about 30 cm away | Stand back, 1.5–2 m |
+| The photographer reflected | the photographer visible in a glossy wall | Shoot reflective surfaces at an oblique angle |
+| Low texture everywhere | the sharpest frame was still soft, a Laplacian variance of only 95 | Add temporary texture: the one patterned towel in frame was the strongest region |
+| Motion blur | about 18% of frames below half the median sharpness | Move slowly |
