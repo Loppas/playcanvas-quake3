@@ -4,8 +4,8 @@ import { createServer } from 'node:net';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
 
-import { startMaster } from '../../master/master-server';
 import { MASTER_ADR, oob, readList, text } from '../../master/master-test-fixtures';
+import { startMaster } from '../../master/node-master';
 import { MasterLink } from '../net/master-link';
 import { masterAt } from '../net/masters';
 import type { DatagramSocket, NetPacket } from '../net/net';

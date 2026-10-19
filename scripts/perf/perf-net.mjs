@@ -91,7 +91,7 @@ const home = throwawayHome(
 );
 const { server, port } = await startVite('profiler');
 const load = (path) => server.ssrLoadModule(path);
-const { startMaster } = await load('/master/master-server.ts');
+const { startMaster } = await load('/master/node-master.ts');
 const { startDedicatedServer } = await load('/src/server/dedicated.ts');
 const { nodeServerNetwork } = await load('/src/server/node-network.ts');
 const { mountArchives } = await load('/src/pak/mount.ts');

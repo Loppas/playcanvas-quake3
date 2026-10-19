@@ -7,8 +7,9 @@ import { MasterLink, type WebSocketLike } from '../src/net/master-link';
 import { NA, netadr } from '../src/net/net';
 import { createPeerSocket, type PeerConnectionFactory } from '../src/net/peer-signalling';
 import type { PeerSocket } from '../src/net/peer-socket';
-import { listen, MasterServer, MAX_FRAME } from './master-server';
+import { MasterServer, MAX_FRAME } from './master-server';
 import { MASTER_ADR, oob, readList, text } from './master-test-fixtures';
+import { listen } from './node-master';
 
 /**
  * The master as `npm run master` runs it, on `ws` and node-datachannel, with programs of the port's
@@ -41,6 +42,7 @@ describe.skipIf(polyfill === null)('the master over ws and node-datachannel', WA
     const master = new MasterServer({
       createPeerConnection: create,
       iceServers: [],
+      lookup: async () => [],
       print: () => {}
     });
     const server: WebSocketServer = await listen(master, 0);

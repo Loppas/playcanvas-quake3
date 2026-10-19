@@ -2,7 +2,7 @@ import dgram from 'node:dgram';
 import { RTCPeerConnection } from 'node-datachannel/polyfill';
 import { WebSocket } from 'ws';
 
-import { startMaster, type RunningMaster } from '../../master/master-server';
+import { startMaster, type RunningMaster } from '../../master/node-master';
 import { atoi } from '../formats/c-scan';
 import type { CvarStore } from '../net/cvar';
 import type { IceServer } from '../net/master-protocol';

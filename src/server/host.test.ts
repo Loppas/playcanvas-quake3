@@ -2788,7 +2788,12 @@ describe('a server at the master', () => {
   it('answers the getinfo its heartbeat earns, down the channel the master dials', async () => {
     const rtc = new FakeRtc();
     const now = () => 0;
-    const master = new MasterServer({ createPeerConnection: rtc.create, now, print: () => {} });
+    const master = new MasterServer({
+      createPeerConnection: rtc.create,
+      now,
+      lookup: async () => [],
+      print: () => {}
+    });
     const server = masterPeer(master, rtc.create, '203.0.113.9', { dials: false, now });
     server.link.register(27960);
     await settle();
