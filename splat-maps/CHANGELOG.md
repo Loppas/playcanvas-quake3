@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/Loppas/playcanvas-quake3/compare/splat-maps-v0.1.0...splat-maps-v0.1.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* **splat-maps:** make public/maps when delivering to a fresh clone ([#38](https://github.com/Loppas/playcanvas-quake3/issues/38)) ([0517074](https://github.com/Loppas/playcanvas-quake3/commit/051707483949ceb6cb532d0866d659ab5d163280))
+
 ## 0.1.0 (2026-10-18)
 
 
