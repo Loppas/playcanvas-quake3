@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="390" viewBox="0 0 720 390" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<title>The carve's box, in whole voxels</title>
+<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 1 1 L 9 5 L 1 9 z" fill="context-stroke"/></marker></defs>
+<rect width="720" height="390" rx="8" fill="#ffffff" stroke="#D3D1C7"/>
+<text x="20" y="32" font-size="14" font-weight="600" fill="#2C2C2A">The carve's box, in whole voxels</text>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 40 98 L 40 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 72 98 L 72 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 104 98 L 104 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 136 98 L 136 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 168 98 L 168 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 200 98 L 200 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 40 98 L 200 98"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 40 130 L 200 130"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 40 162 L 200 162"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 40 194 L 200 194"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 40 226 L 200 226"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 40 258 L 200 258"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 40 290 L 200 290"/>
+<rect x="72" y="130" width="96" height="160" rx="0" fill="#1D9E75"/>
+<rect x="60" y="130" width="120" height="160" rx="0" fill="none" stroke="#D85A30" stroke-width="2" stroke-dasharray="5 3"/>
+<text x="120" y="312" font-size="12" fill="#2C2C2A" text-anchor="middle" font-weight="600">8-unit voxels</text>
+<text x="120" y="330" font-size="12" fill="#5F5E5A" text-anchor="middle">3 × 5 voxels: 24 × 40 units</text>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 288 130 L 288 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 304 130 L 304 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 320 130 L 320 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 336 130 L 336 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 352 130 L 352 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 368 130 L 368 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 384 130 L 384 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 400 130 L 400 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 416 130 L 416 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 432 130 L 432 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 288 130 L 432 130"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 288 146 L 432 146"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 288 162 L 432 162"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 288 178 L 432 178"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 288 194 L 432 194"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 288 210 L 432 210"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 288 226 L 432 226"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 288 242 L 432 242"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 288 258 L 432 258"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 288 274 L 432 274"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 288 290 L 432 290"/>
+<rect x="304" y="146" width="112" height="144" rx="0" fill="#1D9E75"/>
+<rect x="300" y="130" width="120" height="160" rx="0" fill="none" stroke="#D85A30" stroke-width="2" stroke-dasharray="5 3"/>
+<text x="360" y="312" font-size="12" fill="#2C2C2A" text-anchor="middle" font-weight="600">4-unit voxels</text>
+<text x="360" y="330" font-size="12" fill="#5F5E5A" text-anchor="middle">7 × 9 voxels: 28 × 36 units</text>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 130 L 532 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 540 130 L 540 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 548 130 L 548 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 556 130 L 556 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 564 130 L 564 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 572 130 L 572 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 580 130 L 580 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 588 130 L 588 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 596 130 L 596 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 604 130 L 604 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 612 130 L 612 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 620 130 L 620 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 628 130 L 628 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 636 130 L 636 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 644 130 L 644 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 652 130 L 652 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 660 130 L 660 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 668 130 L 668 290"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 130 L 668 130"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 138 L 668 138"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 146 L 668 146"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 154 L 668 154"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 162 L 668 162"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 170 L 668 170"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 178 L 668 178"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 186 L 668 186"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 194 L 668 194"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 202 L 668 202"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 210 L 668 210"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 218 L 668 218"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 226 L 668 226"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 234 L 668 234"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 242 L 668 242"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 250 L 668 250"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 258 L 668 258"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 266 L 668 266"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 274 L 668 274"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 282 L 668 282"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 532 290 L 668 290"/>
+<rect x="540" y="138" width="120" height="152" rx="0" fill="#1D9E75"/>
+<rect x="540" y="130" width="120" height="160" rx="0" fill="none" stroke="#D85A30" stroke-width="2" stroke-dasharray="5 3"/>
+<text x="600" y="312" font-size="12" fill="#2C2C2A" text-anchor="middle" font-weight="600">2-unit voxels</text>
+<text x="600" y="330" font-size="12" fill="#5F5E5A" text-anchor="middle">15 × 19 voxels: 30 × 38 units</text>
+<path fill="none" stroke="#D85A30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M 20 368 L 32 368" stroke-dasharray="3 3"/>
+<text x="37" y="372" font-size="12" fill="#5F5E5A" text-anchor="start">The crouched player, 30 × 40</text>
+<rect x="234.2" y="363" width="10" height="10" rx="2" fill="#1D9E75"/>
+<text x="251.2" y="372" font-size="12" fill="#5F5E5A" text-anchor="start">The carve's box</text>
+</svg>

@@ -15,7 +15,7 @@ set upstream in splat-maps' polish, not compensated for in the game.
 
 ## A rats map changes what "correct" looks like
 
-**Effects are authored for Quake distances; this map is 16.09× larger than one.** `garage_rats`
+**Effects are authored for Quake distances; this map is 17.5× larger than one.** `garage_rats`
 turns a 4.53 × 8.29 × 3.00 m garage into an 80 × 144 × 52 m room, so the far wall is ~4 600
 units away where a Q3 room puts one at 400–800. A correctly-sized rocket therefore recedes to a
 speck within half a second and takes about five seconds at 900 ups to cross the room — and

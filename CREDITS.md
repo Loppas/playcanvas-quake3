@@ -57,6 +57,7 @@ theirs, except Unlagged's, which is GPL and translated (see [NOTICE](NOTICE)).
 [Ethan](https://superspl.at/user?id=ethan3111), licensed
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes: levelled, rescaled, voxel
 collision baked, and Quake 3 entities added. Both maps' parts are in `splat-maps/examples/`,
+and their pk3s on [their release](https://github.com/Loppas/playcanvas-quake3/releases/tag/splat-maps-v0.1.0),
 under the same licence.
 
 ## Papers, specifications, formats and posts
@@ -71,6 +72,9 @@ under the same licence.
   and splat-transform's
   [voxel format](https://developer.playcanvas.com/user-manual/splat-transform/voxel-format/): how
   a splat map's splat and collision are read.
+- Polycam's ["How to Capture High-Fidelity Interior Scans in Object Mode"](https://learn.poly.cam/hc/en-us/articles/48339214285844-How-to-Capture-High-Fidelity-Interior-Scans-in-Object-Mode)
+  and Polyvia3D's ["Gaussian Splatting Mobile Capture"](https://www.polyvia3d.com/guides/gaussian-splatting-mobile-capture):
+  the capture checklists' camera angles, and filming each ring both ways.
 - [WebGPU](https://www.w3.org/TR/webgpu/), the W3C: its buffer usage flags.
 - [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110), HTTP Semantics: range requests, which every
   pak is read by.

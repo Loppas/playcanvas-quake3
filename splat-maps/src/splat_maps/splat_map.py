@@ -825,7 +825,7 @@ def require_splat_transform():
         npm = _npm_command("npm")
         if not npm:
             raise FormatError(f"splat-transform is not on PATH, and nor is npm to install "
-                              f"{package}: put Node >= 24 on PATH (`nvm use 24`)")
+                              f"{package}: put Node and its npm on PATH")
         print(f"  splat-transform is not on PATH: npm install -g {package}", flush=True)
         if subprocess.run([npm, "install", "-g", package]).returncode != 0:
             raise FormatError(f"npm could not install {package}")

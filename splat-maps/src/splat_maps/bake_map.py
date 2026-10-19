@@ -30,7 +30,7 @@ Usage:
 
 Outputs, beside the .sog unless --out-dir is given: <stem>.voxel.json, <stem>.voxel.bin,
 <stem>.collision.glb, <stem>.bake.json and <stem>.bake.log (splat-transform's own output).
-Requires numpy, and splat-transform at the pinned version on PATH (Node >= 24).
+Requires numpy, and splat-transform at the pinned version on PATH.
 """
 
 import argparse

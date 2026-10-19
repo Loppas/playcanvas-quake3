@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<title>A spawn spot from a viewpos reading</title>
+<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 1 1 L 9 5 L 1 9 z" fill="context-stroke"/></marker></defs>
+<rect width="720" height="400" rx="8" fill="#ffffff" stroke="#D3D1C7"/>
+<text x="20" y="32" font-size="14" font-weight="600" fill="#2C2C2A">A spawn spot from a viewpos reading</text>
+<path fill="none" stroke="#2C2C2A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M 60 330 L 660 330"/>
+<text x="64" y="348" font-size="12" fill="#5F5E5A" text-anchor="start">the floor</text>
+<rect x="137" y="94.8" width="126" height="235.2" rx="0" fill="#FBEAF0" stroke="#D4537E" stroke-width="1.5"/>
+<circle cx="200" cy="229.2" r="5" fill="#2C2C2A"/>
+<circle cx="200" cy="120" r="5" fill="#378ADD"/>
+<rect x="527" y="57" width="126" height="235.2" rx="0" fill="none" stroke="#D4537E" stroke-width="1.2" stroke-dasharray="5 4"/>
+<path fill="none" stroke="#D4537E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M 667 294.2 L 667 326" marker-end="url(#a)"/>
+<text x="675" y="315.1" font-size="12" fill="#D4537E" text-anchor="start">9</text>
+<text x="590" y="45" font-size="12" fill="#5F5E5A" text-anchor="middle">it spawns 9 units up, and drops</text>
+<path fill="none" stroke="#5F5E5A" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 111 328 L 111 235.2" marker-end="url(#a)"/>
+<path fill="none" stroke="#5F5E5A" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 111 231.2 L 111 324" marker-end="url(#a)"/>
+<text x="103" y="283.6" font-size="12" fill="#5F5E5A" text-anchor="end">24</text>
+<path fill="none" stroke="#5F5E5A" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 111 227.2 L 111 126" marker-end="url(#a)"/>
+<path fill="none" stroke="#5F5E5A" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 111 122 L 111 223.2" marker-end="url(#a)"/>
+<text x="103" y="178.6" font-size="12" fill="#5F5E5A" text-anchor="end">26</text>
+<path fill="none" stroke="#B4B2A9" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 207 120 L 275 120" stroke-dasharray="2 3"/>
+<text x="281" y="118" font-size="12" fill="#378ADD" text-anchor="start">the view: viewpos prints its height</text>
+<text x="281" y="134" font-size="12" fill="#5F5E5A" text-anchor="start">(x y 50) : yaw</text>
+<path fill="none" stroke="#B4B2A9" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 207 229.2 L 275 229.2" stroke-dasharray="2 3"/>
+<text x="281" y="227.2" font-size="12" fill="#2C2C2A" text-anchor="start">the spot's origin: 50 − 26 = 24</text>
+<text x="281" y="243.2" font-size="12" fill="#5F5E5A" text-anchor="start">so the box rests on the floor</text>
+<rect x="20" y="369" width="10" height="10" rx="2" fill="#D4537E"/>
+<text x="37" y="378" font-size="12" fill="#5F5E5A" text-anchor="start">The player's box, 30 × 56</text>
+<circle cx="220" cy="374" r="5" fill="#378ADD"/>
+<text x="232" y="378" font-size="12" fill="#5F5E5A" text-anchor="start">The view</text>
+<circle cx="306.2" cy="374" r="5" fill="#2C2C2A"/>
+<text x="318.2" y="378" font-size="12" fill="#5F5E5A" text-anchor="start">The origin</text>
+</svg>

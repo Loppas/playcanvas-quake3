@@ -1,8 +1,8 @@
 # garage_cats
 
 The parts of `garage_cats`, the garage at a 0.5 m player, as [maps.md](../../docs/maps.md)'s steps
-wrote them. Its pk3 packs them with the polished splat, the collision octree and mesh, and a
-readme. Those three are left out here, the splat at 176 MB, and the steps below make them again.
+wrote them. [Its pk3](https://github.com/Loppas/playcanvas-quake3/releases/download/splat-maps-v0.1.0/map-garage_cats.pk3)
+packs them with the polished splat, the collision octree and mesh, and a readme.
 
 | File | Written by | What it is |
 |---|---|---|
@@ -15,39 +15,9 @@ readme. Those three are left out here, the splat at 176 MB, and the steps below 
 
 ## Rebuilding it
 
-Make `data\garage\garage-aligned.sog` as [the examples' README](../README.md) has it. Then, from
-`splat-maps\`, with `nvm use 24` run once, copy its entities into the map's folder:
-
-**Windows (cmd)**
-
-```bat
-mkdir data\garage_cats\map
-copy examples\garage_cats\garage_cats.ent data\garage_cats\map\
-```
-
-**Linux/macOS (bash)**
-
-```bash
-mkdir -p data/garage_cats/map
-cp examples/garage_cats/garage_cats.ent data/garage_cats/map/
-```
-
-Then build it there, the same on both:
-
-```bash
-splat-maps polish data/garage/garage-aligned.sog data/garage_cats/map/garage_cats.sog 3.0 --player-height 0.5
-splat-maps bake data/garage_cats/map/garage_cats.sog
-splat-maps levelshot data/garage_cats/map/garage_cats.sog
-splat-maps arena data/garage_cats/map/garage_cats.arena --ent data/garage_cats/map/garage_cats.ent --type "ffa tourney team clanarena" --bots "mynx orbb bitterman"
-splat-maps package data/garage_cats/map/garage_cats.sog --author "<your name>"
-splat-maps deliver data/garage_cats/map/map-garage_cats.pk3
-```
-
-The bake seeds from the `.ent`'s first spawn spot. The arena and the polish's record come out as
-they are here, byte for byte, and the bake's record differs only in its timings and peak memory. The
-octree and the mesh come out as the map's pk3 has them, in `maps/`. Each polish encodes the splat's
-spherical harmonics afresh, so about one in eight of the levelshot's pixels may differ, by a level
-or two.
+[The splat-maps quick start](../../README.md#a-first-map-from-the-garage) rebuilds it, from the
+capture to the map in the game. [The examples' README](../README.md#a-rebuild) says what matches
+the pk3.
 
 ## Credit
 

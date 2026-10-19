@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="340" viewBox="0 0 720 340" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<title>The bake, splats to voxels: one Gaussian and one voxel</title>
+<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 1 1 L 9 5 L 1 9 z" fill="context-stroke"/></marker></defs>
+<rect width="720" height="340" rx="8" fill="#ffffff" stroke="#D3D1C7"/>
+<text x="20" y="32" font-size="14" font-weight="600" fill="#2C2C2A">The bake, splats to voxels: one Gaussian and one voxel</text>
+<text x="20" y="66" font-size="12" fill="#5F5E5A" text-anchor="start">1. Its box reaches the voxel</text>
+<rect x="20" y="76" width="212" height="220" rx="0" fill="none" stroke="#D3D1C7" stroke-width="0.5"/>
+<text x="254" y="66" font-size="12" fill="#5F5E5A" text-anchor="start">2. In its own frame: d</text>
+<rect x="254" y="76" width="212" height="220" rx="0" fill="none" stroke="#D3D1C7" stroke-width="0.5"/>
+<text x="488" y="66" font-size="12" fill="#5F5E5A" text-anchor="start">3. It adds opacity × e^(−½d²)</text>
+<rect x="488" y="76" width="212" height="220" rx="0" fill="none" stroke="#D3D1C7" stroke-width="0.5"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 27 77 L 27 295"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 57 77 L 57 295"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 87 77 L 87 295"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 117 77 L 117 295"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 147 77 L 147 295"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 177 77 L 177 295"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 207 77 L 207 295"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 21 274.5 L 231 274.5"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 21 244.5 L 231 244.5"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 21 214.5 L 231 214.5"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 21 184.5 L 231 184.5"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 21 154.5 L 231 154.5"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 21 124.5 L 231 124.5"/>
+<path fill="none" stroke="#D3D1C7" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" d="M 21 94.5 L 231 94.5"/>
+<rect x="87" y="184.5" width="30" height="30" rx="0" fill="#FAECE7" stroke="#D85A30" stroke-width="2"/>
+<rect x="63.2" y="117.8" width="167.8" height="109.5" rx="0" fill="none" stroke="#EF9F27" stroke-width="1.2" stroke-dasharray="5 4"/>
+<ellipse cx="150" cy="172.5" rx="66" ry="18" transform="rotate(-30 150 172.5)" fill="none" stroke="#378ADD" stroke-width="0.8" stroke-dasharray="3 3"/>
+<ellipse cx="150" cy="172.5" rx="33" ry="9" transform="rotate(-30 150 172.5)" fill="#378ADD" stroke="#378ADD" stroke-width="1.5" fill-opacity="0.2"/>
+<circle cx="150" cy="172.5" r="3" fill="#378ADD"/>
+<path fill="none" stroke="#D4537E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M 150 172.5 L 117 184.5"/>
+<circle cx="117" cy="184.5" r="4" fill="#D4537E"/>
+<text x="28" y="286" font-size="12" fill="#D4537E" text-anchor="start">the voxel's nearest point</text>
+<circle cx="360" cy="186" r="66" fill="none" fill-opacity="0.2" stroke="#378ADD" stroke-width="0.8"/>
+<text x="409.5" y="136.5" font-size="12" fill="#378ADD" text-anchor="start">3</text>
+<circle cx="360" cy="186" r="44" fill="none" fill-opacity="0.2" stroke="#378ADD" stroke-width="0.8"/>
+<text x="393.7" y="152.3" font-size="12" fill="#378ADD" text-anchor="start">2</text>
+<circle cx="360" cy="186" r="22" fill="#378ADD" fill-opacity="0.2" stroke="#378ADD" stroke-width="1.5"/>
+<text x="377.8" y="168.2" font-size="12" fill="#378ADD" text-anchor="start">1</text>
+<polygon points="309.6,197.9 326.9,234.6 336.9,171.1 319.6,134.4" fill="#FAECE7" fill-opacity="0.8" stroke="#D85A30" stroke-width="2"/>
+<path fill="none" stroke="#D4537E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M 360 186 L 336.9 171.1"/>
+<circle cx="336.9" cy="171.1" r="4" fill="#D4537E"/>
+<circle cx="360" cy="186" r="3" fill="#378ADD"/>
+<text x="262" y="286" font-size="12" fill="#D4537E" text-anchor="start">d = 1.25 standard deviations</text>
+<path fill="none" stroke="#5F5E5A" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 504 236 L 684 236"/>
+<path fill="none" stroke="#378ADD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M 504 116 L 505.8 116.1 L 507.6 116.3 L 509.4 116.7 L 511.2 117.2 L 513 117.8 L 514.8 118.6 L 516.6 119.5 L 518.4 120.6 L 520.2 121.8 L 522 123.1 L 523.8 124.6 L 525.6 126.1 L 527.4 127.8 L 529.2 129.6 L 531 131.4 L 532.8 133.4 L 534.6 135.5 L 536.4 137.6 L 538.2 139.8 L 540 142.1 L 541.8 144.4 L 543.6 146.8 L 545.4 149.2 L 547.2 151.7 L 549 154.2 L 550.8 156.7 L 552.6 159.2 L 554.4 161.8 L 556.2 164.3 L 558 166.9 L 559.8 169.4 L 561.6 171.9 L 563.4 174.4 L 565.2 176.9 L 567 179.3 L 568.8 181.7 L 570.6 184.1 L 572.4 186.4 L 574.2 188.7 L 576 191 L 577.8 193.1 L 579.6 195.3 L 581.4 197.3 L 583.2 199.3 L 585 201.3 L 586.8 203.2 L 588.6 205 L 590.4 206.7 L 592.2 208.4 L 594 210 L 595.8 211.6 L 597.6 213.1 L 599.4 214.5 L 601.2 215.9 L 603 217.2 L 604.8 218.4 L 606.6 219.6 L 608.4 220.7 L 610.2 221.8 L 612 222.8 L 613.8 223.7 L 615.6 224.6 L 617.4 225.4 L 619.2 226.2 L 621 227 L 622.8 227.7 L 624.6 228.3 L 626.4 228.9 L 628.2 229.5 L 630 230 L 631.8 230.5 L 633.6 231 L 635.4 231.4 L 637.2 231.8 L 639 232.2 L 640.8 232.5 L 642.6 232.8 L 644.4 233.1 L 646.2 233.4 L 648 233.6 L 649.8 233.8 L 651.6 234 L 653.4 234.2 L 655.2 234.4 L 657 234.6 L 658.8 234.7 L 660.6 234.8 L 662.4 235 L 664.2 235.1 L 666 235.2 L 667.8 235.2 L 669.6 235.3 L 671.4 235.4 L 673.2 235.5 L 675 235.5 L 676.8 235.6 L 678.6 235.6 L 680.4 235.7 L 682.2 235.7 L 684 235.7"/>
+<text x="504" y="250" font-size="12" fill="#5F5E5A" text-anchor="middle">0</text>
+<text x="555.4" y="250" font-size="12" fill="#5F5E5A" text-anchor="middle">1</text>
+<text x="606.9" y="250" font-size="12" fill="#5F5E5A" text-anchor="middle">2</text>
+<text x="658.3" y="250" font-size="12" fill="#5F5E5A" text-anchor="middle">3</text>
+<path fill="none" stroke="#B4B2A9" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 658.3 106 L 658.3 236" stroke-dasharray="3 3"/>
+<text x="655.3" y="114" font-size="12" fill="#5F5E5A" text-anchor="end">cut off</text>
+<path fill="none" stroke="#D4537E" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 568.2 181 L 568.2 236" stroke-dasharray="2 3"/>
+<circle cx="568.2" cy="181" r="4" fill="#D4537E"/>
+<text x="496" y="270" font-size="12" fill="#D4537E" text-anchor="start">e^(−½ × 1.25²) = 0.46</text>
+<text x="496" y="286" font-size="12" fill="#D4537E" text-anchor="start">adds 0.6 × 0.46 = 0.28</text>
+</svg>

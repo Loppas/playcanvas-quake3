@@ -1,8 +1,8 @@
 # garage_rats
 
 The parts of `garage_rats`, the garage at a 0.1 m player, as [maps.md](../../docs/maps.md)'s steps
-wrote them. Its pk3 packs them with the polished splat, the collision octree and mesh, and a
-readme. Those three are left out here, the splat at 175 MB, and the steps below make them again.
+wrote them. [Its pk3](https://github.com/Loppas/playcanvas-quake3/releases/download/splat-maps-v0.1.0/map-garage_rats.pk3)
+packs them with the polished splat, the collision octree and mesh, and a readme.
 
 | File | Written by | What it is |
 |---|---|---|
@@ -15,8 +15,9 @@ readme. Those three are left out here, the splat at 175 MB, and the steps below 
 
 ## Rebuilding it
 
-Make `data\garage\garage-aligned.sog` as [the examples' README](../README.md) has it. Then, from
-`splat-maps\`, with `nvm use 24` run once, copy its entities into the map's folder:
+Make `data/garage/garage-aligned.sog` as
+[the splat-maps quick start](../../README.md#a-first-map-from-the-garage)'s steps 1 and 2 do. Then,
+from `splat-maps/`, copy its entities into the map's folder:
 
 **Windows (cmd)**
 
@@ -43,14 +44,9 @@ splat-maps package data/garage_rats/map/garage_rats.sog --author "<your name>"
 splat-maps deliver data/garage_rats/map/map-garage_rats.pk3
 ```
 
-The bake seeds from the `.ent`'s first spawn spot. The arena and the polish's record come out as
-they are here, byte for byte, and the bake's record differs only in its timings and peak memory. The
-octree and the mesh come out as the map's pk3 has them, in `maps/`. Each polish encodes the splat's
-spherical harmonics afresh, so about one in eight of the levelshot's pixels may differ, by a level
-or two.
-
-The bake and the lint warn that the crouched player's box can get under the floor, through holes
-in the capture. The lint passes with that warning.
+[The examples' README](../README.md#a-rebuild) says what matches the pk3. The bake and the lint
+warn that the crouched player's box can get under the floor, through holes in the capture; the
+lint passes with that warning.
 
 ## Credit
 

@@ -33,8 +33,8 @@ headed by the systems and the shell it is for.
 
 | Tool | What for |
 |---|---|
-| The training environment, from [training.md](training.md#the-environment) | the `gsplat` env, with this package installed in it: the `splat-maps` command. Without it, `uv run splat-maps` from `splat-maps\` runs these steps in the tests' environment ([README](../README.md#tests)), which needs none of the GPU stack |
-| **Node ≥ 24** through nvm-windows, or nvm | splat-transform. Run `nvm use 24` once per shell before the polish, the bake and the levelshot |
+| The environment, from [training.md](training.md#the-environment) | the `gsplat` env, with this package's `splat-maps` command in it. Activate it once per shell: `conda activate gsplat` |
+| **Node**, as the port requires it ([Requirements](../../README.md#requirements)) | splat-transform |
 | **splat-transform 3.1.6** | The polish, the bake and the levelshot install it with npm if it is missing, and refuse any other version, since the frames and the bake were calibrated on 3.1.6 ([conventions.md](conventions.md), "Current answer") |
 | **The port**, the checkout `splat-maps\` sits in | delivery writes to its `public\maps\`. `--port DIR` names another checkout |
 | **NetRadiant-custom 20260114**, only for the editor route | unzipped into `editor\netradiant-custom-20260114\`, which git ignores. It bundles q3map2. On Linux, the release's AppImage, in the same folder, untried; there is no build for macOS |
@@ -101,7 +101,6 @@ splat from then on. A source that carries its own licence keeps it: the polish r
 ### 2. Polish
 
 ```bash
-nvm use 24
 splat-maps polish data/<project>/results/mcmc/<project>.sog data/<project>/map/<stem>.sog <height_m> --player-height <m>
 ```
 
@@ -118,6 +117,8 @@ splat-maps polish data/<project>/results/mcmc/<project>.sog data/<project>/map/<
   far above it; the section drawings show where it lies. The bake takes `--outdoor` too (step 3).
 - Add `--license …` for a capture with no `license.txt` of its own (step 1).
 
+![The polish on the garage: as trained, upside down and tilted in its own units; the floor and ceiling fitted, the up hint picking the floor; from above, turned to square the walls and centred; levelled with its floor at 0, and scaled 3.5 times for a 0.5 m player](images/polish.svg)
+
 **Check:** the last step prints four `ok` lines, tilt and yaw within 0.1°, the floor within 1
 unit of z = 0 and the clear height kept, and the source's credit as `_pcq_source` and
 `_pcq_license`. Look at the drawings in `<stem>_inspect\`: `plan.png` should show the room from
@@ -130,8 +131,40 @@ above, square to the page, and the two sections a level floor at 0. It writes `<
 splat-maps bake data/<project>/map/<stem>.sog --seed x,y,z
 ```
 
-The bake keeps open only what a player-sized box can reach from the seed, so the seed must be in
-the room's open air. With no entities yet, choose it from the polish:
+**First, the splat becomes voxels**: cubes `--voxel` units on a side, 8 by default, each solid
+or empty. For each voxel, every Gaussian near it adds to a total
+([training.md](training.md#what-a-splat-is) says what a Gaussian is):
+- **Only if it reaches.** A Gaussian is cut off at three standard deviations. One whose box at
+  that distance misses the voxel adds nothing.
+- **At the voxel's nearest point.** It measures d, how many of its own standard deviations out
+  the voxel's point nearest its centre is.
+- **Its opacity × e^(−½d²)**: all of its opacity at d = 0, 61% at one standard deviation, 14%
+  at two.
+
+The total becomes an opacity the way light fades through fog, 1 − e^(−total), and the voxel is
+solid at 0.1 or more, splat-transform's default. Then a lone solid voxel is cleared, and an
+empty one walled in on all six sides is filled. So faint splats add up: a few floaters in the
+room's air can make a solid voxel the player bumps into unseen.
+
+![The bake, one Gaussian and one voxel: the Gaussian's box at three standard deviations reaches the voxel; in the Gaussian's own frame the voxel's nearest point is d standard deviations out; it adds its opacity times e to the minus half d squared](images/voxelise-one-gaussian.svg)
+
+![The bake, every voxel's total: the total becomes an opacity, 1 minus e to the minus total, solid from 0.105; summed in every voxel of a slice, the solid ones outlined](images/voxelise-slice.svg)
+
+Then the seed. It is the bake's one point inside the room, and both of its next passes go by it:
+- **The exterior fill** seals the room. It thickens the walls to close small holes, floods inward
+  from the grid's edges, and fills everything the flood reaches. If the flood reaches the seed,
+  the walls leak: splat-transform skips the fill, and the bake reports a `LEAK`.
+- **The carve** keeps the play space. It thickens the walls by half a crouching player's box, so
+  that an empty voxel is anywhere the box's centre fits, floods out from the seed through those,
+  and fills everything the box can't reach: pockets behind and under the capture's surfaces, and
+  any space joined to the seed only through a gap the box can't pass.
+
+![The exterior fill on a slice of a room: the capture's solid voxels, thickened by the fill's reach, flooded from the grid's edges, and the flood grown back and made solid](images/bake-exterior-fill.svg)
+
+![The carve on the same slice: thickened by half the player's box, flooded from the seed, and everything out of the box's reach made solid](images/bake-carve.svg)
+
+So the seed must be in the room's open air, where players will be. A seed in a sealed pocket
+keeps that pocket and fills the room. With no entities yet, choose it from the polish:
 - x and y from `plan.png`: a spot over open floor. `0,0` is the plan's centre.
 - z between the floor and the ceiling, in units. The polish prints the clear height in metres, and
   32 units make a metre.
@@ -158,7 +191,7 @@ that seals the capture's hull. That took the garage about two minutes.
 
 **Check:** it ends `the bake re-measures clean`. Read the warnings. `the player can get N box
 positions under the floor` means the capture has holes a crouching player fits through, and only a
-better capture or a cleanup closes them (L24; the garage has 2,855). It writes `<stem>.voxel.json`,
+better capture or a cleanup closes them (L24). It writes `<stem>.voxel.json`,
 `.voxel.bin`, `.collision.glb`, `.bake.json` and `.bake.log`.
 
 ### 4. Place the entities
@@ -235,7 +268,7 @@ the readings as they are printed:
 splat-maps entities readings data/<project>/map/<stem>.ent --message "The Garage" --spawn "(-4 -4 69) : 0" --intermission "(1056 2016 868) : 242" --look-at "(0 0 100) : 0" --octree data/<project>/map/<stem>.voxel.json
 ```
 
-It applies §3.4's rules (a spawn spot is its reading less 26 in z), gives the first spawn
+It applies [§3.4](map-format.md#34-placing-entities-with-viewpos)'s rules (a spawn spot is its reading less 26 in z), gives the first spawn
 `spawnflags 1`, and with `--octree` checks each spot as the lint will. `--spawn` repeats.
 
 ### 5. Bake again, from the spawn
@@ -246,9 +279,7 @@ splat-maps bake data/<project>/map/<stem>.sog
 
 With no `--seed`, the bake seeds from the `.ent`'s first spawn spot, so the carve keeps open
 exactly the space players start in. It also checks every spawn spot: `box free` and a silent
-landing. A rebuild then needs no remembered seed. The garage bakes byte for byte the same from its
-spawn as from `0,0,160`, since both are in the one open room. Only the seed recorded in
-`_pcq_bake` differs.
+landing. A rebuild then needs no remembered seed.
 
 **Check:** as in step 3, and `spawn at (…): box free, drop N units, landing silent` for each spot.
 A spot `in solid` must move. One that `thuds` or `lands hurt` is too high above the floor
@@ -273,13 +304,9 @@ splat-maps arena data/<project>/map/<stem>.arena --ent data/<project>/map/<stem>
 ```
 
 The long name comes from worldspawn's `message`, and the gametypes default to `ffa`. Add
-`--type` for more. It reads the file back by Q3's rules.
-
-The garage maps name every mode they are made for: `--type "ffa tourney team clanarena"`.
-`clanarena` is the port's word for Clan Arena, which the port's Start Server lists them under.
-
-They name three bots each, as q3dm17 does, which Server Options seeds a skirmish with: garage_rats
-`--bots "ranger phobos sarge"`, and garage_cats `--bots "mynx orbb bitterman"`.
+`--type` for more, such as the garage maps' `"ffa tourney team clanarena"`: `clanarena` is the
+port's word for Clan Arena. `--bots` names the bots Server Options seeds a skirmish with. It reads
+the file back by Q3's rules.
 
 ### 8. Package
 
@@ -290,10 +317,11 @@ splat-maps package data/<project>/map/<stem>.sog --author "<who made the map>"
 It writes `map-<stem>.pk3` beside the `.sog`: every part at its Q3 path, the `_pcq_*` keys in the
 packed `.ent`'s worldspawn, and the readme `<stem>.txt`, which credits the source. Then it reads
 the pk3 back entry by entry and runs the lint, `map_lint.py`, whose 29 rules are `map-format.md`
-§10. The garage's pk3 is 189 MB.
+§10.
 
-**Check:** the lint passes. A warning that `_pcq_pipeline` names a `-dirty` commit means the
-scripts had uncommitted changes, so commit them and package again before a release.
+**Check:** the lint passes. `package` warns when `splat_maps` has uncommitted changes, since
+`_pcq_pipeline` then names a commit, ending `-dirty`, that did not build the map: commit them and
+package again before a release.
 
 ### 9. Deliver
 
@@ -366,12 +394,6 @@ changes to one, bound to a key in `q3config.cfg` (`bind F9 "map <stem>"`).
   starts a map only with a spawn spot, so a new map's first readings come from a provisional pk3:
   the first bake, with one `info_player_deathmatch` at the seed.
 - **Snapping an entity onto the mesh in the editor** is from the editor's changelog and untried.
-- **The runbook has run on one capture only, the garage.**
-  - Steps 2–8 rebuilt `garage_rats` from its source in a row, with its entities from recorded
-    `viewpos` readings, and reproduced its octree byte for byte. Steps 4b–10 then placed its nine
-    spawn spots, and the port played them.
-  - Steps 2–9 built `garage_cats` from the same source in a row, with its spots scaled from
-    `garage_rats`' by a script outside the runbook.
-  - Both are rebuilt from the garage aligned at life size, and their parts are in
-    [`examples/`](../examples/).
-  - A second capture, placed in the editor, is still to go through cold.
+- **The runbook has run step by step on one capture, the garage** ([`examples/`](../examples/)),
+  whose entities came from `viewpos` readings. A map whose entities are placed in the editor is
+  still to go through it.
