@@ -133,9 +133,14 @@ The seed is the bake's one point inside the room, and both of its passes go by i
 - **The exterior fill** seals the room. It thickens the walls to close small holes, floods inward
   from the grid's edges, and fills everything the flood reaches. If the flood reaches the seed,
   the walls leak: splat-transform skips the fill, and the bake reports a `LEAK`.
-- **The carve** keeps the play space. It floods out from the seed wherever a crouching player's
-  box fits, and fills everything it doesn't reach: pockets behind and under the capture's
-  surfaces, and any space joined to the seed only through a gap the box can't pass.
+- **The carve** keeps the play space. It thickens the walls by half a crouching player's box, so
+  that an empty voxel is anywhere the box's centre fits, floods out from the seed through those,
+  and fills everything the box can't reach: pockets behind and under the capture's surfaces, and
+  any space joined to the seed only through a gap the box can't pass.
+
+![The exterior fill on a slice of a room: the capture's solid voxels, thickened by the fill's reach, flooded from the grid's edges, and the flood grown back and made solid](images/bake-exterior-fill.svg)
+
+![The carve on the same slice: thickened by half the player's box, flooded from the seed, and everything out of the box's reach made solid](images/bake-carve.svg)
 
 So the seed must be in the room's open air, where players will be. A seed in a sealed pocket
 keeps that pocket and fills the room. With no entities yet, choose it from the polish:
