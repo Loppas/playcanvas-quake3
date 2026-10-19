@@ -598,7 +598,8 @@ It costs:
 
 Worldspawn in the `.ent` records how the map was made. q3map2 records its own command line and
 version in worldspawn the same way (`_q3map2_cmdline`, `_q3map2_version`;
-`bspfile_abstract.cpp:426–441`). No run-time code reads these keys (§3.1).
+`bspfile_abstract.cpp:426–441`). The port reads `_pcq_format` alone (§9), and the game none of
+them (§3.1).
 
 | Key | Holds | Written from | `garage_rats` |
 |---|---|---|---|
@@ -660,7 +661,9 @@ rescaled and cleaned).
 Four things carry a version:
 - **The layout: `_pcq_format`** in worldspawn.
   - It changes only when this spec changes what a reader must do.
-  - The port ignores it, as Q3 ignores `_` keys. The lint enforces it.
+  - The port refuses a map whose `_pcq_format` it doesn't know, as it refuses a BSP of another
+    version (`readEntityText`, `src/formats/entity-text.ts`), and reads a map without one, as a
+    hand-written `.ent` has none. The lint requires it.
   - A later BSP-backed layer (§12) needs no bump to be told apart, because it is recognised by
     `maps/<n>.bsp`.
 - **Each file's own format:**
