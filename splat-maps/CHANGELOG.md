@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/Loppas/playcanvas-quake3/compare/splat-maps-v0.1.1...splat-maps-v0.1.2) (2026-10-19)
+
+
+### Documentation
+
+* add quick starts, a guide to placing entities, and the maps' links ([#42](https://github.com/Loppas/playcanvas-quake3/issues/42)) ([55b8053](https://github.com/Loppas/playcanvas-quake3/commit/55b8053f847417fbfd6d51f65328d79798c73609))
+
 ## [0.1.1](https://github.com/Loppas/playcanvas-quake3/compare/splat-maps-v0.1.0...splat-maps-v0.1.1) (2026-10-19)
 
 
