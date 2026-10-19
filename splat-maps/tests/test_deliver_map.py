@@ -1,5 +1,6 @@
 """`deliver_map.py`: a linted pk3 into the port's `public/maps/`, whole or not at all."""
 
+import shutil
 from pathlib import Path
 
 import pytest
@@ -67,10 +68,16 @@ def test_deliver_refuses_what_the_lint_refuses(room_pk3, port):
     assert not list((port / "public" / "maps").iterdir())
 
 
-@pytest.mark.parametrize("missing", ["package.json", "public/maps"])
-def test_deliver_needs_the_port(room_pk3, port, missing):
-    path = port / missing
-    path.rmdir() if path.is_dir() else path.unlink()
+def test_deliver_makes_public_maps_in_a_fresh_clone(room_pk3, port):
+    shutil.rmtree(port / "public")
+    code, log = deliver(room_pk3, port)
+    assert code == 0, log
+    assert (port / "public" / "maps" / "map-room.pk3").read_bytes() == room_pk3.read_bytes()
+
+
+def test_deliver_needs_the_port(room_pk3, port):
+    (port / "package.json").unlink()
     code, log = deliver(room_pk3, port)
     assert code != 0
     assert "does not look like the port" in log
+    assert not list((port / "public" / "maps").iterdir())

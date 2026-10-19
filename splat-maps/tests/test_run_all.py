@@ -2,6 +2,7 @@
 each a stand-in that records what it was given."""
 
 import json
+import shutil
 
 import numpy as np
 import pytest
@@ -147,6 +148,13 @@ def test_a_room_keeps_its_ceiling_and_its_bakes_their_fill(tmp_path, stages):
     called = [argv for name, argv in stages if name in ("polish", "bake")]
     assert all("--outdoor" not in argv for argv in called)
     assert [argv[-1] for argv in called[1:]] == [BOX, BOX]
+
+
+def test_all_runs_in_a_fresh_clone(tmp_path, stages):
+    shutil.rmtree(tmp_path / "port" / "public")
+    run(tmp_path)
+    assert stages[-1][0] == "deliver"
+    assert (tmp_path / "port" / "public" / "maps").is_dir()
 
 
 def test_all_needs_a_box(tmp_path, stages, capsys):
