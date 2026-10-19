@@ -11,7 +11,7 @@ Good capture is the biggest quality lever — nail this and the cleanup after tr
 3. **Close the loop.** Return to your start and overlap the first frames so poses form a
    consistent ring.
 
-![Filming a room. From above: a ring along the walls that pauses at each corner and goes back over its start, and a slow pass over the whole floor. From the side: rings at low, eye and high heights, a pass tilted down at the floor, and one tilted up at the ceiling](images/capture-path.svg)
+![Filming a room. From above: a ring along the walls that pauses at each corner and goes back over its start, filmed both ways, toward the walls and into the room, and a slow pass over the whole floor. From the side: rings at low, eye and high heights, each filmed both ways, a pass tilted down at the floor, and one tilted up at the ceiling](images/capture-path.svg)
 
 ## Universal (both modalities)
 
@@ -21,6 +21,7 @@ Good capture is the biggest quality lever — nail this and the cleanup after tr
 - [ ] Sharp frames: shutter ≥ **1/125 s**, **f/8–f/11**, ISO as low as light allows (100–400),
   35–85 mm equiv
 - [ ] **Multiple heights** — low / eye (~1.7 m) / high
+- [ ] **Each ring both ways** — facing the walls, and facing into the room
 - [ ] **Downward floor passes** + upward ceiling/upper-wall pass
 - [ ] Cover corners, floor-wall & ceiling-wall seams, both sides of every doorway
 - [ ] **Close the loop** (overlap start)
@@ -36,6 +37,7 @@ Good capture is the biggest quality lever — nail this and the cleanup after tr
 [ ] Full manual: fixed shutter (>=1/120), ISO, focus, white balance
 [ ] Move SLOWLY & smoothly; pause at corners; NO whip pans
 [ ] Overlapping rings at 2-3 heights (low / eye / high)
+[ ] Film each ring both ways: facing the walls, and facing into the room
 [ ] Dedicated slow DOWNWARD-tilt pass over the whole floor
 [ ] Dedicated UPWARD pass for ceiling / upper walls
 [ ] Orbit key objects 360 where reachable
@@ -58,6 +60,7 @@ can't hold still for hundreds of stills.
 [ ] 70-80% overlap within a ring/row; 60-70% between height rows; 15-30 deg between shots
 [ ] Room-scale: 200-500+ photos; small object: 50-200
 [ ] 3-4 height rings (crouch / standing / raised) around the whole space
+[ ] Shoot each ring both ways: facing the walls, and facing into the room
 [ ] Deliberate downward-angled shots covering the entire floor
 [ ] Upward shots for ceiling / tops of walls
 [ ] Cover corners, seams, both sides of every doorway; close the loop

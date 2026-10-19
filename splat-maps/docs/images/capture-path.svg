@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="350" viewBox="0 0 720 350" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="372" viewBox="0 0 720 372" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
 <title>Filming a room</title>
 <defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 1 1 L 9 5 L 1 9 z" fill="context-stroke"/></marker></defs>
-<rect width="720" height="350" rx="8" fill="#ffffff" stroke="#D3D1C7"/>
+<rect width="720" height="372" rx="8" fill="#ffffff" stroke="#D3D1C7"/>
 <text x="20" y="32" font-size="14" font-weight="600" fill="#2C2C2A">Filming a room</text>
 <text x="30" y="68" font-size="12" fill="#5F5E5A" text-anchor="start">From above</text>
 <rect x="30" y="80" width="300" height="200" rx="0" fill="none" stroke="#2C2C2A" stroke-width="2"/>
@@ -12,6 +12,21 @@
 <circle cx="65" cy="115" r="6" fill="none" stroke="#1D9E75" stroke-width="1.5"/>
 <circle cx="295" cy="115" r="6" fill="none" stroke="#1D9E75" stroke-width="1.5"/>
 <circle cx="295" cy="245" r="6" fill="none" stroke="#1D9E75" stroke-width="1.5"/>
+<path fill="#1D9E75" fill-opacity="0.45" stroke="#1D9E75" stroke-width="1" d="M 120 115 L 132.2 87.6 L 107.8 87.6 z"/>
+<path fill="#7F77DD" fill-opacity="0.45" stroke="#7F77DD" stroke-width="1" d="M 120 115 L 129.6 143.4 L 147.6 126.9 z"/>
+<rect x="117" y="112" width="6" height="6" rx="1" fill="#2C2C2A"/>
+<path fill="#1D9E75" fill-opacity="0.45" stroke="#1D9E75" stroke-width="1" d="M 240 115 L 252.2 87.6 L 227.8 87.6 z"/>
+<path fill="#7F77DD" fill-opacity="0.45" stroke="#7F77DD" stroke-width="1" d="M 240 115 L 212.4 126.9 L 230.4 143.4 z"/>
+<rect x="237" y="112" width="6" height="6" rx="1" fill="#2C2C2A"/>
+<path fill="#1D9E75" fill-opacity="0.45" stroke="#1D9E75" stroke-width="1" d="M 65 180 L 37.6 167.8 L 37.6 192.2 z"/>
+<path fill="#7F77DD" fill-opacity="0.45" stroke="#7F77DD" stroke-width="1" d="M 65 180 L 92.4 192.2 L 92.4 167.8 z"/>
+<rect x="62" y="177" width="6" height="6" rx="1" fill="#2C2C2A"/>
+<path fill="#1D9E75" fill-opacity="0.45" stroke="#1D9E75" stroke-width="1" d="M 295 180 L 322.4 192.2 L 322.4 167.8 z"/>
+<path fill="#7F77DD" fill-opacity="0.45" stroke="#7F77DD" stroke-width="1" d="M 295 180 L 267.6 167.8 L 267.6 192.2 z"/>
+<rect x="292" y="177" width="6" height="6" rx="1" fill="#2C2C2A"/>
+<path fill="#1D9E75" fill-opacity="0.45" stroke="#1D9E75" stroke-width="1" d="M 265 245 L 252.8 272.4 L 277.2 272.4 z"/>
+<path fill="#7F77DD" fill-opacity="0.45" stroke="#7F77DD" stroke-width="1" d="M 265 245 L 250.6 218.7 L 235.8 238 z"/>
+<rect x="262" y="242" width="6" height="6" rx="1" fill="#2C2C2A"/>
 <circle cx="145" cy="245" r="5" fill="#D4537E"/>
 <text x="145" y="233" font-size="12" fill="#5F5E5A" text-anchor="middle">start, and back over it</text>
 <text x="370" y="68" font-size="12" fill="#5F5E5A" text-anchor="start">From the side</text>
@@ -20,41 +35,43 @@
 <path fill="none" stroke="#2C2C2A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M 370 110 L 370 214"/>
 <path fill="none" stroke="#2C2C2A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M 610 110 L 610 214"/>
 <path fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M 382 190 L 598 190" stroke-dasharray="2 4"/>
-<rect x="415" y="186" width="10" height="8" rx="2" fill="#1D9E75"/>
-<path fill="none" stroke="#1D9E75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 420 190 L 395.3 181.8"/>
-<path fill="none" stroke="#1D9E75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 420 190 L 395.3 198.2"/>
-<rect x="555" y="186" width="10" height="8" rx="2" fill="#1D9E75"/>
-<path fill="none" stroke="#1D9E75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 560 190 L 584.7 198.2"/>
-<path fill="none" stroke="#1D9E75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 560 190 L 584.7 181.8"/>
+<path fill="#1D9E75" fill-opacity="0.45" stroke="#1D9E75" stroke-width="1" d="M 420 190 L 395.6 181.1 L 395.6 198.9 z"/>
+<path fill="#7F77DD" fill-opacity="0.45" stroke="#7F77DD" stroke-width="1" d="M 420 190 L 444.4 198.9 L 444.4 181.1 z"/>
+<rect x="417" y="187" width="6" height="6" rx="1" fill="#2C2C2A"/>
+<path fill="#1D9E75" fill-opacity="0.45" stroke="#1D9E75" stroke-width="1" d="M 560 190 L 584.4 198.9 L 584.4 181.1 z"/>
+<path fill="#7F77DD" fill-opacity="0.45" stroke="#7F77DD" stroke-width="1" d="M 560 190 L 535.6 181.1 L 535.6 198.9 z"/>
+<rect x="557" y="187" width="6" height="6" rx="1" fill="#2C2C2A"/>
 <text x="618" y="194" font-size="12" fill="#5F5E5A" text-anchor="start">low</text>
 <path fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M 382 146 L 598 146" stroke-dasharray="2 4"/>
-<rect x="415" y="142" width="10" height="8" rx="2" fill="#1D9E75"/>
-<path fill="none" stroke="#1D9E75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 420 146 L 395.3 137.8"/>
-<path fill="none" stroke="#1D9E75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 420 146 L 395.3 154.2"/>
-<rect x="555" y="142" width="10" height="8" rx="2" fill="#1D9E75"/>
-<path fill="none" stroke="#1D9E75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 560 146 L 584.7 154.2"/>
-<path fill="none" stroke="#1D9E75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 560 146 L 584.7 137.8"/>
+<path fill="#1D9E75" fill-opacity="0.45" stroke="#1D9E75" stroke-width="1" d="M 420 146 L 395.6 137.1 L 395.6 154.9 z"/>
+<path fill="#7F77DD" fill-opacity="0.45" stroke="#7F77DD" stroke-width="1" d="M 420 146 L 444.4 154.9 L 444.4 137.1 z"/>
+<rect x="417" y="143" width="6" height="6" rx="1" fill="#2C2C2A"/>
+<path fill="#1D9E75" fill-opacity="0.45" stroke="#1D9E75" stroke-width="1" d="M 560 146 L 584.4 154.9 L 584.4 137.1 z"/>
+<path fill="#7F77DD" fill-opacity="0.45" stroke="#7F77DD" stroke-width="1" d="M 560 146 L 535.6 137.1 L 535.6 154.9 z"/>
+<rect x="557" y="143" width="6" height="6" rx="1" fill="#2C2C2A"/>
 <text x="618" y="150" font-size="12" fill="#5F5E5A" text-anchor="start">eye, ~1.7 m</text>
 <path fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M 382 122 L 598 122" stroke-dasharray="2 4"/>
-<rect x="415" y="118" width="10" height="8" rx="2" fill="#1D9E75"/>
-<path fill="none" stroke="#1D9E75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 420 122 L 395.3 113.8"/>
-<path fill="none" stroke="#1D9E75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 420 122 L 395.3 130.2"/>
-<rect x="555" y="118" width="10" height="8" rx="2" fill="#1D9E75"/>
-<path fill="none" stroke="#1D9E75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 560 122 L 584.7 130.2"/>
-<path fill="none" stroke="#1D9E75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 560 122 L 584.7 113.8"/>
+<path fill="#1D9E75" fill-opacity="0.45" stroke="#1D9E75" stroke-width="1" d="M 420 122 L 395.6 113.1 L 395.6 130.9 z"/>
+<path fill="#7F77DD" fill-opacity="0.45" stroke="#7F77DD" stroke-width="1" d="M 420 122 L 444.4 130.9 L 444.4 113.1 z"/>
+<rect x="417" y="119" width="6" height="6" rx="1" fill="#2C2C2A"/>
+<path fill="#1D9E75" fill-opacity="0.45" stroke="#1D9E75" stroke-width="1" d="M 560 122 L 584.4 130.9 L 584.4 113.1 z"/>
+<path fill="#7F77DD" fill-opacity="0.45" stroke="#7F77DD" stroke-width="1" d="M 560 122 L 535.6 113.1 L 535.6 130.9 z"/>
+<rect x="557" y="119" width="6" height="6" rx="1" fill="#2C2C2A"/>
 <text x="618" y="126" font-size="12" fill="#5F5E5A" text-anchor="start">high</text>
-<rect x="495" y="142" width="10" height="8" rx="2" fill="#EF9F27"/>
-<path fill="none" stroke="#EF9F27" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 500 146 L 505.3 171.5"/>
-<path fill="none" stroke="#EF9F27" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 500 146 L 519.4 163.3"/>
-<rect x="460" y="142" width="10" height="8" rx="2" fill="#378ADD"/>
-<path fill="none" stroke="#378ADD" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 465 146 L 484.4 128.7"/>
-<path fill="none" stroke="#378ADD" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" d="M 465 146 L 470.3 120.5"/>
+<path fill="#EF9F27" fill-opacity="0.45" stroke="#EF9F27" stroke-width="1" d="M 475 146 L 479.5 171.6 L 494.9 162.7 z"/>
+<rect x="472" y="143" width="6" height="6" rx="1" fill="#2C2C2A"/>
+<path fill="#378ADD" fill-opacity="0.45" stroke="#378ADD" stroke-width="1" d="M 505 146 L 524.9 129.3 L 509.5 120.4 z"/>
+<rect x="502" y="143" width="6" height="6" rx="1" fill="#2C2C2A"/>
 <path fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M 30 322 L 42 322"/>
 <text x="47" y="326" font-size="12" fill="#5F5E5A" text-anchor="start">Rings, pausing at corners</text>
-<path fill="none" stroke="#EF9F27" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M 225 322 L 237 322" stroke-dasharray="3 3"/>
-<text x="242" y="326" font-size="12" fill="#5F5E5A" text-anchor="start">Floor pass, tilted down</text>
-<rect x="407.2" y="317" width="10" height="10" rx="2" fill="#378ADD"/>
-<text x="424.2" y="326" font-size="12" fill="#5F5E5A" text-anchor="start">Ceiling pass, tilted up</text>
-<circle cx="594.4" cy="322" r="5" fill="#D4537E"/>
-<text x="606.4" y="326" font-size="12" fill="#5F5E5A" text-anchor="start">Start</text>
+<rect x="225" y="317" width="10" height="10" rx="2" fill="#1D9E75"/>
+<text x="242" y="326" font-size="12" fill="#5F5E5A" text-anchor="start">Facing the walls</text>
+<rect x="362.4" y="317" width="10" height="10" rx="2" fill="#7F77DD"/>
+<text x="379.4" y="326" font-size="12" fill="#5F5E5A" text-anchor="start">Facing into the room</text>
+<rect x="30" y="343" width="10" height="10" rx="2" fill="#EF9F27"/>
+<text x="47" y="352" font-size="12" fill="#5F5E5A" text-anchor="start">Floor pass, tilted down</text>
+<rect x="212.2" y="343" width="10" height="10" rx="2" fill="#378ADD"/>
+<text x="229.2" y="352" font-size="12" fill="#5F5E5A" text-anchor="start">Ceiling pass, tilted up</text>
+<circle cx="399.4" cy="348" r="5" fill="#D4537E"/>
+<text x="411.4" y="352" font-size="12" fill="#5F5E5A" text-anchor="start">Start</text>
 </svg>
