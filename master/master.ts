@@ -2,7 +2,7 @@ import nodeDataChannel from 'node-datachannel';
 import { RTCPeerConnection } from 'node-datachannel/polyfill';
 
 import { PORT_MASTER } from '../src/net/net';
-import { startMaster } from './master-server';
+import { startMaster } from './node-master';
 
 /**
  * The master, as a Node program: dpmaster for the port.

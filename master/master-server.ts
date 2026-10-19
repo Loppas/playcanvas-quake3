@@ -1,8 +1,4 @@
 import type { LookupAddress } from 'node:dns';
-import { lookup } from 'node:dns/promises';
-import type { AddressInfo } from 'node:net';
-
-import { WebSocketServer } from 'ws';
 
 import type { WebSocketLike } from '../src/net/master-link';
 import {
@@ -84,7 +80,7 @@ export interface MasterServerOptions {
   /** What challenges and the order of a list are drawn from. */
   random?: () => number;
   /** A name's every address: `getaddrinfo`, through Node's `dns.lookup`, or a test's. */
-  lookup?: (name: string) => Promise<LookupAddress[]>;
+  lookup: (name: string) => Promise<LookupAddress[]>;
   /** A line for the console. */
   print?: (line: string) => void;
 }
@@ -116,7 +112,7 @@ export class MasterServer {
   constructor(options: MasterServerOptions) {
     this.iceServers = options.iceServers ?? ICE_SERVERS;
     this.now = options.now ?? (() => performance.now());
-    this.lookup = options.lookup ?? ((name) => lookup(name, { all: true }));
+    this.lookup = options.lookup;
     this.print = options.print ?? console.log;
     const random = options.random ?? Math.random;
 
@@ -362,65 +358,4 @@ function lookupError(err: unknown): string {
   const code = (err as { code?: unknown } | null)?.code;
   if (typeof code === 'string') return code;
   return err instanceof Error ? err.message : String(err);
-}
-
-/**
- * The master on a WebSocket server of `ws`'s, on both families where the machine has both: each
- * connection handed over with its IP and source port, and a frame past {@link MAX_FRAME} refused
- * by closing its socket before it is read.
- */
-export function listen(master: MasterServer, port: number): Promise<WebSocketServer> {
-  return new Promise((resolve, reject) => {
-    const server = new WebSocketServer({ port, maxPayload: MAX_FRAME });
-    server.on('connection', (ws, request) => {
-      // A frame past the limit, or any other fault, closes the socket, and the error is only the
-      // reason why; unheard, Node would throw it.
-      ws.on('error', () => {});
-      const { remoteAddress, remotePort } = request.socket;
-      if (remoteAddress === undefined || remotePort === undefined) ws.close();
-      else master.connect(ws, remoteAddress, remotePort);
-    });
-    server.once('listening', () => resolve(server));
-    server.once('error', reject);
-  });
-}
-
-/** A master listening, for the program it runs in to drive. */
-export interface RunningMaster {
-  /** The port it listens on: the one asked for, or the system's pick for 0. */
-  readonly port: number;
-  /** Read what came down the channels the master dialled. */
-  frame(): void;
-  /** Stop listening, and close every connection. */
-  close(): void;
-}
-
-/**
- * A master on a port, as its own program runs one and as a dedicated server runs one inside
- * itself: the same master either way.
- *
- * @throws what `listen` met, as a port already taken
- */
-export async function startMaster(
-  options: MasterServerOptions & { port: number }
-): Promise<RunningMaster> {
-  const print = options.print ?? console.log;
-  const master = new MasterServer({ ...options, print });
-  let server: WebSocketServer;
-  try {
-    server = await listen(master, options.port);
-  } catch (err) {
-    master.close();
-    throw err;
-  }
-  const { port } = server.address() as AddressInfo;
-  print(`> Listening on port ${port}`);
-  return {
-    port,
-    frame: () => master.frame(),
-    close: () => {
-      master.close();
-      server.close();
-    }
-  };
 }

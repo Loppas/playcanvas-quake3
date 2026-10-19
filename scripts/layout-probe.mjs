@@ -160,7 +160,7 @@ const server = await createServer({
   server: { host: 'localhost', port, strictPort: true, forwardConsole: false }
 });
 await server.listen();
-const { startMaster } = await server.ssrLoadModule('/master/master-server.ts');
+const { startMaster } = await server.ssrLoadModule('/master/node-master.ts');
 const masterLines = [];
 let master = null;
 let loop = null;
