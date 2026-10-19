@@ -2,7 +2,7 @@ import type { PakFileSystem } from '../pak/vfs';
 import { vec3, type Vec3 } from '../sim/vec3';
 import { atof, atoi, scanFloats } from './c-scan';
 import { comParse, parseCursor, textOfBytes } from './com-parse';
-import { splatMapFiles } from './splat-map';
+import { SPLAT_MAP_FORMATS, splatMapFiles } from './splat-map';
 
 /**
  * A map's entities as text: Quake 3's entity lump, which a BSP carries as its lump 0 and a splat
@@ -39,9 +39,15 @@ export type SpawnVars = readonly SpawnVar[];
  * A map with none does not start. Q3 checks for the BSP before it changes anything, and says
  * `Can't find map` with the path it looked for (`SV_Map_f`, `sv_ccmds.c:165–171`).
  *
+ * Nor does a map of a layout the port doesn't read, as `CM_LoadMap` refuses a BSP of another
+ * version: its worldspawn's `_pcq_format` is not one of {@link SPLAT_MAP_FORMATS}. A map without
+ * the key is read, since a hand-written `.ent` has none (`map-format.md` §7).
+ *
  * @param fs - The search path.
  * @param name - The map's name, as `map <n>` takes it.
  * @returns the text, a byte to a character
+ * @throws `Can't find map` for a map without one, `wrong _pcq_format` for a layout the port
+ *   doesn't read, and as {@link parseSpawnVars} does for its worldspawn
  */
 export async function readEntityText(
   fs: Pick<PakFileSystem, 'read'>,
@@ -50,7 +56,13 @@ export async function readEntityText(
   const path = splatMapFiles(name).entities;
   const bytes = await fs.read(path);
   if (!bytes) throw new Error(`Can't find map ${path}`);
-  return textOfBytes(bytes);
+  const text = textOfBytes(bytes);
+  const format = spawnVar(parseSpawnVars(entityTokens(text)) ?? [], '_pcq_format');
+  if (format !== undefined && !SPLAT_MAP_FORMATS.includes(format)) {
+    const known = SPLAT_MAP_FORMATS.join(' or ');
+    throw new Error(`CM_LoadMap: ${path} has wrong _pcq_format (${format} should be ${known})`);
+  }
+  return text;
 }
 
 /**

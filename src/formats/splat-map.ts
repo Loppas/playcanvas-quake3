@@ -13,6 +13,12 @@ import { SparseVoxelOctree, type VoxelOctreeHeader } from '../sim/voxel-svo';
  * Engine-free, like the other readers.
  */
 
+/**
+ * The layouts of a splat map the port reads, as its worldspawn's `_pcq_format` numbers them. The
+ * format's spec owns the numbers (`map-format.md` §7, §9).
+ */
+export const SPLAT_MAP_FORMATS: readonly string[] = ['1'];
+
 /** Every file a splat map is, as paths on the search path. */
 export interface SplatMapFiles {
   /**

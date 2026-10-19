@@ -277,4 +277,29 @@ describe('readEntityText', () => {
       "Can't find map maps/backyard.ent"
     );
   });
+
+  /** A search path holding the garage's entities, its `_pcq_format` pair swapped for `pair`. */
+  const garageWith = (pair: string) => {
+    const text = GARAGE.replace('"_pcq_format" "1"', pair);
+    return searchPathOf({ 'maps/garage_rats.ent': Uint8Array.from(text, (c) => c.charCodeAt(0)) });
+  };
+
+  it('reads a map of a layout it knows, and a hand-written one without the key', async () => {
+    expect(await readEntityText(await garageWith('"_pcq_format" "1"'), 'garage_rats')).toBe(GARAGE);
+    const handWritten = await readEntityText(await garageWith(''), 'garage_rats');
+    expect(readEntities(handWritten)[0]).toEqual([
+      ['classname', 'worldspawn'],
+      ['message', 'The Garage']
+    ]);
+  });
+
+  it('stops a map of a layout it does not know, with its file and its format', async () => {
+    await expect(
+      readEntityText(await garageWith('"_pcq_format" "2"'), 'garage_rats')
+    ).rejects.toThrow('CM_LoadMap: maps/garage_rats.ent has wrong _pcq_format (2 should be 1)');
+    // Keys ignore case, as Q3 matches them.
+    await expect(
+      readEntityText(await garageWith('"_PCQ_FORMAT" "0"'), 'garage_rats')
+    ).rejects.toThrow('has wrong _pcq_format (0 should be 1)');
+  });
 });
