@@ -1,6 +1,6 @@
 [project]
 name = "splat-maps"
-version = "0.1.0"
+version = "0.1.1"
 description = "Gaussian-splat captures to Quake 3 maps for playcanvas-quake3"
 # numpy below 2 has no wheels past 3.12.
 requires-python = ">=3.11,<3.13"
