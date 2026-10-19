@@ -58,9 +58,9 @@
 <path fill="#7F77DD" fill-opacity="0.45" stroke="#7F77DD" stroke-width="1" d="M 560 122 L 535.6 113.1 L 535.6 130.9 z"/>
 <rect x="557" y="119" width="6" height="6" rx="1" fill="#2C2C2A"/>
 <text x="618" y="126" font-size="12" fill="#5F5E5A" text-anchor="start">high</text>
-<path fill="#EF9F27" fill-opacity="0.45" stroke="#EF9F27" stroke-width="1" d="M 475 146 L 479.5 171.6 L 494.9 162.7 z"/>
+<path fill="#EF9F27" fill-opacity="0.45" stroke="#EF9F27" stroke-width="1" d="M 475 146 L 486 169.6 L 498.6 157 z"/>
 <rect x="472" y="143" width="6" height="6" rx="1" fill="#2C2C2A"/>
-<path fill="#378ADD" fill-opacity="0.45" stroke="#378ADD" stroke-width="1" d="M 505 146 L 524.9 129.3 L 509.5 120.4 z"/>
+<path fill="#378ADD" fill-opacity="0.45" stroke="#378ADD" stroke-width="1" d="M 505 146 L 528.6 135 L 516 122.4 z"/>
 <rect x="502" y="143" width="6" height="6" rx="1" fill="#2C2C2A"/>
 <path fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M 30 322 L 42 322"/>
 <text x="47" y="326" font-size="12" fill="#5F5E5A" text-anchor="start">Rings, pausing at corners</text>
@@ -69,9 +69,9 @@
 <rect x="362.4" y="317" width="10" height="10" rx="2" fill="#7F77DD"/>
 <text x="379.4" y="326" font-size="12" fill="#5F5E5A" text-anchor="start">Facing into the room</text>
 <rect x="30" y="343" width="10" height="10" rx="2" fill="#EF9F27"/>
-<text x="47" y="352" font-size="12" fill="#5F5E5A" text-anchor="start">Floor pass, tilted down</text>
-<rect x="212.2" y="343" width="10" height="10" rx="2" fill="#378ADD"/>
-<text x="229.2" y="352" font-size="12" fill="#5F5E5A" text-anchor="start">Ceiling pass, tilted up</text>
-<circle cx="399.4" cy="348" r="5" fill="#D4537E"/>
-<text x="411.4" y="352" font-size="12" fill="#5F5E5A" text-anchor="start">Start</text>
+<text x="47" y="352" font-size="12" fill="#5F5E5A" text-anchor="start">Floor pass, about 45° down</text>
+<rect x="231.4" y="343" width="10" height="10" rx="2" fill="#378ADD"/>
+<text x="248.4" y="352" font-size="12" fill="#5F5E5A" text-anchor="start">Ceiling pass, 30–45° up</text>
+<circle cx="418.6" cy="348" r="5" fill="#D4537E"/>
+<text x="430.6" y="352" font-size="12" fill="#5F5E5A" text-anchor="start">Start</text>
 </svg>
