@@ -9,7 +9,7 @@ Usage:
 
 Reads <dataset>/results/mcmc/ply/ (`train` writes it); writes <name>.sog and <name>_viewer.html
 beside ply/, the name the dataset folder's unless given. Requires splat-transform at the pinned
-version on PATH (Node >= 24).
+version on PATH.
 """
 
 import argparse

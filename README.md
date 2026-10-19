@@ -15,17 +15,17 @@ Open [loppas.github.io/playcanvas-quake3](https://loppas.github.io/playcanvas-qu
 or Edge, and choose the folder that holds your Quake 3 `baseq3` when the page asks. Every map in
 your paks plays ([The web build](#the-web-build)).
 
-The port's own maps, the garage at a cat's size and at a rat's, are pk3s on
-[their release](https://github.com/Loppas/playcanvas-quake3/releases/tag/splat-maps-v0.1.0), about
-180 MB each:
+The port's garage maps are on
+[their release](https://github.com/Loppas/playcanvas-quake3/releases/tag/splat-maps-v0.1.0),
+about 180 MB each:
 [`map-garage_cats.pk3`](https://github.com/Loppas/playcanvas-quake3/releases/download/splat-maps-v0.1.0/map-garage_cats.pk3)
 and
 [`map-garage_rats.pk3`](https://github.com/Loppas/playcanvas-quake3/releases/download/splat-maps-v0.1.0/map-garage_rats.pk3).
-Put them in your `baseq3` before choosing it, then start one from Start Server, or with
-`?map=garage_cats` on the end of the address.
+Put them in your `baseq3` first, then start one from Start Server, or with `?map=garage_cats` on
+the end of the address.
 
-On Windows, the desktop shell plays from your install where it sits: unzip it from the newest
-`v…` release on [Releases](https://github.com/Loppas/playcanvas-quake3/releases) and run
+On Windows, the desktop shell reads your install where it sits: unzip it from the newest `v…`
+release on [Releases](https://github.com/Loppas/playcanvas-quake3/releases) and run
 `playcanvas-quake3.exe` ([The desktop shell](#the-desktop-shell)).
 
 ### Run from source
@@ -40,25 +40,21 @@ npm install
 
 Copy `.env.example` to `.env.local`, and set its `PCQ_FS_BASEPATH` to the folder that holds your
 `baseq3` ([Quake 3 assets](#quake-3-assets)). Download the garage maps into `public/maps/`, the
-same in Windows' command prompt and in bash (in PowerShell, as `curl.exe`):
+same in cmd and bash (in PowerShell, `curl.exe`):
 
 ```bash
 curl -L --create-dirs -o public/maps/map-garage_cats.pk3 https://github.com/Loppas/playcanvas-quake3/releases/download/splat-maps-v0.1.0/map-garage_cats.pk3
 curl -L --create-dirs -o public/maps/map-garage_rats.pk3 https://github.com/Loppas/playcanvas-quake3/releases/download/splat-maps-v0.1.0/map-garage_rats.pk3
 ```
 
-Then start the dev server, and open the address it prints with `?map=garage_cats` on the end
-([Run](#run)):
-
-```bash
-npm run dev
-```
+Then run `npm run dev`, and open the address it prints with `?map=garage_cats` on the end
+([Run](#run)).
 
 ### Make a map
 
 [`splat-maps/`](splat-maps/) makes a map from a capture of a real space. Its
-[quick start](splat-maps/README.md#quick-start) builds `garage_cats` from the garage's capture on
-superspl.at, with no training, and then a map from your own video.
+[quick start](splat-maps/README.md#quick-start) builds `garage_cats` from the garage's capture,
+then a map from your own video.
 
 ## Status
 
@@ -148,13 +144,10 @@ changed to in the game with `map <n>`, bound to a key in `q3config.cfg`:
 bind F9 "map garage_cats"
 ```
 
-`garage_rats` is the garage's capture polished: levelled, walls squared, floor at 0, and 17.5×
-life size. The real garage is 4.53 × 8.29 × 3.00 m, so the fixed 1.75 m player looks 10 cm tall
-inside it, which is the "rats" premise. In game the room is 2538 × 4641 × 1680 Quake units.
-`garage_cats` is the same garage at a bigger player, 3.5× life size, built by splat-maps the same
-way. Both are on [their release](https://github.com/Loppas/playcanvas-quake3/releases/tag/splat-maps-v0.1.0)
-([Quick start](#quick-start)), and their parts are in
-[`splat-maps/examples/`](splat-maps/examples/).
+`garage_rats` is a 4.53 × 8.29 × 3.00 m garage at 17.5× life size, so the 1.75 m player is 10 cm
+tall inside it; `garage_cats` is the same garage at 3.5×. Both are on
+[their release](https://github.com/Loppas/playcanvas-quake3/releases/tag/splat-maps-v0.1.0), and
+their parts are in [`splat-maps/examples/`](splat-maps/examples/).
 
 A map that is not there says so in the browser's console, and the page stays on the main menu,
 as Quake 3's does. One that fails to load, or fails in play, drops the match to the main menu,

@@ -19,7 +19,8 @@ lists what else stays out of a commit.
 
 ## Setting up
 
-You need Node (`.nvmrc` has the version), and to play, your own copy of Quake III Arena.
+You need Node, as the README's [Requirements](README.md#requirements) give it, and to play, your
+own copy of Quake III Arena.
 
 ```bash
 npm install

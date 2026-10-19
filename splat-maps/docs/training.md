@@ -96,7 +96,7 @@ Python side on Windows; the rest is installed by hand. Elsewhere it is the same 
 | **The pycolmap patch** | `python -m splat_maps.patch_pycolmap` | [below](#the-pycolmap-patch-automatic-via-patch_pycolmappy) |
 | **COLMAP** | **4.1.1**, the CUDA build | the official binary from github.com/colmap/colmap releases; conda-forge's is DLL-broken on Windows. `sfm` uses 4.1's option names |
 | **ffmpeg** | | e.g. `conda create -n colmap -c conda-forge ffmpeg` |
-| **Node and splat-transform** | **Node ≥ 24**, splat-transform at the pin | via nvm-windows, or nvm elsewhere (`nvm install 24` / `nvm use 24`). `export` and the map stages install the pinned splat-transform with npm when it is missing, and refuse another version |
+| **Node and splat-transform** | Node as the port requires it ([Requirements](../../README.md#requirements)), splat-transform at the pin | `export` and the map stages install the pinned splat-transform with npm when it is missing, and refuse another version |
 | **git** | | to clone gsplat |
 
 The steps, where `<splat-maps>` is this folder.

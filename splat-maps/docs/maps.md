@@ -33,8 +33,8 @@ headed by the systems and the shell it is for.
 
 | Tool | What for |
 |---|---|
-| The training environment, from [training.md](training.md#the-environment) | the `gsplat` env, with this package installed in it: the `splat-maps` command. Without it, `uv run splat-maps` from `splat-maps\` runs these steps in the tests' environment ([README](../README.md#tests)), which needs none of the GPU stack |
-| **Node ≥ 24** through nvm-windows, or nvm | splat-transform. Run `nvm use 24` once per shell before the polish, the bake and the levelshot |
+| The environment, from [training.md](training.md#the-environment) | the `gsplat` env, with this package's `splat-maps` command in it. Activate it once per shell: `conda activate gsplat` |
+| **Node**, as the port requires it ([Requirements](../../README.md#requirements)) | splat-transform |
 | **splat-transform 3.1.6** | The polish, the bake and the levelshot install it with npm if it is missing, and refuse any other version, since the frames and the bake were calibrated on 3.1.6 ([conventions.md](conventions.md), "Current answer") |
 | **The port**, the checkout `splat-maps\` sits in | delivery writes to its `public\maps\`. `--port DIR` names another checkout |
 | **NetRadiant-custom 20260114**, only for the editor route | unzipped into `editor\netradiant-custom-20260114\`, which git ignores. It bundles q3map2. On Linux, the release's AppImage, in the same folder, untried; there is no build for macOS |
@@ -101,7 +101,6 @@ splat from then on. A source that carries its own licence keeps it: the polish r
 ### 2. Polish
 
 ```bash
-nvm use 24
 splat-maps polish data/<project>/results/mcmc/<project>.sog data/<project>/map/<stem>.sog <height_m> --player-height <m>
 ```
 
@@ -158,7 +157,7 @@ that seals the capture's hull. That took the garage about two minutes.
 
 **Check:** it ends `the bake re-measures clean`. Read the warnings. `the player can get N box
 positions under the floor` means the capture has holes a crouching player fits through, and only a
-better capture or a cleanup closes them (L24; the garage has 2,855). It writes `<stem>.voxel.json`,
+better capture or a cleanup closes them (L24). It writes `<stem>.voxel.json`,
 `.voxel.bin`, `.collision.glb`, `.bake.json` and `.bake.log`.
 
 ### 4. Place the entities
@@ -246,9 +245,7 @@ splat-maps bake data/<project>/map/<stem>.sog
 
 With no `--seed`, the bake seeds from the `.ent`'s first spawn spot, so the carve keeps open
 exactly the space players start in. It also checks every spawn spot: `box free` and a silent
-landing. A rebuild then needs no remembered seed. The garage bakes byte for byte the same from its
-spawn as from `0,0,160`, since both are in the one open room. Only the seed recorded in
-`_pcq_bake` differs.
+landing. A rebuild then needs no remembered seed.
 
 **Check:** as in step 3, and `spawn at (…): box free, drop N units, landing silent` for each spot.
 A spot `in solid` must move. One that `thuds` or `lands hurt` is too high above the floor
@@ -273,13 +270,9 @@ splat-maps arena data/<project>/map/<stem>.arena --ent data/<project>/map/<stem>
 ```
 
 The long name comes from worldspawn's `message`, and the gametypes default to `ffa`. Add
-`--type` for more. It reads the file back by Q3's rules.
-
-The garage maps name every mode they are made for: `--type "ffa tourney team clanarena"`.
-`clanarena` is the port's word for Clan Arena, which the port's Start Server lists them under.
-
-They name three bots each, as q3dm17 does, which Server Options seeds a skirmish with: garage_rats
-`--bots "ranger phobos sarge"`, and garage_cats `--bots "mynx orbb bitterman"`.
+`--type` for more, such as the garage maps' `"ffa tourney team clanarena"`: `clanarena` is the
+port's word for Clan Arena. `--bots` names the bots Server Options seeds a skirmish with. It reads
+the file back by Q3's rules.
 
 ### 8. Package
 
@@ -290,7 +283,7 @@ splat-maps package data/<project>/map/<stem>.sog --author "<who made the map>"
 It writes `map-<stem>.pk3` beside the `.sog`: every part at its Q3 path, the `_pcq_*` keys in the
 packed `.ent`'s worldspawn, and the readme `<stem>.txt`, which credits the source. Then it reads
 the pk3 back entry by entry and runs the lint, `map_lint.py`, whose 29 rules are `map-format.md`
-§10. `garage_rats`' pk3 is 188 MB.
+§10.
 
 **Check:** the lint passes. `package` warns when `splat_maps` has uncommitted changes, since
 `_pcq_pipeline` then names a commit, ending `-dirty`, that did not build the map: commit them and
@@ -367,12 +360,6 @@ changes to one, bound to a key in `q3config.cfg` (`bind F9 "map <stem>"`).
   starts a map only with a spawn spot, so a new map's first readings come from a provisional pk3:
   the first bake, with one `info_player_deathmatch` at the seed.
 - **Snapping an entity onto the mesh in the editor** is from the editor's changelog and untried.
-- **The runbook has run on one capture only, the garage.**
-  - Steps 2–8 rebuilt `garage_rats` from its source in a row, with its entities from recorded
-    `viewpos` readings, and reproduced its octree byte for byte. Steps 4b–10 then placed its nine
-    spawn spots, and the port played them.
-  - Steps 2–9 built `garage_cats` from the same source in a row, with its spots scaled from
-    `garage_rats`' by a script outside the runbook.
-  - Both are rebuilt from the garage aligned at life size, and their parts are in
-    [`examples/`](../examples/).
-  - A second capture, placed in the editor, is still to go through cold.
+- **The runbook has run step by step on one capture, the garage** ([`examples/`](../examples/)),
+  whose entities came from `viewpos` readings. A map whose entities are placed in the editor is
+  still to go through it.

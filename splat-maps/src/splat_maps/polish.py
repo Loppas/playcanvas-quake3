@@ -24,7 +24,7 @@ Usage:
 The three positional arguments come first. Any other argument is sog_inspect's, given to both
 measures. Outputs: <output.sog>, <output stem>.polish.json, and each measure's report and
 drawings, in <input stem>_inspect/ and <output stem>_inspect/.
-Requires numpy and Pillow, and splat-transform at the pinned version on PATH (Node >= 24).
+Requires numpy and Pillow, and splat-transform at the pinned version on PATH.
 """
 
 import argparse

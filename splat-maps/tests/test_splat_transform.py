@@ -60,5 +60,5 @@ def test_an_install_that_puts_none_on_path_is_named(path, code, message):
 
 
 def test_no_npm_names_node(path):
-    with pytest.raises(sm.FormatError, match=r"nor is npm.*Node >= 24"):
+    with pytest.raises(sm.FormatError, match=r"nor is npm.*put Node and its npm on PATH"):
         sm.require_splat_transform()

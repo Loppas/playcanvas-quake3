@@ -19,7 +19,7 @@ Usage:
     python -m splat_maps.sog_inspect <input.sog> [--out DIR] [--metric-height M] [--render]
 
 Requires numpy + Pillow (present in the `gsplat` conda env) and, for --render,
-splat-transform on PATH (Node >= 24).
+splat-transform on PATH.
 """
 
 import argparse
@@ -466,7 +466,7 @@ def render_views(sog, basis, eye, targets, out_dir, resolution="800x450"):
     """
     exe = sm.find_splat_transform()
     if not exe:
-        print("  (skipping --render: splat-transform not on PATH; run `nvm use 24`)")
+        print("  (skipping --render: splat-transform is not on PATH)")
         return []
 
     def camera(q):

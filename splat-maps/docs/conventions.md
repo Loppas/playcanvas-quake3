@@ -40,7 +40,7 @@ Always include a probe with all three angles non-zero; that is the one that deci
 **Current answer (splat-transform v3.1.6):** it works in a frame rotated 180 deg about Z,
 `ST_FRAME = diag(-1,-1,1)`, and composes `Rz*Ry*Rx`. One frame governs rotate, translate and
 scale together. Re-run `calibrate_transform.py` after any upgrade:
-`uv run python -m splat_maps.calibrate_transform <source.sog>`, from `splat-maps/`.
+`python -m splat_maps.calibrate_transform <source.sog>`, in the environment.
 - **The rasterizer's camera is in that frame too.** `--camera-pos`, `--camera-target` and
   `--camera-up` are `ST_FRAME` applied to the file's coordinates, which is the collision
   octree's frame.
