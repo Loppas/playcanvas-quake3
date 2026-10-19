@@ -57,6 +57,7 @@ theirs, except Unlagged's, which is GPL and translated (see [NOTICE](NOTICE)).
 [Ethan](https://superspl.at/user?id=ethan3111), licensed
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes: levelled, rescaled, voxel
 collision baked, and Quake 3 entities added. Both maps' parts are in `splat-maps/examples/`,
+and their pk3s on [their release](https://github.com/Loppas/playcanvas-quake3/releases/tag/splat-maps-v0.1.0),
 under the same licence.
 
 ## Papers, specifications, formats and posts

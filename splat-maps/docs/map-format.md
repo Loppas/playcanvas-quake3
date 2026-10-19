@@ -306,16 +306,15 @@ reading above its entity, and checks the spots in the bake as L20–L22 do.
 
 ### 3.5 Worked example
 
-`garage_rats`, as its `.ent` looks.
-- Entity 1 is the garage's spawn spot.
-- Entities 2 and 3 are illustrative, not placed with `viewpos`. Entity 2 was first written at
-  `1100 2100 900`, which the levelshot step's check found inside a solid voxel (L22), so it was
-  moved 4% of the way along its line of sight, to the first point with 32 units open around it.
-- The `_pcq_*` keys are the ones the bake and the polish recorded when the garage was rebuilt
-  from `garage.sog`. `_pcq_polish` reproduces the shipped polish's transform digit for digit, so
-  its inputs are measured, not inferred.
-- `_pcq_bake` is the re-bake §6.1 calls for. The shipped octree was carved with
-  `--voxel-carve 1.75,0.47`, which rounds to a 40 × 72-unit box, and L10 refuses that.
+`garage_rats`, as the `.ent` packed in its pk3 on
+[its release](https://github.com/Loppas/playcanvas-quake3/releases/tag/splat-maps-v0.1.0) has it,
+less its other eight spawn spots, entities 2 to 9.
+- Entity 1 is the first spawn spot, from the `viewpos` reading `(-4 -4 69) : 0`, less 26 in z
+  (§3.4).
+- Entities 10 and 11 are the intermission point and what it faces, each a reading taken as it is.
+- The `_pcq_*` keys are the ones `package` wrote (§7): the polish's and the bake's records, from
+  the garage aligned at life size, as `splat-maps/examples/` rebuilds it, and the commit that
+  built the map.
 
 ```
 // entity 0
@@ -325,26 +324,26 @@ reading above its entity, and checks the spots in the bake as L20–L22 do.
 "_pcq_format" "1"
 "_pcq_source" "Garage - High Detail Test by Ethan, https://superspl.at/scene/8f4d8e05"
 "_pcq_license" "CC-BY-4.0"
-"_pcq_polish" "--metric-height 3.0 --player-height 0.1 --up-hint 0,-1,0"
-"_pcq_scale" "16.08880448"
-"_pcq_bake" "--voxel-size 0.25 --voxel-external-fill 0.875 --voxel-carve 0.75,0.125 --seed-pos 0,-5,0 --collision-mesh smooth"
+"_pcq_polish" "--metric-height 3.0 --player-height 0.1"
+"_pcq_scale" "17.49962417"
+"_pcq_bake" "--voxel-size 0.25 --voxel-external-fill 0.875 --voxel-carve 0.75,0.125 --seed-pos 0.125,-1.5,0.125 --collision-mesh smooth"
 "_pcq_splat_transform" "3.1.6"
-"_pcq_pipeline" "0000000"
+"_pcq_pipeline" "16cf643"
 }
-// entity 1: the spawn spot
+// entity 1
 {
 "classname" "info_player_deathmatch"
 "origin" "-4 -4 43"
 "angle" "0"
 "spawnflags" "1"
 }
-// entity 2: the intermission camera and levelshot viewpoint (illustrative)
+// entity 10
 {
 "classname" "info_player_intermission"
 "origin" "1056 2016 868"
 "target" "intermission_view"
 }
-// entity 3: what it looks at (illustrative)
+// entity 11
 {
 "classname" "target_position"
 "targetname" "intermission_view"
@@ -600,11 +599,11 @@ version in worldspawn the same way (`_q3map2_cmdline`, `_q3map2_version`;
 | `_pcq_format` | This layout's version, an integer | `package_map` | `1` |
 | `_pcq_source` | The source capture: title, creator, link | the source's `license.txt`, or `splat-maps polish --license` for a capture with none, through the polish record `<n>.polish.json` | `Garage - High Detail Test by Ethan, https://superspl.at/scene/8f4d8e05` |
 | `_pcq_license` | The source's licence, as an SPDX identifier | as above | `CC-BY-4.0` |
-| `_pcq_polish` | `sog_inspect`'s arguments: metric height, player height, up hint | the polish record | `--metric-height 3.0 --player-height 0.1 --up-hint 0,-1,0` |
-| `_pcq_scale` | Metres of the finished map per unit of the captured file: the `-s` factor, metric correction included | the polish record, from the `-s` it applied | `16.08880448` |
-| `_pcq_bake` | The bake's splat-transform flags, sized as §6.1 sizes them, with the seed in the octree frame | the bake record `<n>.bake.json` | `--voxel-size 0.25 --voxel-external-fill 0.875 --voxel-carve 0.75,0.125 --seed-pos 0,-5,0 --collision-mesh smooth` |
+| `_pcq_polish` | `sog_inspect`'s arguments: metric height, player height, up hint | the polish record | `--metric-height 3.0 --player-height 0.1` |
+| `_pcq_scale` | Metres of the finished map per unit of the polish's input: the `-s` factor, metric correction included | the polish record, from the `-s` it applied | `17.49962417` |
+| `_pcq_bake` | The bake's splat-transform flags, sized as §6.1 sizes them, with the seed in the octree frame | the bake record `<n>.bake.json` | `--voxel-size 0.25 --voxel-external-fill 0.875 --voxel-carve 0.75,0.125 --seed-pos 0.125,-1.5,0.125 --collision-mesh smooth` |
 | `_pcq_splat_transform` | The splat-transform version the polish and the bake ran | both records; the lint refuses a mismatch | `3.1.6` |
-| `_pcq_pipeline` | The commit of this repository, playcanvas-quake3, that built the map | `package_map` | a short SHA |
+| `_pcq_pipeline` | The commit of this repository, playcanvas-quake3, that built the map | `package_map` | `16cf643` |
 
 The rules:
 - **The pipeline owns these keys.** A hand-written `.ent` leaves them out. `package_map` writes them

@@ -290,10 +290,11 @@ splat-maps package data/<project>/map/<stem>.sog --author "<who made the map>"
 It writes `map-<stem>.pk3` beside the `.sog`: every part at its Q3 path, the `_pcq_*` keys in the
 packed `.ent`'s worldspawn, and the readme `<stem>.txt`, which credits the source. Then it reads
 the pk3 back entry by entry and runs the lint, `map_lint.py`, whose 29 rules are `map-format.md`
-§10. The garage's pk3 is 189 MB.
+§10. `garage_rats`' pk3 is 188 MB.
 
-**Check:** the lint passes. A warning that `_pcq_pipeline` names a `-dirty` commit means the
-scripts had uncommitted changes, so commit them and package again before a release.
+**Check:** the lint passes. `package` warns when `splat_maps` has uncommitted changes, since
+`_pcq_pipeline` then names a commit, ending `-dirty`, that did not build the map: commit them and
+package again before a release.
 
 ### 9. Deliver
 

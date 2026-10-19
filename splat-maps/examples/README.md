@@ -16,13 +16,8 @@ from `garage-aligned.sog`, below.
 `garage-aligned.sog` is the garage at life size: levelled, its walls squared to the axes, its
 floor at 0, in metres, with the capture's licence inside. It is the capture through the polish
 once, with no player height, and each example's polish scales it for its player.
-
-Download the capture from its page on [superspl.at](https://superspl.at/scene/8f4d8e05), as
-`data\garage\garage.sog`. Then, from `splat-maps\`, with `nvm use 24` run once:
-
-```bash
-splat-maps polish data/garage/garage.sog data/garage/garage-aligned.sog 3.0 --up-hint "0,-1,0"
-```
+[The splat-maps quick start](../README.md#a-first-map-from-the-garage)'s steps 1 and 2 download the
+capture and make it.
 
 The capture is upside down in its file, hence `--up-hint`. `garage-aligned.polish.json` here is
 what the polish recorded: its transform, its verify and the capture's licence. A rerun makes the

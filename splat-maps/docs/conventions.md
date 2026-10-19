@@ -191,7 +191,9 @@ binary, so the consumer still needs a reader — the port's is `readOctree`
 
 **Polish runs measure → apply → verify → record**, and the second measurement is the
 deliverable's warrant. The record step fails the polish unless it shows tilt and yaw within
-0.1°, the floor within 1 unit of y = 0, and the clear height kept within 0.5%.
+0.1°, the floor within 1 unit of y = 0, and the clear height kept within 0.5%. With `--outdoor`,
+tilt and yaw within 0.25° and the height within 1%: a yard's ground and trees are rougher for the
+fits than a room's floor and walls.
 - **The verify always hints +Y.** The output is +Y up by construction. Handing it the input's
   `--up-hint 0,-1,0` makes `sog_inspect` lock onto the ceiling and report the map upside down.
 - **The polish keeps the source's `license.txt`** inside the output bundle, since
