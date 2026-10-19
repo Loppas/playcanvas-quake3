@@ -38,9 +38,9 @@ jobs:
           fi
           changed=$(git diff --name-only HEAD^1 HEAD)
           match() { grep -qE "$1" <<< "$changed" && echo true || echo false; }
-          # The app's checks are skipped only when every change is under splat-maps/, so a path
-          # nobody listed runs them.
-          echo "app=$(grep -qvE '^splat-maps/' <<< "$changed" && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          # The app's checks run for a change to what they read: the code and its tests, the build
+          # and its settings, and the notices the build publishes.
+          echo "app=$(match '^(src/|master/|scripts/|electron/|public/|index\.html$|vite(\.[a-z]+)?\.config\.ts$|tsconfig\.json$|package(-lock)?\.json$|\.nvmrc$|electron-builder\.config\.mjs$|LICENSE$|NOTICE$|CREDITS\.md$|\.github/workflows/)')" >> "$GITHUB_OUTPUT"
           echo "shell=$(match '^(electron/|scripts/|electron-builder\.config\.mjs$|package(-lock)?\.json$|\.github/workflows/)')" >> "$GITHUB_OUTPUT"
           echo "splat-maps=$(match '^(splat-maps/|\.github/workflows/)')" >> "$GITHUB_OUTPUT"
 
