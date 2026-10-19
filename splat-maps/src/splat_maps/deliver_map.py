@@ -34,10 +34,14 @@ def sha256(path):
 
 
 def maps_folder(port):
-    """The port's `public/maps/`; exits unless `port` looks like the port."""
+    """The port's `public/maps/`, made if missing; exits unless `port` has a package.json.
+
+    A fresh clone has no `public/`: git keeps no empty folder, and `public/maps/` is ignored.
+    """
+    if not os.path.isfile(os.path.join(port, "package.json")):
+        sys.exit(f"ERROR: {port} does not look like the port: no package.json")
     maps = os.path.join(port, "public", "maps")
-    if not os.path.isfile(os.path.join(port, "package.json")) or not os.path.isdir(maps):
-        sys.exit(f"ERROR: {port} does not look like the port: no package.json and public/maps")
+    os.makedirs(maps, exist_ok=True)
     return maps
 
 
