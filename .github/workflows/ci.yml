@@ -88,6 +88,8 @@ jobs:
       - run: npm run build:pages
       - run: npm run build:dedicated
       - run: npm run build:master
+      # The hosted master's bundle, made as a deploy makes it, without an account.
+      - run: npm run deploy:master -- --dry-run
 
   shell:
     needs: changes

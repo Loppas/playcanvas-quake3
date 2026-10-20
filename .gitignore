@@ -12,6 +12,8 @@ dist
 dist-ssr
 build
 *.local
+# Wrangler's own state and bundles, beside its config.
+.wrangler
 
 # Editor directories and files
 .vscode/*
