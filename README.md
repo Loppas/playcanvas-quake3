@@ -428,9 +428,10 @@ And the cvars:
 | `sv_runMaster` | `0` | The Node dedicated server runs a master inside itself, on 27950. |
 
 Every server registers with both masters. The Node dedicated server pings each every 30 seconds,
-and closes and opens again a link that hasn't answered by the next ping. A slot is `host[:port]`,
-reached by `ws://` on `localhost` or a private address and by `wss://` otherwise, or a `ws://` or
-`wss://` URL taken as given.
+and closes and opens again a link that hasn't answered by the next ping. A master forgets a server
+whose link closes, so a server at `dedicated 2` heartbeats to `sv_master1` as soon as that link
+opens again. A slot is `host[:port]`, reached by `ws://` on `localhost` or a private address and by
+`wss://` otherwise, or a `ws://` or `wss://` URL taken as given.
 
 ## Scripts
 

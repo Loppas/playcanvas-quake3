@@ -3,11 +3,17 @@ import { resolve } from 'node:path';
 import { zipSync } from 'fflate';
 import { describe, expect, it, vi } from 'vitest';
 
+import { MasterServer } from '../../master/master-server';
+import { MASTER_ADR, masterPeer, oob, readList } from '../../master/master-test-fixtures';
 import { bspFile } from '../formats/bsp-test-fixtures';
 import { CA, ClientConnection } from '../net/connection';
 import { CONFIGSTRING } from '../net/commands';
+import type { CvarStore } from '../net/cvar';
+import { RETRY_MSEC, ServerMasters } from '../net/masters';
 import { MemoryNetwork, testCvars } from '../net/net-test-fixtures';
 import { NA, Net, netadr, stringToAdr, type DatagramSocket } from '../net/net';
+import { createPeerSocket } from '../net/peer-signalling';
+import { FakeRtc, settle, webSocketPair, type FakeSocketEnd } from '../net/peer-test-fixtures';
 import { createNetUserCmd, ENTITYNUM_NONE, ENTITYNUM_WORLD } from '../net/protocol';
 import { CS, Host } from './host';
 import { memorySource } from '../pak/byte-source';
@@ -658,6 +664,110 @@ describe("what lands between the dedicated server's frames", () => {
     expect(errors.map((err) => err.message)).toEqual(['boom']);
     expect(server.program).not.toBe(old);
     expect(server.program.svRunning).toBe(false);
+  });
+});
+
+describe('the dedicated server on its master', () => {
+  /**
+   * A server at 203.0.113.9 whose `sv_master1` is a master in memory, which checks a server down
+   * the server's own link, all on a clock the test moves; and a client at 198.51.100.4 asking the
+   * master for its list. The master's end of each of the server's links is kept, for a test to drop.
+   */
+  async function atMaster(dedicated: string) {
+    let clock = 0;
+    const rtc = new FakeRtc();
+    const master = new MasterServer({ now: () => clock, lookup: async () => [], print: () => {} });
+    const ends: FakeSocketEnd[] = [];
+    const registered: string[] = [];
+    const network = async (cvars: CvarStore): Promise<ServerNetwork> => {
+      const { socket, signalling } = createPeerSocket({
+        links: [],
+        createPeerConnection: rtc.create,
+        dials: false
+      });
+      const masters = new ServerMasters({
+        cvars,
+        signalling,
+        connect: () => {
+          const { client, server } = webSocketPair();
+          master.connect(server, '203.0.113.9', 50000 + ends.length);
+          ends.push(server);
+          return client;
+        },
+        now: () => clock,
+        print: (line) => registered.push(line)
+      });
+      const opened: ServerNetwork = {
+        socket,
+        frame: () => masters.frame(),
+        close: () => masters.close()
+      };
+      masters.onRegistered = (adr) => opened.onRegistered?.(adr);
+      return opened;
+    };
+    const rig = await start({
+      argv: [
+        '+set', 'dedicated', dedicated,
+        '+set', 'sv_master1', 'master.test',
+        '+set', 'sv_master2', '',
+        '+map', 'room'
+      ],
+      network,
+      now: () => clock
+    });
+    const client = masterPeer(master, rtc.create, '198.51.100.4', { dials: true });
+
+    /** A frame this much later, and whatever it set going landed. */
+    const step = async (msec: number) => {
+      clock += msec;
+      rig.server.frame(msec);
+      await settle();
+    };
+    /** The master's end of the server's link dropped, and the server's next try made. */
+    const dropped = async () => {
+      ends[0].close();
+      await settle();
+      for (let waited = 0; waited < RETRY_MSEC; waited += 100) await step(100);
+    };
+    /** The master's list, as the client is sent it. */
+    const listed = async () => {
+      client.socket.send(oob('getservers PlayCanvasQuake 2 empty'), MASTER_ADR);
+      await settle();
+      return readList(client.socket.receive()!.data);
+    };
+    const heartbeats = () => rig.lines.filter((line) => line.startsWith('Sending heartbeat'));
+
+    await step(1);
+    await rig.server.program.mapLoad;
+    await step(8);
+    return { ...rig, ends, registered, dropped, step, listed, heartbeats };
+  }
+
+  it('is listed again as soon as its link opens again, at dedicated 2', async () => {
+    const { ends, dropped, step, listed, heartbeats } = await atMaster('2');
+    expect(await listed()).toEqual(['203.0.113.9:27960']);
+    expect(heartbeats()).toHaveLength(1);
+
+    await dropped();
+    expect(ends).toHaveLength(2);
+    // The master forgot the server with its link, and hears from it again 3 s on, not 300.
+    await step(8);
+    expect(heartbeats()).toHaveLength(2);
+    expect(await listed()).toEqual(['203.0.113.9:27960']);
+  });
+
+  it('sends no heartbeat on reconnecting at dedicated 1, which sends none', async () => {
+    const { ends, registered, dropped, step, listed, heartbeats } = await atMaster('1');
+    await dropped();
+    await step(8);
+
+    expect(ends).toHaveLength(2);
+    expect(registered).toEqual([
+      'Registered with master.test as 203.0.113.9:27960',
+      'Registered with master.test as 203.0.113.9:27960'
+    ]);
+    expect(heartbeats()).toEqual([]);
+    expect(await listed()).toEqual([]);
   });
 });
 

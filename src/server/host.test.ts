@@ -2923,6 +2923,23 @@ describe('the heartbeat', () => {
     expect(heartbeats()).toEqual(['heartbeat DarkPlaces\n']);
   });
 
+  it('is asked for by the master it goes to granting a registration, and by no other', () => {
+    const { host, heartbeats, lan } = publicServer();
+    host.runFrame(host.frameMsec);
+    heartbeats();
+
+    host.masterRegistered(netadr(NA.IP, 'lan.test', 27950));
+    host.masterRegistered(netadr(NA.IP, 'master.test', 27951));
+    host.runFrame(host.frameMsec);
+    expect(heartbeats()).toEqual([]);
+
+    host.masterRegistered(netadr(NA.IP, 'master.test', 27950));
+    expect(heartbeats()).toEqual([]);
+    host.runFrame(host.frameMsec);
+    expect(heartbeats()).toEqual(['heartbeat DarkPlaces\n']);
+    expect(lan()).toEqual([]);
+  });
+
   it('is asked for by the first client, and by a connect that fills the server', () => {
     const first = publicServer();
     first.host.runFrame(first.host.frameMsec);

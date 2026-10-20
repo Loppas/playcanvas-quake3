@@ -250,10 +250,12 @@ export interface ServerMastersOptions extends MastersOptions {
  *
  * A connection that fails or is lost is tried again {@link RETRY_MSEC} later, the wait doubling up
  * to {@link MAX_RETRY_MSEC} and starting over once one opens. A slot changed is followed at the
- * next frame. The server's heartbeat keeps its own clock, so a master that has restarted lists the
- * server again when its next heartbeat comes, as Quake 3's does.
+ * next frame. Each registration a master grants is told to the server, on every connection.
  */
 export class ServerMasters extends SlotMasters {
+  /** Told the master that granted the server's registration, each time a connection to it opens. */
+  onRegistered: ((master: NetAdr) => void) | null = null;
+
   private readonly now: () => number;
 
   constructor(options: ServerMastersOptions) {
@@ -285,8 +287,10 @@ export class ServerMasters extends SlotMasters {
     ws.addEventListener('open', () => {
       master.wait = RETRY_MSEC;
     });
-    link.onRegistered = (address) =>
+    link.onRegistered = (address) => {
       this.print(`Registered with ${master.name} as ${adrToStringWithPort(address)}`);
+      this.onRegistered?.(master.master);
+    };
     const port = this.cvars.get('net_port');
     link.register(port === '' ? PORT_SERVER : atoi(port));
   }
