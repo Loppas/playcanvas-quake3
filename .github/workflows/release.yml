@@ -1,12 +1,12 @@
 name: release
 
 # A push to main opens or updates release-please's release pull requests, one per package, and
-# merging one cuts its tag and GitHub release. The app's release deploys Pages and attaches the
-# Windows shell through this workflow's own jobs, since a release made with GITHUB_TOKEN starts no
-# other workflow.
+# merging one cuts its tag and GitHub release. The app's release deploys Pages, attaches the
+# Windows shell and deploys the hosted master where it changed, through this workflow's own jobs,
+# since a release made with GITHUB_TOKEN starts no other workflow.
 # The action's `release_created` and `tag_name` are the root package's alone, so a splat-maps
-# release runs neither. A manual run is the dry run: it builds both from the ref it is given and
-# releases nothing.
+# release runs none of them. A manual run is the dry run: it builds Pages and the shell from the
+# ref it is given, compares its master with the last release's, and releases and deploys nothing.
 on:
   push:
     branches: [main]
@@ -74,6 +74,84 @@ jobs:
       - uses: actions/configure-pages@v6
       - id: deploy
         uses: actions/deploy-pages@v5
+
+  # The master changed when its bundle, as a deploy would upload it, differs from the last app
+  # release's, or that release had none.
+  master:
+    needs: release-please
+    if: ${{ !cancelled() && (needs.release-please.outputs.created == 'true' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.tag }}
+          # The tags, to find the last release by.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      # Wrangler's folder holds the Worker and its source map, which it uploads, and a README
+      # stamped with the time; the config is what the Worker is deployed with. Both are built in
+      # one checkout into one folder, as the map names the folder and its sources from there.
+      - id: compare
+        run: |
+          bundle() {
+            npm ci --ignore-scripts
+            npm run deploy:master -- --dry-run --outdir "$RUNNER_TEMP/bundle"
+            rm "$RUNNER_TEMP/bundle/README.md"
+            cp master/cloudflare/wrangler.jsonc "$RUNNER_TEMP/bundle/"
+            mv "$RUNNER_TEMP/bundle" "$RUNNER_TEMP/$1"
+          }
+          bundle this
+          last=$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD^ 2> /dev/null) || last=
+          if [ -z "$last" ] || ! git cat-file -e "$last:master/cloudflare/wrangler.jsonc" 2> /dev/null; then
+            verdict="${last:-No release} has no master: deploy"
+            changed=true
+          else
+            git checkout -q "$last"
+            bundle last
+            if diff -rq "$RUNNER_TEMP/last" "$RUNNER_TEMP/this"; then
+              verdict="The master is $last's: no deploy"
+              changed=false
+            else
+              verdict="The master differs from $last's: deploy"
+              changed=true
+            fi
+          fi
+          echo "$verdict" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+  # A deploy closes every WebSocket the master holds, so the `cloudflare` environment, which holds
+  # the Cloudflare token and the account's id, deploys from main alone once a reviewer approves.
+  deploy-master:
+    needs: [release-please, master]
+    if: needs.release-please.outputs.created == 'true' && needs.master.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    environment: cloudflare
+    steps:
+      # Pinned to commits, and no package's install script run, as the job holds the token.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci --ignore-scripts
+      - run: npm run deploy:master
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   shell:
     needs: release-please
