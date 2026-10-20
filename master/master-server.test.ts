@@ -2,7 +2,7 @@ import type { LookupAddress } from 'node:dns';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { encodeFrame, type Resolved } from '../src/net/master-protocol';
+import { decodeFrame, encodeFrame, type Resolved } from '../src/net/master-protocol';
 import {
   adrToStringWithPort,
   NA,
@@ -23,6 +23,7 @@ import {
   RELAY_PERIOD
 } from './master-server';
 import { MASTER_ADR, masterPeer, oob, read, readList, text } from './master-test-fixtures';
+import { TIMEOUT_INFORESPONSE } from './messages';
 import { TIMEOUT_HEARTBEAT } from './servers';
 
 describe('the master', () => {
@@ -61,14 +62,14 @@ describe('the master', () => {
   });
 
   /** A program's socket at the master, from `ip`. */
-  function peer(ip: string, options: { dials?: boolean; port?: number } = {}) {
+  function peer(ip: string, options: { dials?: boolean; port?: number; recorded?: boolean } = {}) {
     const dials = options.dials ?? true;
     return masterPeer(master, rtc.create, ip, { ...options, dials, now: clock });
   }
 
   /** A server at `ip` that has asked for `port`, and been answered. */
-  async function server(ip: string, port = 27960) {
-    const program = peer(ip, { dials: false });
+  async function server(ip: string, port = 27960, options: { recorded?: boolean } = {}) {
+    const program = peer(ip, { ...options, dials: false });
     program.link.register(port);
     await settle();
     return program;
@@ -487,6 +488,106 @@ describe('the master', () => {
       await settle();
       expect(program.link.address?.port).toBe(28000);
       expect(await ask('getservers PlayCanvasQuake 1')).toEqual([[]]);
+    });
+  });
+
+  describe('a master started afresh from the records its WebSockets hold', () => {
+    beforeEach(() => {
+      master = newMaster();
+    });
+
+    /** A server whose WebSocket's end at the master holds a record. */
+    const recordedServer = (ip: string) => server(ip, 27960, { recorded: true });
+
+    /**
+     * The master as a Durable Object woken from hibernation has it: a new one, given the master's
+     * end of each program's WebSocket back with its record, while the programs keep their links.
+     */
+    function wake(...programs: ReturnType<typeof peer>[]): void {
+      master = newMaster();
+      for (const { recorded } of programs) {
+        const end = recorded!.woken();
+        master.restore(end, end.record!);
+      }
+    }
+
+    it('knows its sockets by the same addresses, and lists the same servers', async () => {
+      const first = await recordedServer('203.0.113.9');
+      const second = await recordedServer('203.0.113.9');
+      const quiet = await recordedServer('203.0.113.9');
+      const client = peer('198.51.100.4', { recorded: true });
+      await heartbeat(first);
+      await heartbeat(second, '8');
+      const lists = async () => [
+        await ask('getservers PlayCanvasQuake 1 full'),
+        await ask('getservers PlayCanvasQuake 1 local', '203.0.113.9')
+      ];
+      const before = await lists();
+      expect(before).toEqual([
+        [['203.0.113.9:27960', '203.0.113.9:27961']],
+        [['203.0.113.9:27960', '203.0.113.9:27961', '203.0.113.9:27962']]
+      ]);
+
+      const frames: string[] = [];
+      for (const program of [first, second, quiet, client]) {
+        program.ws.addEventListener('message', (event: { data?: unknown }) => {
+          frames.push(decodeFrame(new Uint8Array(event.data as ArrayBuffer))?.kind ?? '');
+        });
+      }
+      wake(first, second, quiet, client);
+      await settle();
+      // No socket is greeted again.
+      expect(frames).toEqual([]);
+      expect(await lists()).toEqual(before);
+
+      // A relay goes between two of them by the addresses they went by.
+      client.socket.send(oob('getinfo abc'), quiet.link.address!);
+      await settle();
+      expect(read(quiet.socket)).toEqual([{ from: client.link.address, data: oob('getinfo abc') }]);
+      // Their ports are still taken, and one whose socket closes takes its server along.
+      expect((await recordedServer('203.0.113.9')).link.address?.port).toBe(27963);
+      second.link.close();
+      await settle();
+      expect(await ask('getservers PlayCanvasQuake 1 full')).toEqual([['203.0.113.9:27960']]);
+    });
+
+    it('takes the answer to a getinfo the master before it sent', async () => {
+      const program = await recordedServer('203.0.113.9');
+      const getinfo = await getInfo(program);
+      wake(program);
+      await infoResponse(program, getinfo, challengeOf(getinfo));
+      expect(await ask('getservers PlayCanvasQuake 1')).toEqual([['203.0.113.9:27960']]);
+    });
+
+    it('drops a listing whose time ran out between the two', async () => {
+      const early = await recordedServer('203.0.113.9');
+      await heartbeat(early);
+      now += 600_000;
+      const late = await recordedServer('203.0.113.9');
+      await heartbeat(late);
+      // Past the first listing's 15 minutes, and within the second's.
+      now += (TIMEOUT_INFORESPONSE - 600 + 1) * 1000;
+      wake(early, late);
+
+      expect(await ask('getservers PlayCanvasQuake 1')).toEqual([['203.0.113.9:27961']]);
+      expect(await ask('getservers PlayCanvasQuake 1 local', '203.0.113.9')).toEqual([
+        ['203.0.113.9:27960', '203.0.113.9:27961']
+      ]);
+    });
+
+    it('starts the rate limit afresh', async () => {
+      const host = await recordedServer('203.0.113.9');
+      const client = peer('198.51.100.4', { recorded: true });
+      await settle();
+      const frame = encodeFrame({ kind: 'relay', peer: host.link.address!, data: oob('getinfo') });
+      for (let i = 0; i <= RELAY_BURST; i++) client.ws.send(frame);
+      await settle();
+      expect(read(host.socket)).toHaveLength(RELAY_BURST);
+
+      wake(host, client);
+      client.ws.send(frame);
+      await settle();
+      expect(read(host.socket)).toHaveLength(1);
     });
   });
 

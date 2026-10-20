@@ -30,7 +30,7 @@ import { rateLimit, type LeakyBucket } from '../src/server/connectionless';
 import { Throttle } from './clients';
 import { publicAddress } from './common';
 import { Messages } from './messages';
-import { MAX_SERVERS_PER_ADDRESS, ServerList } from './servers';
+import { MAX_SERVERS_PER_ADDRESS, ServerList, type Server } from './servers';
 
 /**
  * The master: dpmaster's messages (`messages.ts`) on a WebSocket to each socket, and the port's own
@@ -45,6 +45,14 @@ import { MAX_SERVERS_PER_ADDRESS, ServerList } from './servers';
  *   socket's do, naming no address, as a frame to or from the master itself does;
  * - without them, down the server's own WebSocket, as a datagram from the master, which shows
  *   only that the server answers.
+ *
+ * Where the master's end of a WebSocket can hold a record across the master's restart, as a
+ * Durable Object's can under Cloudflare's hibernation API, the master keeps in it what it knows of
+ * the connection: its address, its registration and its server's listing. The runtime keeps the
+ * record on the master's side, so nothing crosses the connection for it, and the socket at the
+ * other end sees one connection throughout. A master started afresh is given each WebSocket back
+ * with its record (`restore`); the rest, the rate limit's and the throttle's counts among it,
+ * starts afresh.
  */
 
 /** The ICE servers every greeting names: Cloudflare's free STUN. */
@@ -92,9 +100,33 @@ export interface MasterServerOptions {
   print?: (line: string) => void;
 }
 
+/**
+ * The master's end of a socket's WebSocket. Node's `ws` holds no record, so the master keeps what
+ * it knows in memory alone.
+ */
+export interface MasterWebSocket extends WebSocketLike {
+  /**
+   * `WebSocket.serializeAttachment` in Cloudflare's runtime: a structured clone of `record`, kept
+   * with this end.
+   */
+  serializeAttachment?(record: ConnectionRecord): void;
+}
+
+/**
+ * What the master knows of a connection, as the master's end of its WebSocket holds it: enough for
+ * a master started afresh to go on as the one before it. Its times are the master's clock's.
+ */
+export interface ConnectionRecord {
+  source: NetAdr;
+  address: NetAdr;
+  registered: boolean;
+  /** The server listed at its address, or null. */
+  server: Server | null;
+}
+
 /** One socket's WebSocket at the master. */
 interface Connection {
-  ws: WebSocketLike;
+  ws: MasterWebSocket;
   /** Where it came from: its IP and its connection's source port. */
   source: NetAdr;
   /** The address the master names it by: the port it registered, or else its source's. */
@@ -152,7 +184,7 @@ export class MasterServer {
     this.messages = new Messages({
       servers: this.servers,
       throttle: new Throttle(),
-      now: () => Math.floor(this.now() / 1000),
+      now: () => this.seconds(),
       random,
       sendGetInfo: (to, data) => this.sendGetInfo(to, data),
       registered: () =>
@@ -168,29 +200,30 @@ export class MasterServer {
    * @param ip - The address its connection comes from, as Node writes it.
    * @param port - Its connection's source port.
    */
-  connect(ws: WebSocketLike, ip: string, port: number): void {
+  connect(ws: MasterWebSocket, ip: string, port: number): void {
     const source = connectionAddress(ip, port);
     if (source === null) {
       ws.close();
       return;
     }
-    const connection: Connection = {
-      ws,
-      source,
-      address: this.unclaimed(source),
-      registered: false,
-      bucket: { lastTime: 0, burst: 0 }
-    };
-    this.connections.set(adrToStringWithPort(connection.address), connection);
-
-    ws.binaryType = 'arraybuffer';
-    ws.addEventListener('message', (event) => this.receive(connection, event.data));
-    ws.addEventListener('close', () => this.disconnect(connection));
+    const connection = this.add(ws, source, this.unclaimed(source), false);
+    this.save(connection);
     this.send(connection, {
       kind: 'greeting',
       address: connection.address,
       iceServers: this.iceServers
     });
+  }
+
+  /**
+   * The master's end of a socket's WebSocket as the master before this one held it, with the
+   * record it holds: the connection at the address it went by, registered as it was, and its
+   * server listed as it was. The socket is not greeted, as it knows its address already. A master
+   * is given its WebSockets back before any new socket connects.
+   */
+  restore(ws: MasterWebSocket, record: ConnectionRecord): void {
+    this.add(ws, record.source, record.address, record.registered);
+    if (record.server !== null) this.servers.restore(record.server);
   }
 
   /**
@@ -212,6 +245,28 @@ export class MasterServer {
     for (const connection of [...this.connections.values()]) connection.ws.close();
   }
 
+  /** A connection at `address`, its frames read from now on. */
+  private add(
+    ws: MasterWebSocket,
+    source: NetAdr,
+    address: NetAdr,
+    registered: boolean
+  ): Connection {
+    const connection: Connection = {
+      ws,
+      source,
+      address,
+      registered,
+      bucket: { lastTime: 0, burst: 0 }
+    };
+    this.connections.set(adrToStringWithPort(address), connection);
+
+    ws.binaryType = 'arraybuffer';
+    ws.addEventListener('message', (event) => this.receive(connection, event.data));
+    ws.addEventListener('close', () => this.disconnect(connection));
+    return connection;
+  }
+
   private receive(connection: Connection, data: unknown): void {
     if (!(data instanceof ArrayBuffer)) return;
     if (data.byteLength > MAX_FRAME) {
@@ -227,6 +282,8 @@ export class MasterServer {
           this.send(connection, { kind: 'datagram', data: data as Uint8Array<ArrayBuffer> });
         };
         this.messages.handle(frame.data, connection.address, reply);
+        // A heartbeat or an `infoResponse` may have listed or changed the server behind it.
+        this.save(connection);
         return;
       }
       case 'register':
@@ -275,6 +332,7 @@ export class MasterServer {
 
       this.readdress(connection, address);
       connection.registered = true;
+      this.save(connection);
       this.send(connection, { kind: 'registerResponse', address });
       this.print(`> ${name} registered as ${adrToStringWithPort(address)}`);
       return;
@@ -324,6 +382,17 @@ export class MasterServer {
   }
 
   /**
+   * What the master knows of a connection, kept with the master's end of its WebSocket if that can
+   * hold it.
+   */
+  private save(connection: Connection): void {
+    const { ws, source, address, registered } = connection;
+    if (ws.serializeAttachment === undefined) return;
+    const server = this.servers.get(address, this.seconds(), false);
+    ws.serializeAttachment({ source, address, registered, server });
+  }
+
+  /**
    * An address for a new connection: its source, or the next port up that no live connection
    * goes by, so that a server registered on that port keeps it.
    */
@@ -361,6 +430,11 @@ export class MasterServer {
 
   private overLimit(connection: Connection): boolean {
     return rateLimit(connection.bucket, RELAY_BURST, RELAY_PERIOD, Math.floor(this.now()));
+  }
+
+  /** dpmaster's `crt_time`: the master's clock in whole seconds, as its lists keep time. */
+  private seconds(): number {
+    return Math.floor(this.now() / 1000);
   }
 }
 

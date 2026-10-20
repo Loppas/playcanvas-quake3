@@ -2,8 +2,8 @@ import { MasterLink } from '../src/net/master-link';
 import { formatIPv6, NA, netadr, type NetPacket } from '../src/net/net';
 import { createPeerSocket, type PeerConnectionFactory } from '../src/net/peer-signalling';
 import type { PeerSocket } from '../src/net/peer-socket';
-import { webSocketPair } from '../src/net/peer-test-fixtures';
-import type { MasterServer } from './master-server';
+import { FakeSocketEnd, webSocketPair } from '../src/net/peer-test-fixtures';
+import type { ConnectionRecord, MasterServer, MasterWebSocket } from './master-server';
 
 /**
  * Programs at a {@link MasterServer} for tests, each a socket over a WebSocket in memory, and the
@@ -17,20 +17,53 @@ export const MASTER_ADR = netadr(NA.IP, 'master.test', 27950);
 let nextPort = 50000;
 
 /**
- * A program's socket at a master: its link, its signalling, the socket itself, and its end of the
- * WebSocket.
+ * The master's end of a WebSocket that holds a record, as a Durable Object's does under
+ * Cloudflare's hibernation API: a structured clone of the record last kept, so that a change the
+ * master does not write again is lost, as it would be there.
+ */
+export class RecordedEnd extends FakeSocketEnd implements MasterWebSocket {
+  record: ConnectionRecord | null = null;
+
+  /** An end that takes `end`'s place on its connection, cutting `end` off. */
+  constructor(end: FakeSocketEnd) {
+    super(end.readyState);
+    this.other = end.other;
+    if (end.other !== null) end.other.other = this;
+    end.other = null;
+  }
+
+  serializeAttachment(record: ConnectionRecord): void {
+    this.record = structuredClone(record);
+  }
+
+  /**
+   * The connection as an object woken from hibernation is given it: the same, at a new end that
+   * nothing listens to yet, holding this end's record.
+   */
+  woken(): RecordedEnd {
+    const end = new RecordedEnd(this);
+    end.record = this.record;
+    return end;
+  }
+}
+
+/**
+ * A program's socket at a master: its link, its signalling, the socket itself, its end of the
+ * WebSocket, and the master's end if that holds a record.
  *
  * @param ip - Where its connection comes from, as Node writes it.
  * @param options.port - Its connection's source port, if the test needs one.
+ * @param options.recorded - Whether the master's end holds a record ({@link RecordedEnd}).
  */
 export function masterPeer(
   master: MasterServer,
   createPeerConnection: PeerConnectionFactory,
   ip: string,
-  options: { dials: boolean; port?: number; now?: () => number }
+  options: { dials: boolean; port?: number; now?: () => number; recorded?: boolean }
 ) {
   const { client, server } = webSocketPair();
-  master.connect(server, ip, options.port ?? nextPort++);
+  const recorded = options.recorded === true ? new RecordedEnd(server) : null;
+  master.connect(recorded ?? server, ip, options.port ?? nextPort++);
   const link = new MasterLink(MASTER_ADR, client);
   const { socket, signalling } = createPeerSocket({
     links: [link],
@@ -38,7 +71,7 @@ export function masterPeer(
     dials: options.dials,
     now: options.now
   });
-  return { link, socket, signalling, ws: client };
+  return { link, socket, signalling, ws: client, recorded };
 }
 
 /** Text behind the out-of-band marker, a byte to a character. */
