@@ -17,7 +17,7 @@ export const MASTER_ADR = netadr(NA.IP, 'master.test', 27950);
 let nextPort = 50000;
 
 /**
- * The master's end of a WebSocket that carries a record, as a Durable Object's does under
+ * The master's end of a WebSocket that holds a record, as a Durable Object's does under
  * Cloudflare's hibernation API: a structured clone of the record last kept, so that a change the
  * master does not write again is lost, as it would be there.
  */
@@ -38,7 +38,7 @@ export class RecordedEnd extends FakeSocketEnd implements MasterWebSocket {
 
   /**
    * The connection as an object woken from hibernation is given it: the same, at a new end that
-   * nothing listens to yet, carrying this end's record.
+   * nothing listens to yet, holding this end's record.
    */
   woken(): RecordedEnd {
     const end = new RecordedEnd(this);
@@ -49,11 +49,11 @@ export class RecordedEnd extends FakeSocketEnd implements MasterWebSocket {
 
 /**
  * A program's socket at a master: its link, its signalling, the socket itself, its end of the
- * WebSocket, and the master's end if that carries a record.
+ * WebSocket, and the master's end if that holds a record.
  *
  * @param ip - Where its connection comes from, as Node writes it.
  * @param options.port - Its connection's source port, if the test needs one.
- * @param options.recorded - Whether the master's end carries a record ({@link RecordedEnd}).
+ * @param options.recorded - Whether the master's end holds a record ({@link RecordedEnd}).
  */
 export function masterPeer(
   master: MasterServer,

@@ -491,17 +491,17 @@ describe('the master', () => {
     });
   });
 
-  describe("a master started afresh from its sockets' records", () => {
+  describe('a master started afresh from the records its WebSockets hold', () => {
     beforeEach(() => {
       master = newMaster();
     });
 
-    /** A server whose socket at the master carries a record. */
+    /** A server whose WebSocket's end at the master holds a record. */
     const recordedServer = (ip: string) => server(ip, 27960, { recorded: true });
 
     /**
-     * The master as a Durable Object woken from hibernation has it: a new one, given each program's
-     * socket back with its record, while the programs keep their links.
+     * The master as a Durable Object woken from hibernation has it: a new one, given the master's
+     * end of each program's WebSocket back with its record, while the programs keep their links.
      */
     function wake(...programs: ReturnType<typeof peer>[]): void {
       master = newMaster();

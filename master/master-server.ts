@@ -46,11 +46,13 @@ import { MAX_SERVERS_PER_ADDRESS, ServerList, type Server } from './servers';
  * - without them, down the server's own WebSocket, as a datagram from the master, which shows
  *   only that the server answers.
  *
- * Where a socket can carry a record across the master's restart, as a Durable Object's WebSocket
- * can under Cloudflare's hibernation API, the master keeps in it what it knows of the connection:
- * its address, its registration and its server's listing. A master started afresh is given each
- * socket back with its record (`restore`); the rest, the rate limit's and the throttle's counts
- * among it, starts afresh.
+ * Where the master's end of a WebSocket can hold a record across the master's restart, as a
+ * Durable Object's can under Cloudflare's hibernation API, the master keeps in it what it knows of
+ * the connection: its address, its registration and its server's listing. The runtime keeps the
+ * record on the master's side, so nothing crosses the connection for it, and the socket at the
+ * other end sees one connection throughout. A master started afresh is given each WebSocket back
+ * with its record (`restore`); the rest, the rate limit's and the throttle's counts among it,
+ * starts afresh.
  */
 
 /** The ICE servers every greeting names: Cloudflare's free STUN. */
@@ -99,17 +101,20 @@ export interface MasterServerOptions {
 }
 
 /**
- * A socket's WebSocket at the master. Node's `ws` carries nothing for the master, which keeps what
+ * The master's end of a socket's WebSocket. Node's `ws` holds no record, so the master keeps what
  * it knows in memory alone.
  */
 export interface MasterWebSocket extends WebSocketLike {
-  /** `WebSocket.serializeAttachment` in Cloudflare's runtime: a structured clone of `record`, kept. */
+  /**
+   * `WebSocket.serializeAttachment` in Cloudflare's runtime: a structured clone of `record`, kept
+   * with this end.
+   */
   serializeAttachment?(record: ConnectionRecord): void;
 }
 
 /**
- * What the master knows of a connection, as its socket carries it: enough for a master started
- * afresh to go on as the one before it. Its times are the master's clock's.
+ * What the master knows of a connection, as the master's end of its WebSocket holds it: enough for
+ * a master started afresh to go on as the one before it. Its times are the master's clock's.
  */
 export interface ConnectionRecord {
   source: NetAdr;
@@ -211,10 +216,10 @@ export class MasterServer {
   }
 
   /**
-   * A socket's WebSocket as the master before this one held it, from the record it carries: its
-   * connection at the address it went by, registered as it was, and its server listed as it was.
-   * It is not greeted, as its other end knows its address already. A master is given its sockets
-   * back before any new one connects.
+   * The master's end of a socket's WebSocket as the master before this one held it, with the
+   * record it holds: the connection at the address it went by, registered as it was, and its
+   * server listed as it was. The socket is not greeted, as it knows its address already. A master
+   * is given its WebSockets back before any new socket connects.
    */
   restore(ws: MasterWebSocket, record: ConnectionRecord): void {
     this.add(ws, record.source, record.address, record.registered);
@@ -376,7 +381,10 @@ export class MasterServer {
     this.connections.set(adrToStringWithPort(address), connection);
   }
 
-  /** What the master knows of a connection, kept in its socket if the socket can carry it. */
+  /**
+   * What the master knows of a connection, kept with the master's end of its WebSocket if that can
+   * hold it.
+   */
   private save(connection: Connection): void {
     const { ws, source, address, registered } = connection;
     if (ws.serializeAttachment === undefined) return;
