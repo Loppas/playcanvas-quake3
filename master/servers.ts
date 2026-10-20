@@ -116,6 +116,14 @@ export class ServerList {
   }
 
   /**
+   * A server back on the list as a record of the master's kept it. One whose time has run out is
+   * dropped the next time the list is read, as any is.
+   */
+  restore(server: Server): void {
+    this.servers.set(adrToStringWithPort(server.address), server);
+  }
+
+  /**
    * A server whose socket has closed, or that has taken another address. dpmaster's servers only
    * time out; the port's are connected to the master, which knows when one has gone.
    */
