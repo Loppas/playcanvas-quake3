@@ -118,6 +118,15 @@ describe("a tab host's peers", () => {
     expect(stops()).toBe(1);
   });
 
+  it('tell the worker of each master that grants the server its registration', async () => {
+    const { posted } = rig();
+    await settle();
+    const granted = posted.flatMap(({ message, transfer }) =>
+      message.type === 'registered' ? [{ master: message.master, transfer }] : []
+    );
+    expect(granted).toEqual([{ master: netadr(NA.IP, 'localhost', 27950), transfer: [] }]);
+  });
+
   it('let their masters go as they close', async () => {
     const { master, peers } = rig();
     await settle();
