@@ -447,13 +447,14 @@ as given.
 | `npm run build:dedicated` | Build the dedicated server into `build/`, without running it |
 | `npm run master` | Build and run the master (see above) |
 | `npm run build:master` | Build the master into `build/`, without running it |
+| `npm run deploy:master` | Deploy the master to Cloudflare as a Worker (`master/cloudflare/`); `-- --dry-run` bundles it without an account |
 | `npm run record` | Record a play session — frames, contact sheets, video (see below) |
 | `npm run probe:layout` | Measure every menu page against the layout rules, at 16:9 and 4:3 |
 | `npm run reference` | Draw the capture maps in Quake 3 and the port, and compare them (see above) |
 | `npm run q3-play` | Play the same moves in Quake 3 and the port, and compare (see above) |
 | `npm test` | Run the Vitest suite once |
 | `npm run test:watch` | Vitest in watch mode |
-| `npm run typecheck` | `tsc --noEmit`, for the page and the shell's main process |
+| `npm run typecheck` | `tsc --noEmit`, for the page, the shell's main process and the master's Worker |
 | `npm run build` | Typecheck + production build to `dist/` |
 | `npm run build:pages` | Typecheck + the GitHub Pages build to `dist/`, without the maps (see above) |
 | `npm run preview` | Serve the production build |

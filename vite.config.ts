@@ -2,6 +2,7 @@ import { createReadStream } from 'node:fs';
 import { readdir, readFile, rm, stat } from 'node:fs/promises';
 import nodePath from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
+import { configDefaults } from 'vitest/config';
 
 import { isPakName, listPaks, rangeResponse, resolveInside } from './scripts/baseq3-route.mjs';
 import { engineBuild } from './scripts/engine-build.mjs';
@@ -301,7 +302,15 @@ export default defineConfig(({ mode }) => ({
     license: { fileName: THIRD_PARTY_NOTICES },
     rolldownOptions: { output: { postBanner: banner(import.meta.dirname) } }
   },
-  worker: { rolldownOptions: { output: { postBanner: banner(import.meta.dirname) } } }
+  worker: { rolldownOptions: { output: { postBanner: banner(import.meta.dirname) } } },
+  // The suite on Node, as this config's own project, which alone takes the CLI's `--dir` and
+  // `--exclude`, and the master's Worker in workerd as a project of its own. `exclude` is read
+  // from `--dir`'s folder, so the Worker's is named alone.
+  test: {
+    name: 'node',
+    exclude: [...configDefaults.exclude, '**/cloudflare/**'],
+    projects: ['vite.config.ts', 'master/cloudflare/vitest.config.ts']
+  }
   // The dev server keeps Vite's defaults: `localhost` alone, unless `--host` opens it to the
   // network, and Vite's check of the `Host` header, which stops a DNS-rebinding page reaching the
   // routes above.

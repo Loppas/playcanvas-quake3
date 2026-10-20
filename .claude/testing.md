@@ -465,6 +465,14 @@ npx vitest run --dir src
 `npm test` runs everything including `scripts/*.test.mjs`; `--dir src` is the fast inner loop and
 what the sabotage runner uses. `npm run test:watch` watches.
 
+The suite is two Vitest projects (`vite.config.ts`): `node`, everything above, and `workerd`, the
+master's Worker (`master/cloudflare/`) in Cloudflare's runtime through
+`@cloudflare/vitest-plugin`. `--dir` and `--exclude` reach the Node project alone, so the
+Worker's file runs whatever they say; `--project workerd` runs it alone. Its files run one at a
+time, after the Node project's, since a Durable Object's WebSockets need storage shared across
+them. Every fetch the Worker makes is answered by the tests' own DNS over HTTPS
+(`master/cloudflare/vitest.config.ts`), so none reaches the network.
+
 - Tests are colocated as `*.test.ts` and import from `vitest` explicitly — no globals.
 - A file needing a DOM opts in at its top: `// @vitest-environment jsdom` (50 files do).
 - **Mock only what cannot run here.** One of 336 test files calls `vi.mock`. Forty call
@@ -767,8 +775,8 @@ The rules that make it work:
 npm run typecheck
 ```
 
-Covers the page and the shell's main process (`tsc --noEmit` twice). Run it with the suite; a
-change is not green without both.
+Covers the page, the shell's main process and the master's Worker (`tsc --noEmit` three times).
+Run it with the suite; a change is not green without both.
 
 **Never run a formatter on this repo.** There is no Prettier config and no Prettier dependency,
 so `npx prettier --write` applies Prettier's own defaults — double quotes, trailing commas — and

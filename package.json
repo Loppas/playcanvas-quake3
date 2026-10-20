@@ -20,7 +20,7 @@
     "preshell": "node ./scripts/ensure-node-version.cjs",
     "shell": "node ./scripts/shell-dev.mjs",
     "shell:build": "tsc --noEmit -p electron && install-electron && npm run build && electron-builder --config electron-builder.config.mjs",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p electron",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p electron && tsc --noEmit -p master/cloudflare",
     "test": "vitest run",
     "test:watch": "vitest",
     "prerecord": "node ./scripts/ensure-node-version.cjs",
@@ -37,6 +37,7 @@
     "dedicated": "npm run build:dedicated && node build/dedicated.js",
     "build:master": "vite build --config vite.master.config.ts",
     "master": "npm run build:master && node build/master.js",
+    "deploy:master": "wrangler deploy --config master/cloudflare/wrangler.jsonc",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -46,6 +47,8 @@
     "ws": "^8.22.0"
   },
   "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.5",
+    "@cloudflare/workers-types": "^5.20261019.1",
     "@types/node": "^26.1.1",
     "@types/ws": "^8.18.1",
     "electron": "^44.3.0",
@@ -55,7 +58,8 @@
     "semver": "^7.7.4",
     "typescript": "~6.0.2",
     "vite": "^8.0.8",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.151.2"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

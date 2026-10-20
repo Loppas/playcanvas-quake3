@@ -1,0 +1,19 @@
+// The master on Cloudflare's Workers Free plan: the Worker, and the one Durable Object it hands
+// every WebSocket to (worker.ts). `npm run deploy:master` deploys it to the account wrangler is
+// signed in to, or that CLOUDFLARE_ACCOUNT_ID names; no account is named here.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "pcq-master",
+  "main": "worker.ts",
+  // From 2026-08-04 `nodejs_compat` is on by default, which `node:dns` needs.
+  "compatibility_date": "2026-10-19",
+  "workers_dev": true,
+  "send_metrics": false,
+  "durable_objects": {
+    "bindings": [{ "name": "MASTER", "class_name": "MasterObject" }]
+  },
+  // The Free plan's objects are SQLite-backed alone.
+  "exports": {
+    "MasterObject": { "type": "durable-object", "storage": "sqlite" }
+  }
+}
