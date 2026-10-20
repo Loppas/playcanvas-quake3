@@ -10,7 +10,8 @@ import type { PageToWorker } from './worker-messages';
  * A tab's listen server, the page's half of its socket: the peer connections, which only a page
  * can make, and the masters, over which the server registers and is signalled. Each channel is
  * moved to the worker in the task that made it; the worker's socket sends and reads it there, and
- * what it cannot send down one comes back here to be routed (`worker-server.ts`).
+ * what it cannot send down one comes back here to be routed (`worker-server.ts`). Each
+ * registration a master grants crosses too, for the worker's host to hear.
  *
  * The page holds a Web Lock while it hosts. A tab whose data channels have all gone to a worker no
  * longer counts as using WebRTC to Chrome, which is what keeps a hidden tab from being frozen; a
@@ -77,6 +78,7 @@ export class HostPeers implements PeerSink {
       now: options.now,
       print: options.print
     });
+    this.masters.onRegistered = () => this.post({ type: 'registered' }, []);
     this.masters.frame();
     const schedule = options.schedule ?? everySecond;
     this.stopFrames = schedule(() => this.masters.frame());

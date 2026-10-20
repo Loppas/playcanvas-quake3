@@ -2855,7 +2855,7 @@ describe('the heartbeat', () => {
     return { ...fixture, heartbeats: () => landed(master), lan: () => landed(lan) };
   }
 
-  it("goes to sv_master1 at the end of the first frame after a spawn, and 300 s after that", () => {
+  it('goes at the end of the first frame after a spawn, and 300 s after that', () => {
     const { host, heartbeats, lines } = publicServer();
     expect(heartbeats()).toEqual([]);
 
@@ -2869,23 +2869,36 @@ describe('the heartbeat', () => {
     expect(heartbeats()).toEqual(['heartbeat DarkPlaces\n']);
   });
 
-  it("goes to the Internet's master alone, never the LAN's", () => {
-    const { host, heartbeats, lan } = publicServer();
+  it('goes to every master the slots name, and once to a master two of them name', () => {
+    const sending = (lines: string[]) => lines.filter((line) => line.startsWith('Sending'));
+    const { host, heartbeats, lan, lines } = publicServer();
     host.runFrame(host.frameMsec);
-    expect(heartbeats()).toHaveLength(1);
-    expect(lan()).toEqual([]);
+    expect(heartbeats()).toEqual(['heartbeat DarkPlaces\n']);
+    expect(lan()).toEqual(['heartbeat DarkPlaces\n']);
+    expect(sending(lines)).toEqual([
+      'Sending heartbeat to master.test',
+      'Sending heartbeat to lan.test'
+    ]);
+
+    const shared = publicServer({ sv_master2: 'master.test:27950' });
+    shared.host.runFrame(shared.host.frameMsec);
+    expect(shared.heartbeats()).toEqual(['heartbeat DarkPlaces\n']);
+    expect(sending(shared.lines)).toEqual(['Sending heartbeat to master.test']);
   });
 
-  it('is sent only by a public server, dedicated 2, and to a master its slot names', () => {
+  it('is sent only by a public server, dedicated 2, and only to masters the slots name', () => {
     for (const dedicated of ['0', '1', '']) {
-      const { host, heartbeats } = publicServer({ dedicated });
+      const { host, heartbeats, lan } = publicServer({ dedicated });
       host.runFrame(host.frameMsec);
-      expect(heartbeats()).toEqual([]);
+      expect([...heartbeats(), ...lan()]).toEqual([]);
     }
-    const { host, heartbeats, lines } = publicServer({ sv_master1: '' });
+    const { host, heartbeats, lan, lines } = publicServer({ sv_master1: '' });
     host.runFrame(host.frameMsec);
     expect(heartbeats()).toEqual([]);
-    expect(lines.filter((line) => line.startsWith('Sending heartbeat'))).toEqual([]);
+    expect(lan()).toEqual(['heartbeat DarkPlaces\n']);
+    expect(lines.filter((line) => line.startsWith('Sending heartbeat'))).toEqual([
+      'Sending heartbeat to lan.test'
+    ]);
   });
 
   it('is not sent from a paused frame, which runs nothing', () => {
@@ -2921,6 +2934,19 @@ describe('the heartbeat', () => {
     expect(heartbeats()).toEqual([]);
     host.runFrame(host.frameMsec);
     expect(heartbeats()).toEqual(['heartbeat DarkPlaces\n']);
+  });
+
+  it('is asked for by a master granting a registration, at the end of the next frame', () => {
+    const { host, heartbeats, lan } = publicServer();
+    host.runFrame(host.frameMsec);
+    heartbeats();
+    lan();
+
+    host.masterRegistered();
+    expect(heartbeats()).toEqual([]);
+    host.runFrame(host.frameMsec);
+    expect(heartbeats()).toEqual(['heartbeat DarkPlaces\n']);
+    expect(lan()).toEqual(['heartbeat DarkPlaces\n']);
   });
 
   it('is asked for by the first client, and by a connect that fills the server', () => {

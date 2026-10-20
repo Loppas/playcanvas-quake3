@@ -241,6 +241,9 @@ export function startServerWorker(port: WorkerPort): ServerWorker {
       case 'deliver':
         socket?.deliver({ from: message.from, data: message.data });
         break;
+      case 'registered':
+        program?.host.masterRegistered();
+        break;
       case 'packet':
         loopback?.deliver(message.data);
         break;

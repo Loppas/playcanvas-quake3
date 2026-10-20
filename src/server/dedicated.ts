@@ -54,6 +54,11 @@ const SYS_ERROR_EXIT_CODE = 3;
 export interface ServerNetwork {
   /** The socket, or null when none could be opened and only the loopback is left. */
   readonly socket: DatagramSocket | null;
+  /**
+   * Told as a master grants the server's registration, each time a connection to it opens: the
+   * server's to set.
+   */
+  onRegistered?: (() => void) | null;
   /** The network's turn in each frame: its connections kept. */
   frame(): void;
   /** Everything let go, once the server has said its last. */
@@ -182,12 +187,14 @@ export class DedicatedServer {
    * The network the boot opened: its socket is the server's from now on, and what lands on it
    * between frames is read as it lands ({@link ServerProgram.readArrivals}). That is
    * `NET_Sleep`'s wake, inside `Com_Frame`, so what throws there is `Com_Error`'s as in a frame.
+   * A master's grant of the server's registration is the host's to hear.
    */
   open(network: ServerNetwork | null): void {
     this.network = network;
     const socket = network?.socket ?? null;
     this.program.host.net.socket = socket;
     if (socket !== null) socket.onArrival = () => this.guarded(() => this.program.readArrivals());
+    if (network !== null) network.onRegistered = () => this.program.host.masterRegistered();
   }
 
   /**

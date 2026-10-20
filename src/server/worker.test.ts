@@ -5,6 +5,7 @@ import { LocalGame, type ClientMap } from '../local-game';
 import { CONFIGSTRING } from '../net/commands';
 import { CA, ClientConnection } from '../net/connection';
 import { infoValueForKey } from '../net/info';
+import { RETRY_MSEC } from '../net/masters';
 import { NA, Net, netadr, stringToAdr, type NetPacket } from '../net/net';
 import { testCvars } from '../net/net-test-fixtures';
 import { createNetUserCmd, ENTITYNUM_NONE, ENTITYNUM_WORLD } from '../net/protocol';
@@ -629,25 +630,29 @@ describe('the page and a worker, over the messages', () => {
 describe('the page hosting players elsewhere', () => {
   /**
    * A tab whose server is at 203.0.113.9 through the master on this machine, which both slots name
-   * by default, and whose own client is in the world.
+   * by default, and whose own client is in the world. The masters' frame runs when the test ticks.
    */
-  async function hosting(channels = true) {
+  async function hosting(channels = true, setup: (cvars: Cvars) => void = () => {}) {
     const wire = boundary(channels);
     const master = new FakeMaster('localhost');
     const rtc = new FakeRtc();
     const urls: string[] = [];
-    const tab = page(wire, () => {}, {
+    let tick: (() => void) | null = null;
+    const tab = page(wire, setup, {
       createPeerConnection: rtc.create,
       connect: (url) => {
         urls.push(url);
         return master.connect('203.0.113.9');
       },
       locks: null,
-      schedule: () => () => {}
+      schedule: (frame) => {
+        tick = frame;
+        return () => {};
+      }
     });
     await enter(wire, tab.game);
     await settle();
-    return { wire, master, rtc, urls, ...tab };
+    return { wire, master, rtc, urls, tick: () => tick?.(), ...tab };
   }
 
   /** A player at 198.51.100.4, at the same master, on the tab's clock. */
@@ -680,6 +685,26 @@ describe('the page hosting players elsewhere', () => {
     const { urls, printed } = await hosting();
     expect(urls).toEqual(['ws://localhost:27950']);
     expect(printed).toContain('Registered with localhost as 203.0.113.9:27960');
+  });
+
+  it('heartbeats as soon as its link opens again, when listed on the Internet', async () => {
+    const rig = await hosting(true, (cvars) => cvars.set('dedicated', '2'));
+    const heartbeats = () =>
+      rig.master.datagrams.filter(({ data }) => text(data).endsWith('heartbeat DarkPlaces\n'));
+    const before = heartbeats().length;
+    expect(before).toBeGreaterThan(0);
+
+    rig.master.restart();
+    await settle();
+    // The page tries the master again 3 s on, at its masters' next tick.
+    for (let waited = 0; waited < RETRY_MSEC; waited += 100) await rig.wire.step(rig.game, 100);
+    rig.tick();
+    await settle();
+    await rig.wire.step(rig.game);
+    await settle();
+
+    expect(rig.master.read('register')).toHaveLength(2);
+    expect(heartbeats()).toHaveLength(before + 1);
   });
 
   it('lets a player elsewhere dial in and play, down a channel moved to the worker', async () => {

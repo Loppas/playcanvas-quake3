@@ -85,6 +85,8 @@ export type PageToWorker =
   | { type: 'channel'; id: number; peer: NetAdr; channel: DataChannelLike }
   /** A datagram that came through a master rather than down a channel. */
   | { type: 'deliver'; from: NetAdr; data: Uint8Array }
+  /** A master's grant of the server's registration, as a connection to it opened: the host's. */
+  | { type: 'registered' }
   /** A live check's ask (DEV only), answered with `devResult`. */
   | { type: 'dev'; id: number; request: DevRequest };
 

@@ -118,6 +118,13 @@ describe("a tab host's peers", () => {
     expect(stops()).toBe(1);
   });
 
+  it('tell the worker of each registration a master grants', async () => {
+    const { posted } = rig();
+    await settle();
+    const granted = posted.filter(({ message }) => message.type === 'registered');
+    expect(granted).toEqual([{ message: { type: 'registered' }, transfer: [] }]);
+  });
+
   it('let their masters go as they close', async () => {
     const { master, peers } = rig();
     await settle();

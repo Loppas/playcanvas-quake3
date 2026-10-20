@@ -200,6 +200,20 @@ describe("a server's masters", () => {
     expect(lines.filter((line) => line.startsWith('Registered'))).toHaveLength(2);
   });
 
+  it('tell the server of each registration a master grants, on every connection', async () => {
+    const { masters, master, frame } = rig();
+    let registered = 0;
+    masters.onRegistered = () => registered++;
+    await frame(0);
+    expect(registered).toBe(2);
+
+    master('master.test').restart();
+    await frame(1000);
+    expect(registered).toBe(2);
+    await frame(4000);
+    expect(registered).toBe(3);
+  });
+
   it('read net_port as each connection opens', async () => {
     const { cvars, master, frame } = rig({ sv_master2: '', net_port: '27960' });
     await frame(0);

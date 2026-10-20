@@ -111,8 +111,9 @@ export async function nodeServerNetwork(
     now: () => performance.now(),
     print
   });
-  return {
+  const network: ServerNetwork = {
     socket,
+    onRegistered: null,
     frame: () => {
       master?.frame();
       masters.frame();
@@ -123,6 +124,8 @@ export async function nodeServerNetwork(
       master?.close();
     }
   };
+  masters.onRegistered = () => network.onRegistered?.();
+  return network;
 }
 
 /**

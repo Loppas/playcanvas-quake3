@@ -172,13 +172,13 @@ export interface Settings {
   /** `sv_hostname`: the server's name, as its serverinfo carries it and the browser lists it. */
   hostname: string;
   /**
-   * `sv_master1`: the Internet's master, which a server heartbeats to on `dedicated 2` and
-   * `globalservers` asks. Every server registers with it.
+   * `sv_master1`: the Internet's master, which `globalservers` asks. Every server registers with
+   * it, and one on `dedicated 2` heartbeats to it.
    */
   master1: string;
   /**
    * `sv_master2`: the LAN's master, which `localservers` asks first. Every server registers with
-   * it.
+   * it, and one on `dedicated 2` heartbeats to it.
    */
   master2: string;
   /** `net_port`: the port a server asks its masters for, and in Node binds its peers to. */
