@@ -58,7 +58,7 @@
     "semver": "^7.7.4",
     "typescript": "~6.0.2",
     "vite": "^8.0.8",
-    "vitest": "^4.1.10",
+    "vitest": "^5.0.5",
     "wrangler": "^4.151.2"
   },
   "engines": {
