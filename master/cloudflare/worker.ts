@@ -8,9 +8,10 @@ import { MasterServer, type ConnectionRecord, type MasterWebSocket } from '../ma
  * The master on Cloudflare: a Worker that hands each WebSocket to one Durable Object, which runs
  * {@link MasterServer} on them, as `wrangler.jsonc` declares the two.
  *
- * The object holds its WebSockets by the hibernation API, so it costs nothing while they are idle,
- * and is evicted then with them left open. A Worker can't dial WebRTC, so the master checks a
- * server down the server's own link.
+ * The object holds its WebSockets by the hibernation API, so it costs nothing while they are idle:
+ * it is evicted then with them left open, and the next object gives the master back each one with
+ * the record the master kept in it. A Worker can't dial WebRTC, so the master checks a server down
+ * the server's own link.
  */
 
 declare global {
@@ -49,23 +50,32 @@ export class MasterObject extends DurableObject {
     now: () => Date.now(),
     lookup: (name) => lookup(name, { all: true })
   });
-  /** The master's end of each WebSocket the object has accepted since it started. */
+  /** The master's end of each WebSocket the object holds. */
   private readonly ends = new Map<WebSocket, ObjectEnd>();
+
+  /**
+   * An object made afresh, as one is after an eviction: the master is given back each WebSocket
+   * the object holds, with the record the master kept in it, before the event that woke it.
+   */
+  constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
+    super(ctx, env);
+    for (const ws of ctx.getWebSockets()) {
+      // One the master refused as it connected holds none, and is held till its close is answered.
+      const record = ws.deserializeAttachment() as ConnectionRecord | null;
+      if (record !== null) this.master.restore(this.end(ws), record);
+    }
+  }
 
   fetch(request: Request): Response {
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);
-    const end = new ObjectEnd(server);
-    this.ends.set(server, end);
-    this.master.connect(end, request.headers.get('CF-Connecting-IP') ?? '', SOURCE_PORT);
+    const ip = request.headers.get('CF-Connecting-IP') ?? '';
+    this.master.connect(this.end(server), ip, SOURCE_PORT);
     return new Response(null, { status: 101, webSocket: client });
   }
 
   webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): void {
-    const end = this.ends.get(ws);
-    // One accepted before the object was last evicted, which the master has never heard of.
-    if (end === undefined) ws.close();
-    else end.message(message);
+    this.ends.get(ws)?.message(message);
   }
 
   webSocketClose(ws: WebSocket): void {
@@ -76,6 +86,13 @@ export class MasterObject extends DurableObject {
 
   webSocketError(ws: WebSocket): void {
     this.closed(ws);
+  }
+
+  /** The master's end of a WebSocket the object holds, its events passed on from now. */
+  private end(ws: WebSocket): ObjectEnd {
+    const end = new ObjectEnd(ws);
+    this.ends.set(ws, end);
+    return end;
   }
 
   private closed(ws: WebSocket): void {
