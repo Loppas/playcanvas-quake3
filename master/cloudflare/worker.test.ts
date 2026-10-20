@@ -81,6 +81,41 @@ async function list(program: Program, line: string): Promise<string[] | null> {
   return readList(await ask(program, line));
 }
 
+/** A server's heartbeat, and the challenge of the `getinfo` the master sends down its link. */
+async function heartbeat(host: Program): Promise<string> {
+  const getinfo = text(await ask(host, 'heartbeat DarkPlaces\n'));
+  const challenge = /^\xff\xff\xff\xffgetinfo (\S+)$/.exec(getinfo)?.[1];
+  if (challenge === undefined) throw new Error(`not a getinfo: ${getinfo}`);
+  return challenge;
+}
+
+/**
+ * A server's `infoResponse` with this challenge, and the Internet's list as the server then asks
+ * for it: a link's frames are handled in order, so the query is answered after the response.
+ */
+async function infoResponse(host: Program, challenge: string): Promise<string[] | null> {
+  const keys = `\\challenge\\${challenge}\\gamename\\PlayCanvasQuake\\protocol\\1`;
+  const counts = '\\clients\\1\\sv_maxclients\\8';
+  host.send({ kind: 'datagram', data: oob(`infoResponse\n${keys}${counts}`) });
+  return list(host, 'getserversExt PlayCanvasQuake 1');
+}
+
+/** The record the master keeps with its end of a WebSocket. */
+function record(ws: WebSocket): ConnectionRecord {
+  return ws.deserializeAttachment() as ConnectionRecord;
+}
+
+/** The one object the Worker hands every WebSocket to. */
+async function object(): Promise<DurableObjectStub<MasterObject>> {
+  const [id] = await listDurableObjectIds(env.MASTER);
+  return env.MASTER.get(id);
+}
+
+/** The object evicted with its WebSockets left open, as Cloudflare evicts an idle one. */
+async function evict(): Promise<void> {
+  await evictDurableObject(await object());
+}
+
 /** The one object, and the master in it, as they were before each test: none. */
 afterEach(() => evictAllDurableObjects({ webSockets: 'close' }));
 
@@ -101,15 +136,7 @@ describe('the master on Cloudflare', () => {
   it('lists a server that heartbeats once it answers the getinfo sent down its link', async () => {
     const host = await server('203.0.113.9');
     expect(host.address).toEqual(netadr(NA.IP, '203.0.113.9', 27960));
-
-    const getinfo = text(await ask(host, 'heartbeat DarkPlaces\n'));
-    expect(getinfo).toMatch(/^\xff\xff\xff\xffgetinfo \S+$/);
-    const challenge = getinfo.slice('\xff\xff\xff\xffgetinfo '.length);
-    const keys = `\\challenge\\${challenge}\\gamename\\PlayCanvasQuake\\protocol\\1`;
-    const counts = '\\clients\\1\\sv_maxclients\\8';
-    host.send({ kind: 'datagram', data: oob(`infoResponse\n${keys}${counts}`) });
-    // A link's frames are handled in order, so this query is answered after the infoResponse.
-    expect(await list(host, 'getserversExt PlayCanvasQuake 1')).toEqual(['203.0.113.9:27960']);
+    expect(await infoResponse(host, await heartbeat(host))).toEqual(['203.0.113.9:27960']);
 
     const client = await connect('198.51.100.4');
     await greeting(client);
@@ -154,10 +181,8 @@ describe('the master on Cloudflare', () => {
     const client = await connect('203.0.113.40');
     await greeting(client);
 
-    const [id] = await listDurableObjectIds(env.MASTER);
-    await runInDurableObject(env.MASTER.get(id), (object: MasterObject, state) => {
-      const record = (ws: WebSocket) => ws.deserializeAttachment() as ConnectionRecord;
-      object.webSocketError(state.getWebSockets().find((ws) => record(ws).registered)!);
+    await runInDurableObject(await object(), (instance: MasterObject, state) => {
+      instance.webSocketError(state.getWebSockets().find((ws) => record(ws).registered)!);
     });
     expect(await list(client, 'getserversExt PlayCanvasQuake 1 local')).toEqual([]);
   });
@@ -166,25 +191,79 @@ describe('the master on Cloudflare', () => {
     const client = await connect('198.51.100.4');
     await greeting(client);
 
-    const [id] = await listDurableObjectIds(env.MASTER);
-    await runInDurableObject(env.MASTER.get(id), (object: MasterObject, state) => {
+    await runInDurableObject(await object(), (instance: MasterObject, state) => {
       const [ws] = state.getWebSockets();
-      object.webSocketMessage(ws, new ArrayBuffer(MAX_FRAME + 1));
+      instance.webSocketMessage(ws, new ArrayBuffer(MAX_FRAME + 1));
       // A query already on its way when the master closed the WebSocket.
-      object.webSocketMessage(ws, oob('getserversExt PlayCanvasQuake 1').buffer);
+      instance.webSocketMessage(ws, oob('getserversExt PlayCanvasQuake 1').buffer);
     });
     await client.closed;
     expect(client.frames).toEqual([]);
   });
 
-  it('closes a WebSocket it held before it was evicted, which its master never knew', async () => {
-    const client = await connect('198.51.100.4');
-    await greeting(client);
+  describe('woken after an eviction, with its WebSockets left open', () => {
+    it('lists the same servers, and knows each socket by its address, greeting none', async () => {
+      const host = await server('203.0.113.9');
+      await infoResponse(host, await heartbeat(host));
+      const listen = await server('198.51.100.20', 27961);
+      const client = await connect('198.51.100.20');
+      const from = await greeting(client);
+      await evict();
 
-    const [id] = await listDurableObjectIds(env.MASTER);
-    await evictDurableObject(env.MASTER.get(id));
-    client.send({ kind: 'datagram', data: oob('getserversExt PlayCanvasQuake 1') });
-    await client.closed;
+      // The client's next frame is the list it asks for, which a greeting would come before.
+      expect(await list(client, 'getserversExt PlayCanvasQuake 1')).toEqual(['203.0.113.9:27960']);
+      expect(await list(client, 'getserversExt PlayCanvasQuake 1 local')).toEqual([
+        '198.51.100.20:27961'
+      ]);
+      client.send({ kind: 'relay', peer: host.address, data: oob('getinfo abc') });
+      expect(await host.next()).toEqual({ kind: 'relay', peer: from, data: oob('getinfo abc') });
+      listen.send({ kind: 'relay', peer: from, data: oob('getinfo def') });
+      expect(await client.next()).toEqual({
+        kind: 'relay',
+        peer: listen.address,
+        data: oob('getinfo def')
+      });
+      // The port the client goes by is still taken.
+      expect(await greeting(await connect('198.51.100.20'))).toEqual(
+        netadr(NA.IP, '198.51.100.20', 49153)
+      );
+    });
+
+    it('takes the answer to a getinfo the object before it sent', async () => {
+      const host = await server('203.0.113.9');
+      const challenge = await heartbeat(host);
+      await evict();
+      expect(await infoResponse(host, challenge)).toEqual(['203.0.113.9:27960']);
+    });
+
+    it('lists a server that closes after it no more', async () => {
+      const host = await server('203.0.113.9');
+      await infoResponse(host, await heartbeat(host));
+      const client = await connect('198.51.100.4');
+      await greeting(client);
+      await evict();
+
+      host.ws.close(1000);
+      await host.closed;
+      expect(await list(client, 'getserversExt PlayCanvasQuake 1')).toEqual([]);
+    });
+
+    it('gives the master back no WebSocket that holds no record', async () => {
+      const kept = await connect('198.51.100.4');
+      await greeting(kept);
+      const stripped = await connect('198.51.100.4');
+      await greeting(stripped);
+      // As one the master refused as it connected holds none, until its close is answered.
+      await runInDurableObject(await object(), (_instance: MasterObject, state) => {
+        const [ws] = state.getWebSockets().filter((ws) => record(ws).address.port === 49153);
+        ws.serializeAttachment(null);
+      });
+      await evict();
+
+      const client = await connect('198.51.100.4');
+      expect(await greeting(client)).toEqual(netadr(NA.IP, '198.51.100.4', 49153));
+      expect(await list(kept, 'getserversExt PlayCanvasQuake 1')).toEqual([]);
+    });
   });
 
   describe("looks a name up with the runtime's node:dns", () => {
