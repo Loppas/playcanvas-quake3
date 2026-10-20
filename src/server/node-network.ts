@@ -19,6 +19,9 @@ import type { ServerNetwork } from './dedicated';
 /** How many ports Quake 3's bind tries, from `net_port` up (`net_ip.c:1394`). */
 export const BIND_PORTS = 10;
 
+/** How often a link to a master is pinged. */
+export const PING_MSEC = 30 * 1000;
+
 /**
  * `NET_OpenIP`'s walk (`net_ip.c:1391–1410`): `net_port`, else the next free port of the nine
  * above it, each try printed as `NET_IPSocket` prints it (`:820–875`).
@@ -104,7 +107,7 @@ export async function nodeServerNetwork(
   const masters = new ServerMasters({
     cvars,
     signalling,
-    connect: (url) => new WebSocket(url),
+    connect: pinged,
     now: () => performance.now(),
     print
   });
@@ -120,6 +123,34 @@ export async function nodeServerNetwork(
       master?.close();
     }
   };
+}
+
+/**
+ * `ws`'s client to a master, pinged every {@link PING_MSEC} once open, and ended when the pong to
+ * one ping hasn't come by the next, so it is tried again as any lost connection is. Little else
+ * crosses the link, a heartbeat every 5 minutes at most, so a link that died quietly, as through a
+ * NAT that has forgotten it, would go unnoticed. The pings are WebSocket protocol frames, which the
+ * master's WebSocket server answers itself; the browser's `WebSocket` can't send one.
+ */
+export function pinged(url: string): WebSocket {
+  const ws = new WebSocket(url);
+  let answered = true;
+  let timer: ReturnType<typeof setInterval> | undefined;
+  // `ping()` throws while the socket connects, which a timer's callback would end the server with.
+  ws.on('open', () => {
+    timer = setInterval(() => {
+      // `close()` would wait up to 30 s for the master's own close frame, which a dead link never
+      // brings.
+      if (!answered) ws.terminate();
+      else ws.ping();
+      answered = false;
+    }, PING_MSEC);
+  });
+  ws.on('pong', () => {
+    answered = true;
+  });
+  ws.on('close', () => clearInterval(timer));
+  return ws;
 }
 
 /** A peer connection on the server's one port, which libdatachannel shares between them all. */

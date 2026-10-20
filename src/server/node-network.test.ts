@@ -1,22 +1,24 @@
 import dgram from 'node:dgram';
-import { createServer } from 'node:net';
+import { once } from 'node:events';
+import { createServer, type AddressInfo, type Socket } from 'node:net';
 
-import { afterAll, afterEach, describe, expect, it } from 'vitest';
-import { WebSocket } from 'ws';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+import { WebSocket, WebSocketServer } from 'ws';
 
 import { MASTER_ADR, oob, readList, text } from '../../master/master-test-fixtures';
 import { startMaster } from '../../master/node-master';
 import { MasterLink } from '../net/master-link';
-import { masterAt } from '../net/masters';
+import { masterAt, RETRY_MSEC } from '../net/masters';
 import type { DatagramSocket, NetPacket } from '../net/net';
 import { testCvars } from '../net/net-test-fixtures';
 import { createPeerSocket, type PeerConnectionFactory } from '../net/peer-signalling';
-import { BIND_PORTS, nodeServerNetwork, openPort } from './node-network';
+import { BIND_PORTS, nodeServerNetwork, openPort, PING_MSEC, pinged } from './node-network';
 
 /**
- * The Node dedicated server's network: Quake 3's bind walk over real UDP ports, and the server's
- * peers on one port, registered with a master over `ws` and dialled by it through node-datachannel.
- * The second half is skipped where node-datachannel's native addon cannot load.
+ * The Node dedicated server's network: Quake 3's bind walk over real UDP ports, the pings that find
+ * a dead link to a master, and the server's peers on one port, registered with a master over `ws`
+ * and dialled by it through node-datachannel. The last part is skipped where node-datachannel's
+ * native addon cannot load.
  *
  * The ports are fixed, 28960 to 28998, below those the system hands a socket bound to port 0
  * (from 32768 on Linux, 49152 on Windows and macOS), as the peer connections of other files, run
@@ -50,6 +52,7 @@ async function hold(type: 'udp4' | 'udp6', port: number): Promise<void> {
 
 afterEach(() => {
   for (const socket of held.splice(0)) socket.close();
+  vi.useRealTimers();
 });
 
 describe("Quake 3's bind walk", () => {
@@ -112,6 +115,94 @@ async function next(socket: DatagramSocket): Promise<NetPacket> {
   await until(() => (packet = socket.receive()) !== null);
   return packet!;
 }
+
+/**
+ * A master's WebSocket server, `ws`'s, on a port of its own, which answers pings as the port's
+ * master does; and the socket of each link to it, once the link's first frame has come.
+ */
+async function wsMaster(closers: (() => void)[]): Promise<{ url: string; links: WebSocket[] }> {
+  const server = new WebSocketServer({ host: '127.0.0.1', port: 0 });
+  await once(server, 'listening');
+  const links: WebSocket[] = [];
+  server.on('connection', (ws) => ws.once('message', () => links.push(ws)));
+  closers.push(() => {
+    for (const ws of server.clients) ws.terminate();
+    server.close();
+  });
+  return { url: `ws://127.0.0.1:${(server.address() as AddressInfo).port}`, links };
+}
+
+describe('a link to a master', () => {
+  const closers: (() => void)[] = [];
+
+  afterEach(() => {
+    for (const close of closers.splice(0).reverse()) close();
+  });
+
+  /** A link to the master, open. */
+  async function link(url: string): Promise<WebSocket> {
+    const ws = pinged(url);
+    closers.push(() => ws.terminate());
+    await once(ws, 'open');
+    return ws;
+  }
+
+  it('is pinged every 30 seconds, and stays open while the master answers', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const ws = await link((await wsMaster(closers)).url);
+    const ping = vi.spyOn(ws, 'ping');
+
+    vi.advanceTimersByTime(29_999);
+    expect(ping).not.toHaveBeenCalled();
+    for (let pings = 1; pings <= 3; pings++) {
+      const pong = once(ws, 'pong');
+      vi.advanceTimersByTime(pings === 1 ? 1 : 30_000);
+      expect(ping).toHaveBeenCalledTimes(pings);
+      await pong;
+    }
+    expect(ws.readyState).toBe(WebSocket.OPEN);
+
+    // Its pings stop as it closes.
+    ws.close();
+    await once(ws, 'close');
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('is ended at the next ping when the master has not answered the last', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const master = await wsMaster(closers);
+    const ws = await link(master.url);
+    ws.send(new Uint8Array(1)); // a frame, by which the master knows its link
+    await until(() => master.links.length === 1);
+    // A dead link: the master reads nothing more, a ping or a close frame alike.
+    master.links[0].pause();
+
+    vi.advanceTimersByTime(PING_MSEC);
+    expect(ws.readyState).toBe(WebSocket.OPEN);
+    const closed = once(ws, 'close');
+    vi.advanceTimersByTime(PING_MSEC);
+    await closed;
+  });
+
+  it('is not pinged while it connects', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    // A master that takes the connection and never answers its upgrade.
+    const sockets: Socket[] = [];
+    const silent = createServer((socket) => sockets.push(socket));
+    await new Promise<void>((resolve) => silent.listen(0, '127.0.0.1', resolve));
+    closers.push(() => {
+      for (const socket of sockets) socket.destroy();
+      silent.close();
+    });
+    const ws = pinged(`ws://127.0.0.1:${(silent.address() as AddressInfo).port}`);
+    ws.on('error', () => {});
+    closers.push(() => ws.terminate());
+    await until(() => sockets.length === 1);
+
+    vi.advanceTimersByTime(2 * PING_MSEC);
+    expect(ws.readyState).toBe(WebSocket.CONNECTING);
+  });
+});
 
 describe.skipIf(polyfill === null)('the dedicated server on its masters', WAITING, () => {
   const closers: (() => void)[] = [];
@@ -186,6 +277,26 @@ describe.skipIf(polyfill === null)('the dedicated server on its masters', WAITIN
     await new Promise((resolve) => setTimeout(resolve, 200));
     client.socket.send(oob('getservers PlayCanvasQuake 1 empty'), MASTER_ADR);
     expect(readList((await next(client.socket)).data)).toEqual([]);
+  });
+
+  it('closes a link to a master that has stopped answering, and opens it again', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'performance'] });
+    const master = await wsMaster(closers);
+    const cvars = testCvars({ sv_master1: master.url, sv_master2: '', net_port: '28995' });
+    const network = await nodeServerNetwork(cvars, () => {});
+    closers.push(() => network.close());
+
+    network.frame();
+    await until(() => master.links.length === 1);
+    master.links[0].pause();
+    vi.advanceTimersByTime(2 * PING_MSEC);
+
+    // Its close is a lost connection's, tried again a wait later.
+    await until(() => {
+      vi.advanceTimersByTime(RETRY_MSEC);
+      network.frame();
+      return master.links.length === 2;
+    });
   });
 });
 
