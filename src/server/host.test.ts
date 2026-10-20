@@ -2785,11 +2785,14 @@ describe('a client over data channels', () => {
 });
 
 describe('a server at the master', () => {
-  it('answers the getinfo its heartbeat earns, down the channel the master dials', async () => {
+  it.each([
+    ['down the channel the master dials', true],
+    ['down its own link, at a master that dials nobody', false]
+  ])('answers the getinfo its heartbeat earns, %s', async (_, dials) => {
     const rtc = new FakeRtc();
     const now = () => 0;
     const master = new MasterServer({
-      createPeerConnection: rtc.create,
+      createPeerConnection: dials ? rtc.create : undefined,
       now,
       lookup: async () => [],
       print: () => {}
@@ -2814,6 +2817,7 @@ describe('a server at the master', () => {
     const replies = [];
     for (let p; (p = client.socket.receive()) !== null; ) replies.push(readList(p.data));
     expect(replies).toEqual([['203.0.113.9:27960']]);
+    expect(rtc.connections).toHaveLength(dials ? 2 : 0);
   });
 });
 
