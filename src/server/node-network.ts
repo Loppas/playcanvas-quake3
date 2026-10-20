@@ -124,7 +124,7 @@ export async function nodeServerNetwork(
       master?.close();
     }
   };
-  masters.onRegistered = (adr) => network.onRegistered?.(adr);
+  masters.onRegistered = () => network.onRegistered?.();
   return network;
 }
 

@@ -355,7 +355,7 @@ port's own presets.
 | Value | Server |
 |---|---|
 | `1`, the default | A LAN server. It registers with both masters and sends no heartbeat, so it shows in the server browser's Local list for players on its network. |
-| `2` | An Internet server. It heartbeats to `sv_master1` as well, so it shows in the Internet list too. |
+| `2` | An Internet server. It heartbeats to both masters as well, so it shows in the Internet list too. |
 | `0` | Stops the server, as Ctrl+C does. |
 
 Players find it under MULTIPLAYER, or reach it with `connect <address>` from a bind. Either way
@@ -372,7 +372,7 @@ Its terminal is its console. Each line typed there is a command, and its own are
 | `addbot <name> [skill 1-5] [team] [msec delay] [altname]` | Add a bot from the paks' `scripts/bots.txt`. |
 | `kick <name>`, `clientkick <n>`, `kickbots` | Remove a player, a slot, or every bot. |
 | `status`, `serverinfo` | Print the map and its players, or the serverinfo. |
-| `heartbeat` | Heartbeat to `sv_master1` now (see below). |
+| `heartbeat` | Heartbeat to the masters now (see below). |
 | `exec <file>`, `wait` | Run a cfg, or wait a frame. |
 | `set`, `seta`, `toggle`, `reset`, `<cvar> <value>` | Set a cvar. |
 
@@ -417,21 +417,23 @@ The commands that reach a master, from a bind or the dedicated server's terminal
 |---|---|
 | `globalservers <0-1> <protocol> [words]` | Asks `sv_master1` for its list, as the server browser's Internet source does. 0 asks every Internet master, which is `sv_master1` alone. |
 | `localservers` | Asks `sv_master2` for the servers on your network, or `sv_master1` when that slot is empty or its master can't be reached. |
-| `heartbeat` | On a server at `dedicated 2`, heartbeats to `sv_master1` now, rather than waiting out the five minutes between heartbeats. |
+| `heartbeat` | On a server at `dedicated 2`, heartbeats to both masters now, rather than waiting out the five minutes between heartbeats. |
 
 And the cvars:
 
 | Cvar | Default | Is |
 |---|---|---|
-| `sv_master1` | `localhost` | The Internet's master. A server at `dedicated 2` heartbeats to it, and `globalservers` asks it. |
+| `sv_master1` | `localhost` | The Internet's master, which `globalservers` asks. |
 | `sv_master2` | `localhost` | The LAN's master, which `localservers` asks first. |
 | `sv_runMaster` | `0` | The Node dedicated server runs a master inside itself, on 27950. |
 
-Every server registers with both masters. The Node dedicated server pings each every 30 seconds,
-and closes and opens again a link that hasn't answered by the next ping. A master forgets a server
-whose link closes, so a server at `dedicated 2` heartbeats to `sv_master1` as soon as that link
-opens again. A slot is `host[:port]`, reached by `ws://` on `localhost` or a private address and by
-`wss://` otherwise, or a `ws://` or `wss://` URL taken as given.
+Every server registers with both masters, and one at `dedicated 2` heartbeats to both, as Quake 3's
+does to every slot; two slots that name one master share its link and its heartbeat. The Node
+dedicated server pings each master every 30 seconds, and closes and opens again a link that hasn't
+answered by the next ping. A master forgets a server whose link closes, so a server at
+`dedicated 2` heartbeats as soon as a link opens again. A slot is `host[:port]`, reached by `ws://`
+on `localhost` or a private address and by `wss://` otherwise, or a `ws://` or `wss://` URL taken
+as given.
 
 ## Scripts
 

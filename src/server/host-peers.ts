@@ -78,7 +78,7 @@ export class HostPeers implements PeerSink {
       now: options.now,
       print: options.print
     });
-    this.masters.onRegistered = (master) => this.post({ type: 'registered', master }, []);
+    this.masters.onRegistered = () => this.post({ type: 'registered' }, []);
     this.masters.frame();
     const schedule = options.schedule ?? everySecond;
     this.stopFrames = schedule(() => this.masters.frame());

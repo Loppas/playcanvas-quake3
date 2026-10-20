@@ -68,6 +68,23 @@ export function masterAt(slot: string): MasterAt | null {
 /** The slots a program reaches its masters through: the Internet's master, then the LAN's. */
 export const MASTER_SLOTS = ['sv_master1', 'sv_master2'] as const;
 
+/**
+ * The masters the slots' values name, in slot order, each with the value that named it first: one
+ * for two slots that name the same, which a program keeps one connection to and sends one
+ * heartbeat.
+ */
+export function namedMasters(values: readonly string[]): { at: MasterAt; name: string }[] {
+  const named: { at: MasterAt; name: string }[] = [];
+  for (const name of values) {
+    const at = masterAt(name);
+    if (at === null) continue;
+    const key = adrToStringWithPort(at.adr);
+    if (named.some((master) => adrToStringWithPort(master.at.adr) === key)) continue;
+    named.push({ at, name });
+  }
+  return named;
+}
+
 /** How long a master that could not be reached waits before it is tried again, at first. */
 export const RETRY_MSEC = 3000;
 
@@ -169,13 +186,10 @@ abstract class SlotMasters {
     this.slots = slots;
 
     const named: Master[] = [];
-    for (const value of slots) {
-      const at = masterAt(value);
-      if (at === null) continue;
+    for (const { at, name } of namedMasters(slots)) {
       const key = adrToStringWithPort(at.adr);
-      if (named.some((master) => adrToStringWithPort(master.master) === key)) continue;
       const kept = this.masters.find((master) => adrToStringWithPort(master.master) === key);
-      named.push(kept ?? this.create(at, value));
+      named.push(kept ?? this.create(at, name));
     }
 
     for (const master of [...this.masters]) {
@@ -253,8 +267,8 @@ export interface ServerMastersOptions extends MastersOptions {
  * next frame. Each registration a master grants is told to the server, on every connection.
  */
 export class ServerMasters extends SlotMasters {
-  /** Told the master that granted the server's registration, each time a connection to it opens. */
-  onRegistered: ((master: NetAdr) => void) | null = null;
+  /** Told as a master grants the server's registration, each time a connection to it opens. */
+  onRegistered: (() => void) | null = null;
 
   private readonly now: () => number;
 
@@ -289,7 +303,7 @@ export class ServerMasters extends SlotMasters {
     });
     link.onRegistered = (address) => {
       this.print(`Registered with ${master.name} as ${adrToStringWithPort(address)}`);
-      this.onRegistered?.(master.master);
+      this.onRegistered?.();
     };
     const port = this.cvars.get('net_port');
     link.register(port === '' ? PORT_SERVER : atoi(port));

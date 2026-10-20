@@ -31,11 +31,10 @@ import {
   infoValueForKey,
   MAX_INFO_STRING
 } from '../net/info';
-import { masterAt } from '../net/masters';
+import { MASTER_SLOTS, namedMasters } from '../net/masters';
 import { hashKey, MAX_MSGLEN, Message } from '../net/msg';
 import {
   adrToString,
-  compareAdr,
   compareBaseAdr,
   HEARTBEAT_FOR_MASTER,
   isLANAddress,
@@ -390,9 +389,6 @@ const UDPIP_HEADER_SIZE = 28;
 
 /** `HEARTBEAT_MSEC` (`sv_main.c:244`): how often a server heartbeats when nothing asks it to. */
 const HEARTBEAT_MSEC = 300 * 1000;
-
-/** The slot whose master is sent heartbeats: the Internet's. */
-const HEARTBEAT_SLOT = 'sv_master1';
 
 /**
  * The frames a map load and a restart run before the clients come back (`sv_init.c:498`,
@@ -808,31 +804,29 @@ export class Host {
 
   /**
    * A master has granted the server's registration, on a connection to it that has just opened. A
-   * master unlists a server whose connection closes and lists it again only by a heartbeat, so the
-   * master heartbeats go to is sent one at the end of the next frame, not when the next falls due,
-   * up to {@link HEARTBEAT_MSEC} later. The port's own: Quake 3's UDP has no connection to lose.
+   * master unlists a server whose connection closes and lists it again only by a heartbeat, so one
+   * goes at the end of the next frame, not when the next falls due, up to {@link HEARTBEAT_MSEC}
+   * later. The port's own: Quake 3's UDP has no connection to lose.
    */
-  masterRegistered(master: NetAdr): void {
-    const heartbeats = masterAt(this.cvars.get(HEARTBEAT_SLOT));
-    if (heartbeats !== null && compareAdr(heartbeats.adr, master)) this.heartbeat();
+  masterRegistered(): void {
+    this.heartbeat();
   }
 
   /**
-   * `SV_MasterHeartbeat` (`sv_main.c:246–332`): on `dedicated 2`, `heartbeat` to the Internet's
-   * master every {@link HEARTBEAT_MSEC}, or sooner when asked. The master answers with a `getinfo`,
-   * and lists the server by its `infoResponse`. The LAN's master is sent none: every server that
-   * registers with it is on its list.
+   * `SV_MasterHeartbeat` (`sv_main.c:246–332`): on `dedicated 2`, `heartbeat` to every master the
+   * slots name, every {@link HEARTBEAT_MSEC} or sooner when asked. Each master answers with a
+   * `getinfo`, and lists the server by its `infoResponse`.
    */
   private masterHeartbeat(): void {
     if (this.cvarInt('dedicated') !== 2) return;
     if (this.svsTime < this.nextHeartbeatTime) return;
     this.nextHeartbeatTime = this.svsTime + HEARTBEAT_MSEC;
 
-    const slot = this.cvars.get(HEARTBEAT_SLOT);
-    const master = masterAt(slot);
-    if (master === null) return;
-    this.print(`Sending heartbeat to ${slot}`);
-    this.net.outOfBandPrint('server', master.adr, `heartbeat ${HEARTBEAT_FOR_MASTER}\n`);
+    const slots = MASTER_SLOTS.map((slot) => this.cvars.get(slot));
+    for (const { at, name } of namedMasters(slots)) {
+      this.print(`Sending heartbeat to ${name}`);
+      this.net.outOfBandPrint('server', at.adr, `heartbeat ${HEARTBEAT_FOR_MASTER}\n`);
+    }
   }
 
   /**

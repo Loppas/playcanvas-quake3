@@ -9,7 +9,7 @@ import { MASTER_ADR, oob, readList, text } from '../../master/master-test-fixtur
 import { startMaster } from '../../master/node-master';
 import { MasterLink } from '../net/master-link';
 import { masterAt, RETRY_MSEC } from '../net/masters';
-import type { DatagramSocket, NetAdr, NetPacket } from '../net/net';
+import type { DatagramSocket, NetPacket } from '../net/net';
 import { testCvars } from '../net/net-test-fixtures';
 import { createPeerSocket, type PeerConnectionFactory } from '../net/peer-signalling';
 import { BIND_PORTS, nodeServerNetwork, openPort, PING_MSEC, pinged } from './node-network';
@@ -224,8 +224,8 @@ describe.skipIf(polyfill === null)('the dedicated server on its masters', WAITIN
     const lines: string[] = [];
     const cvars = testCvars({ sv_master1: slot, sv_master2: slot, net_port: '28990' });
     const network = await nodeServerNetwork(cvars, (line) => lines.push(line));
-    const registered: NetAdr[] = [];
-    network.onRegistered = (adr) => registered.push(adr);
+    let registered = 0;
+    network.onRegistered = () => registered++;
     const loop = setInterval(() => {
       running.frame();
       network.frame();
@@ -243,7 +243,7 @@ describe.skipIf(polyfill === null)('the dedicated server on its masters', WAITIN
       'Opening IP socket: 0.0.0.0:28990',
       `Registered with ${slot} as 127.0.0.1:28990`
     ]);
-    expect(registered).toEqual([masterAdr]);
+    expect(registered).toBe(1);
 
     socket.send(oob('heartbeat DarkPlaces\n'), masterAdr);
     const getinfo = await next(socket);

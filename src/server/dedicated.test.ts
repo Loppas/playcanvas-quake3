@@ -702,7 +702,7 @@ describe('the dedicated server on its master', () => {
         frame: () => masters.frame(),
         close: () => masters.close()
       };
-      masters.onRegistered = (adr) => opened.onRegistered?.(adr);
+      masters.onRegistered = () => opened.onRegistered?.();
       return opened;
     };
     const rig = await start({
