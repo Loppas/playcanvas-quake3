@@ -55,6 +55,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { BASEGAME, fsBasepath } from './fs-basepath.mjs';
+import { keepSocketsHere } from './perf/perf-lib.mjs';
 import {
   CAPTURE_HEIGHT,
   CAPTURE_MAPS,
@@ -196,6 +197,7 @@ async function capturePort(base, times) {
   try {
     const viewport = { width: CAPTURE_WIDTH, height: CAPTURE_HEIGHT };
     const context = await browser.newContext({ viewport });
+    await keepSocketsHere(context);
     const page = await context.newPage();
     for (const map of maps) {
       const view = { mode, entities, time: times.get(map) };

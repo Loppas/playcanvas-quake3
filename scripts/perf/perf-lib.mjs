@@ -3,8 +3,9 @@
 // first one's caches), requestAnimationFrame paced to an emulated display, and a frame log the
 // page fills without allocating while it records.
 //
-// The rules of a live check hold (testing.md): a free port, never 5173, 27950 or 27960; a
-// throwaway fs_homepath; nothing written under src/ while a run is going. The server neither
+// The rules of a live check hold (testing.md): a free port, never 5173, 27950 or 27960; no
+// socket off this machine; a throwaway fs_homepath; nothing written under src/ while a run is
+// going. The server neither
 // watches nor reloads, so an edit elsewhere cannot reload a page mid-measure.
 import {
   closeSync,
@@ -138,12 +139,28 @@ export async function launchChrome(profileDir, display = DISPLAY) {
     viewport: { width: display.width, height: display.height },
     deviceScaleFactor: display.scale
   });
-  // Quake 3's own master and server ports on this machine are someone else's: a socket a page
-  // opens to either is closed before it reaches them, whatever its config says. The route reaches
-  // pages opened after it, so the page the profile opened with goes.
-  await context.routeWebSocket(/^wss?:\/\/[^/]+:(27950|27960)\//, (ws) => ws.close());
+  // The route reaches pages opened after it, so the page the profile opened with goes.
+  await keepSocketsHere(context);
   for (const page of context.pages()) await page.close();
   return context;
+}
+
+/** The names a page reaches this machine by. */
+const THIS_MACHINE = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/**
+ * Closes every WebSocket a page opens off this machine, or to Quake 3's own master and server
+ * ports on it, before it reaches them, whatever the page's config says. A check's match registers
+ * with the masters its slots name, which by default is the public one; the ports here are someone
+ * else's.
+ *
+ * @param {import('playwright').BrowserContext} context - its pages opened from now on
+ */
+export async function keepSocketsHere(context) {
+  await context.routeWebSocket(
+    (url) => !THIS_MACHINE.has(url.hostname) || url.port === '27950' || url.port === '27960',
+    (ws) => ws.close()
+  );
 }
 
 /**

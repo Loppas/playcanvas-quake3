@@ -3,12 +3,13 @@
 // signed in to, or that CLOUDFLARE_ACCOUNT_ID names; no account is named here.
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "pcq-master",
+  "name": "pcq3-master",
   "main": "worker.ts",
   // From 2026-08-04 `nodejs_compat` is on by default, which `node:dns` needs.
   "compatibility_date": "2026-10-19",
-  "workers_dev": true,
+  "workers_dev": false,
   "send_metrics": false,
+  "preview_urls": false,
   "durable_objects": {
     "bindings": [{ "name": "MASTER", "class_name": "MasterObject" }]
   },

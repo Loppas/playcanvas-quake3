@@ -378,9 +378,10 @@ Its terminal is its console. Each line typed there is a command, and its own are
 
 ## The master
 
-Servers are found through a master, the port's dpmaster. `npm run master` runs one on this
-machine, on port 27950, which both `sv_master` slots name by default. The Node dedicated server
-can run one inside itself instead:
+Servers are found through a master, the port's dpmaster. `sv_master1` names the hosted one,
+`wss://pcq3-master.cheapskatecorner.com`, by default. `npm run master` runs one on this machine,
+on port 27950, which `sv_master2` names by default. The Node dedicated server can run one inside
+itself instead:
 
 ```bash
 npm run dedicated -- +set dedicated 2 +set sv_runMaster 1 +map garage_rats
@@ -423,7 +424,7 @@ And the cvars:
 
 | Cvar | Default | Is |
 |---|---|---|
-| `sv_master1` | `localhost` | The Internet's master, which `globalservers` asks. |
+| `sv_master1` | `wss://pcq3-master.cheapskatecorner.com` | The Internet's master, which `globalservers` asks. |
 | `sv_master2` | `localhost` | The LAN's master, which `localservers` asks first. |
 | `sv_runMaster` | `0` | The Node dedicated server runs a master inside itself, on 27950. |
 

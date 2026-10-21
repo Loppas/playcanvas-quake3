@@ -68,7 +68,7 @@ describe('the settings registry', () => {
       pmoveMsec: 8,
       dedicated: 0,
       hostname: 'noname',
-      master1: 'localhost',
+      master1: 'wss://pcq3-master.cheapskatecorner.com',
       master2: 'localhost',
       netPort: 27960,
       runMaster: false,
