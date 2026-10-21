@@ -359,9 +359,11 @@ port's own presets.
 | `0` | Stops the server, as Ctrl+C does. |
 
 Players find it under MULTIPLAYER, or reach it with `connect <address>` from a bind. Either way
-they reach it through a master, so one has to be running: `npm run master` beside it, or
-`+set sv_runMaster 1` on its command line (see the master, below). Every player's data channel
-comes in on one UDP port, `net_port`: 27960, or the first free one of the nine above it.
+they reach it through a master: the hosted one, which `sv_master1` names by default, or one on its
+network, `npm run master` beside it or `+set sv_runMaster 1` on its command line (see the master,
+below). Every player's data channel comes in on one UDP port, `net_port`: 27960, or the first free
+one of the nine above it. Players beyond its network join only when that port can be reached from
+the Internet.
 
 Its terminal is its console. Each line typed there is a command, and its own are Quake 3's:
 
@@ -379,22 +381,22 @@ Its terminal is its console. Each line typed there is a command, and its own are
 ## The master
 
 Servers are found through a master, the port's dpmaster. `sv_master1` names the hosted one,
-`wss://pcq3-master.cheapskatecorner.com`, by default. `npm run master` runs one on this machine,
-on port 27950, which `sv_master2` names by default. The Node dedicated server can run one inside
-itself instead:
+`wss://pcq3-master.cheapskatecorner.com`, by default ([The hosted master](#the-hosted-master)).
+`npm run master` runs one on this machine, on port 27950, which `sv_master2` names by default.
+The Node dedicated server can run one inside itself instead:
 
 ```bash
 npm run dedicated -- +set dedicated 2 +set sv_runMaster 1 +map garage_rats
 ```
 
-The master has no console and takes no flags. It logs every message it handles to its terminal,
-as `> 127.0.0.1:27960 ---> heartbeat (DarkPlaces)`. It answers dpmaster's messages, as dpmaster's
-[techinfo.txt](https://github.com/kphillisjr/dpmaster/blob/master/doc/techinfo.txt) describes
+A master run here has no console and takes no flags. It logs every message it handles to its
+terminal, as `> 127.0.0.1:27960 ---> heartbeat (DarkPlaces)`. It answers dpmaster's messages, as
+dpmaster's [techinfo.txt](https://github.com/kphillisjr/dpmaster/blob/master/doc/techinfo.txt) describes
 them, over a WebSocket rather than UDP:
 
 | Message | From | Answer |
 |---|---|---|
-| `heartbeat DarkPlaces` | A server | `getinfo <challenge>`, down a data channel the master dials to the server. Any other tag is refused. |
+| `heartbeat DarkPlaces` | A server | `getinfo <challenge>`, down a data channel the master dials to the server, or from the hosted master down the server's own link. Any other tag is refused. |
 | `infoResponse` | A server, to that `getinfo` | The server listed for 15 minutes, if its challenge, protocol and game name check out. |
 | `getservers <game> <protocol> [words]` | A client | `getserversResponse`: the listed servers' IPv4 addresses. |
 | `getserversExt <game> <protocol> [words]` | A client | `getserversExtResponse`: the listed servers of both families. |
@@ -436,6 +438,45 @@ answered by the next ping. A master forgets a server whose link closes, so a ser
 on `localhost` or a private address and by `wss://` otherwise, or a `ws://` or `wss://` URL taken
 as given.
 
+### The hosted master
+
+The hosted master is the same master on Cloudflare: a Worker that hands every WebSocket to one
+Durable Object (`master/cloudflare/`). It answers every message as one run here does, but checks a
+server down the server's own link. A master run here sends a heartbeat's `getinfo` down a data
+channel it dials to the server, as a player would, so it lists only a server players can reach. A
+Worker can't dial one, so the hosted master sends it down the server's WebSocket, which shows only
+that the server answers. A server players can't reach, such as one behind carrier-grade NAT, is
+listed and can't be joined.
+
+Who joins whom through it:
+
+- A dedicated server whose `net_port` can be reached from the Internet is joined from anywhere.
+- A tab's listen server is found by the Local list and joined from its own network. Listed on the
+  Internet, it shows to players elsewhere, but two browsers on different networks may find no path
+  to each other, and the port has no TURN relay to carry one.
+
+### Deploying a master
+
+A release deploys the hosted master when it changes it. The release workflow builds the master as
+a deploy would upload it, at the release and at the release before, and deploys when the two
+differ, once a reviewer approves the deploy in the repository's `cloudflare` environment, which
+holds the Cloudflare token. A deploy closes every WebSocket the master holds: pages and servers
+connect again, and a server at `dedicated 2` heartbeats as soon as its link opens.
+
+To run your own, deploy it to a Cloudflare account of your own, with an API token for that account
+that has Account › Workers Scripts › Edit alone, and an expiry:
+
+```bash
+CLOUDFLARE_API_TOKEN=<token> CLOUDFLARE_ACCOUNT_ID=<account id> npm run deploy:master
+```
+
+`npx wrangler login` instead deploys as you; `npx wrangler logout` after leaves no login on the
+machine. The first deploy makes the Durable Object. The config deploys with workers.dev off, so
+give the Worker an address: a domain, in its settings on Cloudflare's dashboard, or
+`"workers_dev": true` in `master/cloudflare/wrangler.jsonc` for its `workers.dev` one. Then name
+it in `sv_master1`: `+set sv_master1 wss://<its address>` on a dedicated server's command line,
+or `?sv_master1=wss://<its address>` on a page's address, for that tab.
+
 ## Scripts
 
 | Command | Does |
@@ -448,7 +489,7 @@ as given.
 | `npm run build:dedicated` | Build the dedicated server into `build/`, without running it |
 | `npm run master` | Build and run the master (see above) |
 | `npm run build:master` | Build the master into `build/`, without running it |
-| `npm run deploy:master` | Deploy the master to Cloudflare as a Worker (`master/cloudflare/`); `-- --dry-run` bundles it without an account |
+| `npm run deploy:master` | Deploy the master to Cloudflare as a Worker (`master/cloudflare/`, see above); `-- --dry-run` bundles it without an account |
 | `npm run record` | Record a play session — frames, contact sheets, video (see below) |
 | `npm run probe:layout` | Measure every menu page against the layout rules, at 16:9 and 4:3 |
 | `npm run reference` | Draw the capture maps in Quake 3 and the port, and compare them (see above) |
