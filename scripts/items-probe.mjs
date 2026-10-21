@@ -14,6 +14,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { keepSocketsHere } from './perf/perf-lib.mjs';
+
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(tmpdir(), 'pcq-items-probe');
 const CENTRE = { x: -4, y: -4, z: 43 };
@@ -61,6 +63,7 @@ try {
     args: ['--enable-unsafe-webgpu', '--autoplay-policy=no-user-gesture-required']
   });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  await keepSocketsHere(context);
   page = await context.newPage();
   page.on('console', (m) => {
     if (m.type() === 'error') problems.push(`${m.type()}: ${m.text()}`);

@@ -629,8 +629,8 @@ describe('the page and a worker, over the messages', () => {
 
 describe('the page hosting players elsewhere', () => {
   /**
-   * A tab whose server is at 203.0.113.9 through the master on this machine, which both slots name
-   * by default, and whose own client is in the world. The masters' frame runs when the test ticks.
+   * A tab whose server is at 203.0.113.9 through the master on this machine, which both slots
+   * name, and whose own client is in the world. The masters' frame runs when the test ticks.
    */
   async function hosting(channels = true, setup: (cvars: Cvars) => void = () => {}) {
     const wire = boundary(channels);
@@ -638,7 +638,12 @@ describe('the page hosting players elsewhere', () => {
     const rtc = new FakeRtc();
     const urls: string[] = [];
     let tick: (() => void) | null = null;
-    const tab = page(wire, setup, {
+    const slots = (cvars: Cvars) => {
+      cvars.set('sv_master1', 'localhost');
+      cvars.set('sv_master2', 'localhost');
+      setup(cvars);
+    };
+    const tab = page(wire, slots, {
       createPeerConnection: rtc.create,
       connect: (url) => {
         urls.push(url);

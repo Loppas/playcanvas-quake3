@@ -17,6 +17,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
 
+import { keepSocketsHere } from './perf/perf-lib.mjs';
+
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(tmpdir(), 'pcq-items-pak');
 const PAK = join(REPO, 'public/maps/zz-items.pk3');
@@ -220,6 +222,7 @@ try {
     args: ['--enable-unsafe-webgpu', '--autoplay-policy=no-user-gesture-required']
   });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  await keepSocketsHere(context);
   page = await context.newPage();
   page.on('console', (m) => {
     if (m.type() === 'error') problems.push(`${m.type()}: ${m.text()}`);
