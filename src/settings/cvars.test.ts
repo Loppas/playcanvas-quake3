@@ -473,6 +473,12 @@ describe('Cvars: what a store elsewhere is given', () => {
     expect(heard.at(-1)).toEqual(['s_volume', '0.500000']);
     cvars.setServer('sv_cheats', '0');
     expect(heard.at(-1)).toEqual(['sv_cheats', '0']);
+    // By the name as spelled here: a setting's own, and another's as it was first given.
+    cvars.set('FragLimit', '15');
+    expect(heard.at(-1)).toEqual(['fraglimit', '15']);
+    cvars.set('My_Cvar', 'a');
+    cvars.set('MY_CVAR', 'b');
+    expect(heard.at(-1)).toEqual(['My_Cvar', 'b']);
     const count = heard.length;
     cvars.reset('fraglimit');
     expect(heard).toHaveLength(count + 1);
@@ -503,7 +509,7 @@ describe("Cvars: what a listen server's store elsewhere set", () => {
     cvars.mirror('g_localteampref', '');
     expect(cvars.get('g_localTeamPref')).toBe('');
     expect(cvars.modificationCount('g_localTeamPref')).toBe(count + 1);
-    expect(heard).toEqual([['g_localteampref', '']]);
+    expect(heard).toEqual([['g_localTeamPref', '']]);
     expect(saves).not.toHaveBeenCalled();
 
     // A cvar `seta` archived here is written back with its new value.
@@ -516,10 +522,16 @@ describe("Cvars: what a listen server's store elsewhere set", () => {
     expect(heard).toHaveLength(2);
   });
 
-  it('makes one it never held as the systeminfo would, read-only if the systeminfo has it', () => {
+  it("makes one it never held as that store's game or server registered it", () => {
     const warn = vi.fn();
     const cvars = new Cvars({ debugMode: true, warn });
 
+    // A rule the game registered stays the console's, though the systeminfo carries it.
+    cvars.mirror('pmove_AirControl', '0');
+    expect(cvars.set('pmove_AirControl', '1', true)).toBe(true);
+    expect(cvars.archived()).toContainEqual({ name: 'pmove_AirControl', value: '1' });
+
+    // `sv_cheats` is the server's, read-only.
     cvars.mirror('sv_cheats', '1');
     expect(cvars.set('sv_cheats', '0')).toBe(false);
     expect(warn).toHaveBeenCalledWith('sv_cheats is read only.');

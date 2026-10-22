@@ -274,14 +274,15 @@ export class Cvars implements CvarStore {
    * held unused without a second warning. Otherwise it is {@link set}'s: the query string's value
    * takes it in this tab alone, a latched setting waits for its start, an archived one wants the
    * file written, and a cvar keeps the flags it has here. One this store has never held is made as
-   * the systeminfo would make it: read-only if the systeminfo carries it.
+   * the game or the server registered it there: the console's to set, as qagame's rules are though
+   * the systeminfo carries them, except `sv_cheats`, which Q3 registers `CVAR_ROM` (`cvar.c:1443`).
    */
   mirror(name: string, raw: string): void {
     const key = settingForCvar(name);
     if (!key) {
       const lower = name.toLowerCase();
       const before = this.others.get(lower);
-      this.keepOther(name, raw, false, before === undefined && SERVER_CVARS.has(lower));
+      this.keepOther(name, raw, false, before === undefined && lower === 'sv_cheats');
       if (before?.value !== raw) {
         this.bump(name, raw);
         if (before?.archive === true) this.announceSave();
@@ -413,12 +414,14 @@ export class Cvars implements CvarStore {
     return (key ? SETTINGS[key].cvar : name).toLowerCase();
   }
 
-  /** Count a cvar's change, and tell whoever hears every change. */
+  /** Count a cvar's change, and tell whoever hears every change, by the name as spelled here. */
   private bump(name: string, value: string): void {
     const at = this.canonical(name);
     this.modifications.set(at, (this.modifications.get(at) ?? 0) + 1);
     this.modificationsOfAny++;
-    for (const listener of this.cvarChangeListeners) listener(at, value);
+    const key = settingForCvar(name);
+    const spelled = key ? SETTINGS[key].cvar : (this.others.get(at)?.name ?? name);
+    for (const listener of this.cvarChangeListeners) listener(spelled, value);
   }
 
   private isProtected(key: Key): boolean {

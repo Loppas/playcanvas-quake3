@@ -504,6 +504,26 @@ describe('the page and a worker, over the messages', () => {
     expect(cvarsTold(wire, 'page').map(({ name }) => name)).not.toContain('g_gravity');
   });
 
+  it("leaves the game's rules the page's console's to set, as a listen server's are", async () => {
+    const wire = boundary();
+    const { game, cvars } = page(wire);
+    await enter(wire, game);
+
+    // The game registered its rules in the worker's store, which the page now holds as Quake 3's
+    // one store holds qagame's: the console's to set, a preset's `seta` among them, though the
+    // systeminfo carries them.
+    expect(cvars.get('pmove_JumpVelocity')).toBe('270');
+    expect(cvars.set('pmove_JumpVelocity', '275', true)).toBe(true);
+    expect(cvars.set('weapon_reload_rg', '1250', true)).toBe(true);
+
+    for (let i = 0; i < 4; i++) await wire.step(game);
+    const systeminfo = game.configstring(CONFIGSTRING.SYSTEMINFO);
+    expect(infoValueForKey(systeminfo, 'pmove_JumpVelocity')).toBe('275');
+    expect(infoValueForKey(systeminfo, 'weapon_reload_rg')).toBe('1250');
+    // The file keeps them as the game spells them.
+    expect(cvars.archived()).toContainEqual({ name: 'pmove_JumpVelocity', value: '275' });
+  });
+
   it('counts a page change to a cvar no setting names, and hears the answer', async () => {
     const wire = boundary();
     const { game, cvars } = page(wire);
