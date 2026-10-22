@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/Loppas/playcanvas-quake3/compare/v0.3.0...v0.4.0) (2026-10-21)
+
+
+### Features
+
+* **master:** check a server by sending getinfo down the server's own link ([#66](https://github.com/Loppas/playcanvas-quake3/issues/66)) ([e01e81b](https://github.com/Loppas/playcanvas-quake3/commit/e01e81baca2c334c869c095f672f201ea8a5cb71))
+* **master:** rebuild the hosted master from its open WebSockets when its object wakes ([#72](https://github.com/Loppas/playcanvas-quake3/issues/72)) ([0e630fe](https://github.com/Loppas/playcanvas-quake3/commit/0e630fe2d9ed8729cf9717424ab16a16152ca878))
+* **master:** rebuild the master's state from records its WebSockets hold ([#70](https://github.com/Loppas/playcanvas-quake3/issues/70)) ([db4990c](https://github.com/Loppas/playcanvas-quake3/commit/db4990c1a5a26f2b544d99fea897af0d9b4d0f6f))
+* **master:** serve the master from a Cloudflare Worker and its Durable Object ([#71](https://github.com/Loppas/playcanvas-quake3/issues/71)) ([7436892](https://github.com/Loppas/playcanvas-quake3/commit/74368925e57582f3ddb94dc473e9a12259a07fdb))
+* **server:** heartbeat every master, and as soon as a link to one opens again ([#69](https://github.com/Loppas/playcanvas-quake3/issues/69)) ([0c2be96](https://github.com/Loppas/playcanvas-quake3/commit/0c2be96bb1681a640716b5f32877cf52b81c04b0))
+* **server:** ping the master from a dedicated server to find a dead link ([#68](https://github.com/Loppas/playcanvas-quake3/issues/68)) ([e99a799](https://github.com/Loppas/playcanvas-quake3/commit/e99a799945b6c9e25266b46092ae17085798b3b5))
+* **settings:** make the hosted master sv_master1's default ([#74](https://github.com/Loppas/playcanvas-quake3/issues/74)) ([9bbaa2e](https://github.com/Loppas/playcanvas-quake3/commit/9bbaa2ede2ef64ab37604d4d9577b0ed380fe4c9))
+
 ## [0.3.0](https://github.com/Loppas/playcanvas-quake3/compare/v0.2.0...v0.3.0) (2026-10-19)
 
 
