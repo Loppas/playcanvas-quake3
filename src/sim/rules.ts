@@ -1,5 +1,7 @@
 import { atof, atoi } from '../formats/c-scan';
 import type { CvarStore } from '../net/cvar';
+import { infoPairs } from '../net/info';
+import { SV_FPS } from '../net/snapshot-rate';
 import {
   ARMOR_PROTECTION,
   DUCKED_FALL_MULTIPLIER,
@@ -521,12 +523,15 @@ export type SysteminfoRule = (typeof SYSTEMINFO_RULES)[number];
  * touch read is here, so a client predicts on the server's numbers rather than on its own.
  *
  * `sv_cheats` rides with them: it is `CVAR_SYSTEMINFO` in Q3 (`sv_init.c:651`), and a client
- * holds its cheat-flagged cvars at their defaults while it is 0. The list is also what a server
- * may set in the client's store and nothing else may.
+ * holds its cheat-flagged cvars at their defaults while it is 0.
  *
  * Excessive Plus's `xp_unlagged` rides with them too, as its does, to tell a client which of its
  * shots the server rewinds the others for, and so does `sv_fps`, as unlagged's game module puts it
  * there, for a client to work out the gap between its snapshots.
+ *
+ * A client reads the rules, and the cvars beside them its view reads, into a record of its own
+ * ({@link readSysteminfoRecord}). The rest are what a server may set in the client's store, and
+ * nothing else may.
  */
 export const SYSTEMINFO_CVARS = [
   ...SYSTEMINFO_RULES,
@@ -562,7 +567,7 @@ export const HITSCAN_RULES = [
 export type HitscanRules = Pick<Rules, (typeof HITSCAN_RULES)[number]>;
 
 /** A rule's value from its cvar's string. */
-function parse(cvar: RuleCvar, text: string): number {
+function parse(cvar: Pick<RuleCvar, 'read'>, text: string): number {
   return cvar.read === 'integer' ? atoi(text) : atof(text);
 }
 
@@ -582,6 +587,64 @@ export function defaultRules(): Rules {
 
 /** The rules at id's values, for whatever is given none. */
 export const ID_RULES: Readonly<Rules> = Object.freeze(defaultRules());
+
+/**
+ * The server's cvars past the rules that a client's view reads, each a whole number, at what a
+ * server that sends none plays: no hook and no shot rewound, as in Quake 3, and the port's own
+ * frame rate ({@link SV_FPS}).
+ */
+const SYSTEMINFO_SERVER_CVARS = { g_allowGrapple: 0, xp_unlagged: 0, sv_fps: SV_FPS } as const;
+
+/**
+ * What a client reads out of `CS_SYSTEMINFO` into a record of its own: the rules it predicts by,
+ * and the server's cvars its view reads beside them.
+ */
+export type SysteminfoRecord = SysteminfoRules &
+  Record<keyof typeof SYSTEMINFO_SERVER_CVARS, number>;
+
+/** A key of {@link SysteminfoRecord}: how its value is read, and what it is where none is sent. */
+interface RecordKey {
+  readonly name: keyof SysteminfoRecord;
+  readonly read: RuleCvar['read'];
+  readonly id: number;
+}
+
+/** The record's keys, by the name lowercased, as `Cvar_FindVar` matches one. */
+const RECORD_KEYS: ReadonlyMap<string, RecordKey> = new Map(
+  [
+    ...SYSTEMINFO_RULES.map((name): RecordKey => {
+      const cvar = RULE_CVARS.find((each) => each.name === name) as RuleCvar;
+      return { name, read: cvar.read, id: ID_RULES[name] };
+    }),
+    ...Object.entries(SYSTEMINFO_SERVER_CVARS).map(
+      ([name, id]): RecordKey => ({ name: name as keyof SysteminfoRecord, read: 'integer', id })
+    )
+  ].map((key) => [key.name.toLowerCase(), key])
+);
+
+/** Whether a systeminfo key is one a client reads into its record, rather than into its cvars. */
+export function isSysteminfoRecordKey(key: string): boolean {
+  return RECORD_KEYS.has(key.toLowerCase());
+}
+
+/** The record at id's values, for {@link readSysteminfoRecord} to fill. */
+export function idSysteminfoRecord(): SysteminfoRecord {
+  return Object.fromEntries(
+    [...RECORD_KEYS.values()].map((key) => [key.name, key.id])
+  ) as SysteminfoRecord;
+}
+
+/**
+ * The record, read out of `CS_SYSTEMINFO` in place, each rule as the server's game module reads
+ * its cvar. A key the string leaves out is id's: what a game without it plays.
+ */
+export function readSysteminfoRecord(systemInfo: string, record: SysteminfoRecord): void {
+  for (const key of RECORD_KEYS.values()) record[key.name] = key.id;
+  for (const [name, value] of infoPairs(systemInfo)) {
+    const key = RECORD_KEYS.get(name.toLowerCase());
+    if (key) record[key.name] = parse(key, value);
+  }
+}
 
 /**
  * The rules, kept in step with their cvars: `trap_Cvar_Update` over each, which reads a cvar again
