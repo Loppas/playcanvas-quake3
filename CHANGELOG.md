@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/Loppas/playcanvas-quake3/compare/v0.4.0...v0.4.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* **settings:** let a preset set the rules of a server hosted in a tab ([#78](https://github.com/Loppas/playcanvas-quake3/issues/78)) ([2643fb1](https://github.com/Loppas/playcanvas-quake3/commit/2643fb128de091605d500d502686a77aab35673a))
+
 ## [0.4.0](https://github.com/Loppas/playcanvas-quake3/compare/v0.3.0...v0.4.0) (2026-10-21)
 
 
