@@ -1206,9 +1206,12 @@ describe('the host', () => {
 
     it('takes the rules from the gamestate, and a change from the cs that follows', () => {
       const { host, cvars } = makeHost();
+      cvars.set('pmove_JumpVelocity', '300');
+      host.runFrame(8);
       const client = testCvars();
       const connected = new ClientConnection(client);
       connectLocal(host, connected);
+      expect(connected.rules.pmove_JumpVelocity).toBe(300);
       // Into the world, so the host has a slot a configstring is sent to.
       sendMove(host, connected, [moveCmd(8)]);
 
@@ -1221,11 +1224,46 @@ describe('the host', () => {
         command !== null;
         command = connected.nextServerCommand()
       ) {
-        // Run them as the view's `takeServerCommands` does, so the `cs` reaches the store.
+        // Run them as the view's `takeServerCommands` does, so the `cs` reaches the client.
       }
 
-      expect(client.get('pmove_JumpVelocity')).toBe('333');
+      expect(connected.rules.pmove_JumpVelocity).toBe(333);
+      // The rules are the record's alone; Quake 3's own systeminfo cvars are still set.
+      expect(client.get('pmove_JumpVelocity')).toBe('');
       expect(client.get('pmove_msec')).toBe('16');
+    });
+
+    it("leaves the player's own rules alone, for a preset to set and the file to keep", () => {
+      // A server with a store of its own, as one elsewhere is, playing other rules.
+      const { host, cvars } = makeHost();
+      cvars.set('pmove_JumpVelocity', '275');
+      cvars.set('g_allowGrapple', '3');
+      cvars.set('xp_unlagged', '0');
+      cvars.set('sv_fps', '40');
+      host.runFrame(8);
+      const warn = vi.fn();
+      const client = new Cvars({ debugMode: true, warn });
+      const connected = new ClientConnection(client);
+      connectLocal(host, connected);
+      expect(connected.rules).toMatchObject({
+        pmove_JumpVelocity: 275,
+        g_allowGrapple: 3,
+        xp_unlagged: 0,
+        sv_fps: 40
+      });
+
+      // None of the server's rules is the client's to hold read-only or write to its file.
+      expect(client.set('pmove_JumpVelocity', '290', true)).toBe(true);
+      expect(client.archived()).toContainEqual({ name: 'pmove_JumpVelocity', value: '290' });
+      expect(client.archived().map((cvar) => cvar.name)).not.toContain('pmove_WalkAccel');
+      // The grapple style, the rewind and the frame rate the player set stay the player's.
+      const own = new Cvars({ debugMode: true, warn: () => {} });
+      for (const name of ['g_allowGrapple', 'xp_unlagged', 'sv_fps']) {
+        expect(client.get(name)).toBe(own.get(name));
+      }
+      expect(client.archived()).not.toContainEqual({ name: 'g_allowGrapple', value: '3' });
+      expect(warn).not.toHaveBeenCalled();
+      expect(connected.rules.pmove_JumpVelocity).toBe(275);
     });
 
     it("puts a client's cheat cvars back when the systeminfo says sv_cheats 0", () => {
@@ -1253,10 +1291,9 @@ describe('the host', () => {
       connectLocal(host, connected);
       sendMove(host, connected, [moveCmd(8)]);
 
-      expect(connected.configstrings[CONFIGSTRING.SYSTEMINFO].length).toBeGreaterThan(
-        MAX_INFO_STRING
-      );
-      expect(client.get('pmove_JumpVelocity')).toBe(long);
+      const systemInfo = () => connected.configstrings[CONFIGSTRING.SYSTEMINFO];
+      expect(systemInfo().length).toBeGreaterThan(MAX_INFO_STRING);
+      expect(infoValueForKey(systemInfo(), 'pmove_JumpVelocity')).toBe(long);
 
       const longer = 'y'.repeat(1800);
       cvars.set('pmove_JumpVelocity', longer);
@@ -1273,7 +1310,7 @@ describe('the host', () => {
       ) {
         // As above, but for the change that keeps the string big.
       }
-      expect(client.get('pmove_JumpVelocity')).toBe(longer);
+      expect(infoValueForKey(systemInfo(), 'pmove_JumpVelocity')).toBe(longer);
     });
   });
 

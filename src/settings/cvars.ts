@@ -2,13 +2,18 @@ import { DEBUG_MODE } from '../config';
 import { atoi } from '../formats/c-scan';
 import type { ArchivedCvar } from '../formats/q3config';
 import type { CvarStore } from '../net/cvar';
-import { SYSTEMINFO_CVARS } from '../sim/rules';
+import { isSysteminfoRecordKey, SYSTEMINFO_CVARS } from '../sim/rules';
 import { DEFAULT_SETTINGS, SETTINGS, SETTING_KEYS, settingForCvar, type Settings } from './registry';
 
 type Key = keyof Settings;
 
-/** The systeminfo's cvars, lowercased: what a server may set in this store and nothing else may. */
-const SERVER_CVARS = new Set(SYSTEMINFO_CVARS.map((name) => name.toLowerCase()));
+/**
+ * The systeminfo's cvars past the client's own record of it, lowercased: what a server may set in
+ * this store and nothing else may. The rest go into the record, never here.
+ */
+const SERVER_CVARS = new Set(
+  SYSTEMINFO_CVARS.filter((name) => !isSysteminfoRecordKey(name)).map((name) => name.toLowerCase())
+);
 
 /** One setting's strings: the file's, and this tab's if the query string set it. */
 interface Slot {
@@ -242,9 +247,9 @@ export class Cvars implements CvarStore {
    * `CL_SystemInfoChanged`'s apply of one key (`cl_parse.c:388–430`): `Cvar_SetSafe`, and the
    * `Cvar_Get` that precedes it for a key the client has never held.
    *
-   * A server may set the cvars its systeminfo carries — the rules and the two the replay reads
-   * beside them ({@link SYSTEMINFO_CVARS}) — and no other the client holds. A key the client has
-   * never held becomes the server's own, read-only to everything but the server, as
+   * A server may set the cvars its systeminfo carries past the client's own record of it
+   * ({@link SERVER_CVARS}), and no other the client holds. A key the client has never held
+   * becomes the server's own, read-only to everything but the server, as
    * `CVAR_SERVER_CREATED | CVAR_ROM` is in Q3.
    *
    * @returns Whether the value was taken; `false` is Q3's warning.
@@ -256,8 +261,8 @@ export class Cvars implements CvarStore {
 
     const before = this.others.get(lower);
     if (before !== undefined && !before.server && !SERVER_CVARS.has(lower)) return false;
-    // A cvar the store already held keeps its flags: a listen server's own rules stay writable by
-    // its console, as Q3's `CVAR_SYSTEMINFO` cvars are (`cvar.c:558–570`).
+    // A cvar the store already held keeps its flags: a listen server's own stay writable by its
+    // console, as Q3's `CVAR_SYSTEMINFO` cvars are (`cvar.c:558–570`).
     this.keepOther(name, raw, false, before?.server ?? true);
     if (before?.value !== raw) this.bump(name, raw);
     // The systeminfo's `sv_cheats` 0 is `Cvar_SetCheatState`'s call (`cl_parse.c:373–377`).
@@ -274,14 +279,15 @@ export class Cvars implements CvarStore {
    * held unused without a second warning. Otherwise it is {@link set}'s: the query string's value
    * takes it in this tab alone, a latched setting waits for its start, an archived one wants the
    * file written, and a cvar keeps the flags it has here. One this store has never held is made as
-   * the systeminfo would make it: read-only if the systeminfo carries it.
+   * the game or the server registered it there: the console's to set, as qagame's rules are though
+   * the systeminfo carries them, except `sv_cheats`, which Q3 registers `CVAR_ROM` (`cvar.c:1443`).
    */
   mirror(name: string, raw: string): void {
     const key = settingForCvar(name);
     if (!key) {
       const lower = name.toLowerCase();
       const before = this.others.get(lower);
-      this.keepOther(name, raw, false, before === undefined && SERVER_CVARS.has(lower));
+      this.keepOther(name, raw, false, before === undefined && lower === 'sv_cheats');
       if (before?.value !== raw) {
         this.bump(name, raw);
         if (before?.archive === true) this.announceSave();
@@ -413,12 +419,14 @@ export class Cvars implements CvarStore {
     return (key ? SETTINGS[key].cvar : name).toLowerCase();
   }
 
-  /** Count a cvar's change, and tell whoever hears every change. */
+  /** Count a cvar's change, and tell whoever hears every change, by the name as spelled here. */
   private bump(name: string, value: string): void {
     const at = this.canonical(name);
     this.modifications.set(at, (this.modifications.get(at) ?? 0) + 1);
     this.modificationsOfAny++;
-    for (const listener of this.cvarChangeListeners) listener(at, value);
+    const key = settingForCvar(name);
+    const spelled = key ? SETTINGS[key].cvar : (this.others.get(at)?.name ?? name);
+    for (const listener of this.cvarChangeListeners) listener(spelled, value);
   }
 
   private isProtected(key: Key): boolean {

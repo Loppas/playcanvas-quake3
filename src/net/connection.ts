@@ -1,6 +1,12 @@
 import { atof, atoi } from '../formats/c-scan';
 import { tokenize } from '../formats/q3config';
 import { PMOVE_MSEC, PMOVE_MSEC_MAX, PMOVE_MSEC_MIN } from '../sim/constants';
+import {
+  idSysteminfoRecord,
+  isSysteminfoRecordKey,
+  readSysteminfoRecord,
+  type SysteminfoRecord
+} from '../sim/rules';
 import { ClientClock, UserCmdRing } from './client-clock';
 import {
   CLC,
@@ -163,6 +169,12 @@ export class ClientConnection {
   clientNum = -1;
   /** Which map load we are playing, which every message we send is stamped with. */
   serverId = 0;
+  /**
+   * The rules the client predicts by, and the server's cvars its view reads beside them, as the
+   * last systeminfo carried them, and id's before one has. Refilled in place, so whoever holds the
+   * record reads the current ones.
+   */
+  readonly rules: SysteminfoRecord = idSysteminfoRecord();
   checksumFeed = 0;
   gameStateReceived = false;
 
@@ -593,18 +605,21 @@ export class ClientConnection {
 
   /**
    * `CL_SystemInfoChanged` (`cl_parse.c:342–436`): the server id every message is stamped with,
-   * and the rules a client's prediction replays, which the server sends as Quake 3's
-   * `CVAR_SYSTEMINFO` cvars do.
+   * the rules a client's prediction replays, and the rest of the server's `CVAR_SYSTEMINFO` cvars.
    *
-   * Q3 refuses a key its own cvar flags say a server may not set, and creates one it has never
-   * held read-only; the store makes both calls, and a refusal is Q3's warning.
+   * The rules, and the cvars beside them the view reads, go into {@link rules} and never into the
+   * store, where Q3 sets every key as a cvar: they are the server's while the client is on it, and
+   * a cvar would make them the player's. Q3 refuses any other key its own cvar flags say a server
+   * may not set, and creates one it has never held read-only; the store makes both calls, and a
+   * refusal is Q3's warning.
    */
   private systemInfoChanged(): void {
     const systemInfo = this.configstrings[CONFIGSTRING.SYSTEMINFO];
     this.serverId = atoi(infoValueForKey(systemInfo, 'sv_serverid'));
+    readSysteminfoRecord(systemInfo, this.rules);
 
     for (const [key, value] of infoPairs(systemInfo)) {
-      if (key.toLowerCase() === 'sv_serverid') continue;
+      if (key.toLowerCase() === 'sv_serverid' || isSysteminfoRecordKey(key)) continue;
       if (!this.cvars.setServer(key, value)) {
         this.net?.print(`WARNING: server is not allowed to set ${key}=${value}\n`);
       }

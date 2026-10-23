@@ -373,19 +373,17 @@ describe('Cvars with a server whose sv_cheats is 0', () => {
 });
 
 describe("Cvars: what a server's systeminfo may set", () => {
-  it("takes the systeminfo's cvars, a listen server's own among them", () => {
+  it("takes Quake 3's own systeminfo cvars, a listen server's among them", () => {
     const warn = vi.fn();
     const cvars = new Cvars({ debugMode: true, warn });
-    // A listen server's game module has registered its rules in the one store already.
-    cvars.set('pmove_JumpVelocity', '270');
+    // A listen server's game module has registered its cvars in the one store already.
+    cvars.set('pmove_msec', '8');
 
-    expect(cvars.setServer('pmove_JumpVelocity', '300')).toBe(true);
-    expect(cvars.get('pmove_JumpVelocity')).toBe('300');
+    expect(cvars.setServer('pmove_msec', '16')).toBe(true);
+    expect(cvars.get('pmove_msec')).toBe('16');
     // The server's own cvar stays the console's to set, as Q3's `CVAR_SYSTEMINFO` ones are.
-    expect(cvars.set('pmove_JumpVelocity', '310')).toBe(true);
-    // The grapple style is a setting the server sends, and it is taken too.
-    expect(cvars.setServer('g_allowGrapple', '3')).toBe(true);
-    expect(cvars.get('g_allowGrapple')).toBe('3');
+    expect(cvars.set('pmove_msec', '11')).toBe(true);
+    expect(cvars.setServer('sv_cheats', '1')).toBe(true);
     expect(warn).not.toHaveBeenCalled();
   });
 
@@ -399,6 +397,16 @@ describe("Cvars: what a server's systeminfo may set", () => {
     cvars.set('my_cvar', 'mine');
     expect(cvars.setServer('my_cvar', 'theirs')).toBe(false);
     expect(cvars.get('my_cvar')).toBe('mine');
+    // A rule is the player's here, and so are the grapple style, the rewind and the frame rate:
+    // the client reads the server's into a record of its own.
+    cvars.set('pmove_JumpVelocity', '270');
+    expect(cvars.setServer('pmove_JumpVelocity', '300')).toBe(false);
+    expect(cvars.get('pmove_JumpVelocity')).toBe('270');
+    for (const name of ['g_allowGrapple', 'xp_unlagged', 'sv_fps']) {
+      const own = cvars.get(name);
+      expect(cvars.setServer(name, '3')).toBe(false);
+      expect(cvars.get(name)).toBe(own);
+    }
   });
 
   it('creates a key it has never held read-only, and the server may change it after', () => {
@@ -416,19 +424,17 @@ describe("Cvars: what a server's systeminfo may set", () => {
     expect(cvars.get('sv_customRule')).toBe('3');
   });
 
-  it("leaves a listen server's frame and move step the console's to set after a systeminfo", () => {
+  it("leaves a listen server's move step the console's to set after a systeminfo", () => {
     const warn = vi.fn();
     const cvars = new Cvars({ debugMode: true, warn });
-    expect(cvars.setServer('sv_fps', '125')).toBe(true);
     expect(cvars.setServer('pmove_msec', '8')).toBe(true);
 
-    expect(cvars.set('sv_fps', '60')).toBe(true);
     expect(cvars.set('pmove_msec', '16')).toBe(true);
     expect(warn).not.toHaveBeenCalled();
-    // A server elsewhere sets them as any systeminfo does, and they stay so after it, as in Q3's
-    // one store.
-    expect(cvars.setServer('sv_fps', '20')).toBe(true);
-    expect(cvars.get('sv_fps')).toBe('20');
+    // A server elsewhere sets it as any systeminfo does, and it stays so after it, as in Q3's one
+    // store.
+    expect(cvars.setServer('pmove_msec', '11')).toBe(true);
+    expect(cvars.get('pmove_msec')).toBe('11');
   });
 
   it("resets the cheat settings when the systeminfo's sv_cheats is 0", () => {
@@ -473,6 +479,12 @@ describe('Cvars: what a store elsewhere is given', () => {
     expect(heard.at(-1)).toEqual(['s_volume', '0.500000']);
     cvars.setServer('sv_cheats', '0');
     expect(heard.at(-1)).toEqual(['sv_cheats', '0']);
+    // By the name as spelled here: a setting's own, and another's as it was first given.
+    cvars.set('FragLimit', '15');
+    expect(heard.at(-1)).toEqual(['fraglimit', '15']);
+    cvars.set('My_Cvar', 'a');
+    cvars.set('MY_CVAR', 'b');
+    expect(heard.at(-1)).toEqual(['My_Cvar', 'b']);
     const count = heard.length;
     cvars.reset('fraglimit');
     expect(heard).toHaveLength(count + 1);
@@ -503,7 +515,7 @@ describe("Cvars: what a listen server's store elsewhere set", () => {
     cvars.mirror('g_localteampref', '');
     expect(cvars.get('g_localTeamPref')).toBe('');
     expect(cvars.modificationCount('g_localTeamPref')).toBe(count + 1);
-    expect(heard).toEqual([['g_localteampref', '']]);
+    expect(heard).toEqual([['g_localTeamPref', '']]);
     expect(saves).not.toHaveBeenCalled();
 
     // A cvar `seta` archived here is written back with its new value.
@@ -516,10 +528,16 @@ describe("Cvars: what a listen server's store elsewhere set", () => {
     expect(heard).toHaveLength(2);
   });
 
-  it('makes one it never held as the systeminfo would, read-only if the systeminfo has it', () => {
+  it("makes one it never held as that store's game or server registered it", () => {
     const warn = vi.fn();
     const cvars = new Cvars({ debugMode: true, warn });
 
+    // A rule the game registered stays the console's, though the systeminfo carries it.
+    cvars.mirror('pmove_AirControl', '0');
+    expect(cvars.set('pmove_AirControl', '1', true)).toBe(true);
+    expect(cvars.archived()).toContainEqual({ name: 'pmove_AirControl', value: '1' });
+
+    // `sv_cheats` is the server's, read-only.
     cvars.mirror('sv_cheats', '1');
     expect(cvars.set('sv_cheats', '0')).toBe(false);
     expect(warn).toHaveBeenCalledWith('sv_cheats is read only.');

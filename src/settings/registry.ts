@@ -638,7 +638,7 @@ export const SETTINGS: SettingDefs = {
     latched: true,
     archive: false
   },
-  // The server's frame and the move's step, which a server's systeminfo sets too: Q3 registers
+  // The server's frame and the move's step, which a server's systeminfo carries: Q3 registers
   // neither archived (`sv_init.c:667`, `g_main.c:178`), and corrects each where it is read rather
   // than refusing it (`sv_main.c:1083–1085`, `g_active.c:790–797`).
   svFps: {
