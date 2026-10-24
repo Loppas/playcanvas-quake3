@@ -16,7 +16,9 @@ The bake is splat-transform's own voxel writer. What this adds is the sizing and
      splats far past what was filmed, and the grid spans them all;
   6. `--outdoor` bakes with no exterior fill, for a capture with no hull to seal: outdoors the
      fill floods in through the open sky and closes everything. Outside the grid is solid, so
-     the box's sides and top then bound the map.
+     the box's sides and top then bound the map. The grid spans the splats' extents, past the
+     box where big splats reach out of it, and an unfilled grid is cropped to its solid voxels,
+     so with a box the bake seals it: a solid wall one voxel thick inside each of its six faces.
 
 Then it loads the octree back and measures it: the port's own structural checks, whether
 splat-transform skipped a step (a leak skips the exterior fill without an error), every spawn
@@ -42,6 +44,7 @@ import shutil
 import struct
 import subprocess
 import sys
+import tempfile
 import time
 
 import numpy as np
@@ -86,6 +89,44 @@ def filter_box(text):
         raise ValueError(f"--box {text!r} is not x0,y0,z0,x1,y1,z1 with each 0 below its 1")
     a, b = sm.sim_to_octree(values[:3]), sm.sim_to_octree(values[3:])
     return ",".join(sm.fmt_num(c) for c in (*map(min, a, b), *map(max, a, b)))
+
+
+#: The shell's Gaussians as a PLY stores them: position, log scale, rotation (w first), logit
+#: opacity and colour.
+SHELL_PROPERTIES = ("x", "y", "z", "scale_0", "scale_1", "scale_2", "rot_0", "rot_1", "rot_2",
+                    "rot_3", "opacity", "f_dc_0", "f_dc_1", "f_dc_2")
+
+
+def shell_ply(box_sim, v):
+    """A PLY of opaque Gaussians that make a solid wall one voxel thick inside each face of
+    `box_sim`, (x0, y0, z0, x1, y1, z1) in Q3 units, at a `v`-unit voxel: a sealed box for an
+    outdoor bake, which has no fill to seal it.
+
+    Voxel faces lie on multiples of `v`, since the grid is aligned to whole blocks (cli.mjs
+    `alignGridBounds`). Each Gaussian sits in a wall's mid-plane at a voxel corner, an eighth of
+    a voxel across, so its three-sigma box reaches the four voxels at that corner and no others;
+    one at every other corner fills the wall. A PLY input is read in the polished splat's
+    frame, which `sim_to_world` gives.
+    """
+    lo = [math.ceil(c / v) for c in box_sim[:3]]
+    hi = [math.floor(c / v) for c in box_sim[3:]]
+    walls = []
+    for axis in range(3):
+        a, b = (i for i in range(3) if i != axis)
+        ia, ib = np.meshgrid(np.arange(lo[a], hi[a] + 1, 2), np.arange(lo[b], hi[b] + 1, 2),
+                             indexing="ij")
+        for layer in (lo[axis] + 0.5, hi[axis] - 0.5):
+            wall = np.empty((ia.size, 3))
+            wall[:, axis], wall[:, a], wall[:, b] = layer, ia.ravel(), ib.ravel()
+            walls.append(wall * v)
+    centres = np.concatenate(walls)
+    log_sigma = math.log(v / 8 / sm.UNITS_PER_METRE)
+    n = len(centres)
+    rows = np.column_stack([*sm.sim_to_world(centres.T), *np.full((3, n), log_sigma),
+                            np.ones(n), *np.zeros((3, n)), np.full(n, 10.0), *np.zeros((3, n))])
+    header = (f"ply\nformat binary_little_endian 1.0\nelement vertex {n}\n"
+              + "".join(f"property float {p}\n" for p in SHELL_PROPERTIES) + "end_header\n")
+    return header.encode("ascii") + rows.astype("<f4").tobytes()
 
 
 def main(argv=None, prog=None):
@@ -171,11 +212,12 @@ def main(argv=None, prog=None):
                 "--seed-pos", ",".join(sm.fmt_num(c) for c in seed_oct),
                 "--collision-mesh", args.mesh]
 
-    def bake(s, where):
-        """One splat-transform run into `where`: (its output, seconds, whether it leaked)."""
+    def bake(s, where, shell=()):
+        """One splat-transform run into `where`, with the shell's PLY as a second input if one
+        is given: (its output, seconds, whether it leaked)."""
         os.makedirs(where, exist_ok=True)
-        # The crop is an action on the input, so it follows it.
-        cmd = [exe, "-w", "--no-tty", *flags_for(s), args.sog, *crop,
+        # The crop is an action on the input, so it follows it, and the shell after it is uncut.
+        cmd = [exe, "-w", "--no-tty", *flags_for(s), args.sog, *crop, *shell,
                os.path.join(where, f"{stem}.voxel.json")]
         print(f"  splat-transform {' '.join(cmd[1:])}")
         t0 = time.time()
@@ -192,9 +234,17 @@ def main(argv=None, prog=None):
         print(f"  cropped to the box ({args.box}) in Q3 units, octree ({crop[1]})")
     trail = []
     if args.outdoor:
-        print("  no exterior fill (--outdoor): " + ("the box bounds the map" if args.box else
+        print("  no exterior fill (--outdoor): " + ("the box bounds the map, sealed by a wall "
+                                                    "one voxel thick inside each face"
+                                                    if args.box else
                                                     "the capture's own extent bounds the map"))
-        text, seconds, leaked = bake(sizes, out_dir)
+        with tempfile.TemporaryDirectory() as tmp:
+            shell = []
+            if args.box:
+                shell = [os.path.join(tmp, f"{stem}.shell.ply")]
+                with open(shell[0], "wb") as fh:
+                    fh.write(shell_ply([float(c) for c in args.box.split(",")], v))
+            text, seconds, leaked = bake(sizes, out_dir, shell)
     elif not auto:
         print(f"  external fill {sizes['fill_voxels']} voxels: seals hull holes under "
               f"{sizes['fill_seals_under_units']} units")

@@ -183,7 +183,11 @@ The box is recorded in `_pcq_bake`.
 it; with no ceiling it floods in through the sky and closes everything. `--outdoor` leaves it
 out, and since everything outside the grid is solid, the box's sides and top then bound the map:
 keep its floor a little under the ground, so that a player who steps off the captured ground
-drops only that far.
+drops only that far. Its top is the map's ceiling, so leave room above the tallest thing a player
+can stand on. splat-transform sizes the grid to the splats, past the box where big splats reach
+out of it, and crops a grid with no fill to its solid voxels, which would put the ceiling at the
+capture's own top. So the bake seals the box: opaque Gaussians make a solid wall one voxel thick
+inside each of its six faces. Only the bake reads them; the packed splat is untouched.
 
 The voxel is 8 units unless `--voxel` says otherwise. `map-format.md` §6.1 says when another size
 pays. The external fill defaults to `auto`, which bakes several times to find the smallest reach
