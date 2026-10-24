@@ -54,6 +54,25 @@ scale together. Re-run `calibrate_transform.py` after any upgrade:
   depends on the view, not only on the size. Render at 1024 × 1024 or less, and count the
   background pixels of every render a check relies on.
 
+**The voxel writer, read in `cli.mjs` and measured (v3.1.6):**
+- **The grid spans every Gaussian's three-sigma box, whatever its opacity**
+  (`computeGaussianExtents`), aligned outward to whole blocks of four voxels from the origin
+  (`alignGridBounds`). So voxel faces lie on multiples of the voxel, and a splat centred inside
+  `--filter-box` can push the grid a block past it.
+- **It then crops the grid.** With an external fill, it keeps the blocks holding an open voxel, and
+  one more round them (`cropToNavigable`). With none, it keeps the blocks holding a solid voxel
+  (`cropToOccupied`), so an outdoor grid would end at the capture's top. With no carve and no mesh,
+  it crops the same way before anything else: a probe of the grid's bounds passes the bake's own
+  flags.
+- **A solid voxel with no solid neighbour is cleared** (`filterAndFillBlocks`), so a marker that
+  must survive makes two at least.
+- **An action applies to the input it follows**, and inputs of different layouts are combined into
+  the union of their columns, the missing ones zero. A PLY input is read in the polished splat's
+  own frame, metres and +Y up (`sim_to_world`), and turned by `ST_FRAME` with it: an opaque marker
+  at a PLY's y −15 stretched the octree's grid to y +16.
+- **`--voxel-floor-fill` walks each column up from the grid's y = 0**, which in the octree's frame
+  is the map's top. It would fill the air, so the pipeline does not use it.
+
 ## Fitting geometry in a splat cloud
 
 **Density proposes, area decides.** Choosing a surface by point count picks a rafter over the
@@ -93,10 +112,19 @@ when the report shows more cloud past the ceiling than under the floor the sign 
 flipped. `sog_inspect` now warns on that and names the negated `--up-hint` to try; the garage
 needs `--up-hint 0,-1,0`. Verify the fix by re-running and comparing the two reports (and a
 `--render`), not by eyeballing the section drawings — they are drawn in the levelled frame and
-look flat either way up.
+look flat either way up. Both superspl.at downloads polished so far, the garage and a tabletop
+trained in LichtFeld Studio, were stored upside down.
+
+**The yaw fit can hold two near-equal answers.** It scores how sharply the plan piles into
+histogram bins. Where a capture's straight lines disagree slightly, as a board's edges and a
+cloth's stripes did, two orientations about 0.26° apart score alike, and the verify of a plan
+turned to one can find the other, past its limit. `--no-yaw`, given to both measures, is the way
+out: the plan stays that far from square.
 
 **Absolute scale cannot be recovered from SfM output.** It comes from the physical space — one
-known distance, or a scale bar in the capture. Everything else is derivable; this is not.
+known distance, or a scale bar in the capture. Everything else is derivable; this is not. When
+nobody measured the space, objects of known size in it serve: a tabletop's cherry tomatoes,
+courgettes and chopping board agreed on 4.3 cm a unit.
 
 ## Performance and memory
 
@@ -127,6 +155,21 @@ tall the player should appear in the real space) rather than as a bare multiplie
 the factor. The garage's ~2.8 cm spacing is invisible at life size and reads as ~45 cm smears at
 16x. Scaling up past what the capture resolves cannot be fixed downstream — it needs a denser
 re-capture or a smaller factor.
+
+**Unseen gaps open with the factor.** Where an object rests on a surface, no camera saw the
+surface under it or the object's underside, so the capture holds no splats there. At a small
+factor the gap is narrower than the carve's box, which fills it. Magnified, the player fits in,
+and drops inside the object or under the ground. The bake's warning that the player can get box
+positions under the floor is the sign. A coarser voxel does not rescue it: at 13 units the carve's
+box is one voxel wide, and closes less. A tabletop baked sealed at a 0.025 m player and leaked at
+0.02 m. So find a capture's limit before building on it: polish and bake two or three player
+heights in a scratch folder.
+
+**One capture at several sizes is several maps, named by the size**: `garage_cats` at a 0.5 m
+player, `garage_rats` at 0.1 m. Each keeps its own `.ent`, since spots do not survive a rescale
+([maps.md](maps.md), "Changing a map"). One takes the capture's plain long name and the others
+mark theirs, "The Garage (Cat Size)", in worldspawn's `message` and the arena's `longname`
+alike.
 
 ## The map editor and q3map2
 
@@ -187,6 +230,9 @@ binary, so the consumer still needs a reader — the port's is `readOctree`
 - **A leak is logged, not raised.** splat-transform prints `seed reachable from outside, skipping
   exterior fill` as information and writes the octree anyway, with the whole outside open. Check
   the log, and measure where the player's box can reach, not only the octree's structure.
+- **An outdoor box is sealed by the bake, since nothing else bounds it**: with no fill the grid
+  ends where the voxel writer's crop and the splats' reach leave it, above ([maps.md](maps.md),
+  step 3).
 - **Bake the file that ships**, so the player collides with what they see.
 
 **Polish runs measure → apply → verify → record**, and the second measurement is the
