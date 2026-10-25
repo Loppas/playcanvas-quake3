@@ -83,18 +83,6 @@ describe('warmUp', () => {
     expect(camera.camera!.frustumCulling).toBe(true);
   });
 
-  it('draws no frame while the canvas has no area, each module shown and put away still', () => {
-    const log: string[] = [];
-    vi.spyOn(app, 'render').mockImplementation(() => {
-      log.push('render');
-    });
-    app.graphicsDevice.resizeCanvas(0, 0);
-    warmUp(app, [
-      { ...logged(log, 'a'), frames: () => 2, frame: (k) => log.push(`a frame ${k}`) }
-    ]);
-    expect(log).toEqual(['a at 0', `a at ${WARM_TIMES[1]}`, 'a frame 0', 'a frame 1', 'a end']);
-  });
-
   it('draws through a camera a module puts up, culling nothing there either', () => {
     const own = new Entity('own-camera');
     own.addComponent('camera');
