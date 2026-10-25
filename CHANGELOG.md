@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/Loppas/playcanvas-quake3/compare/v0.4.2...v0.4.3) (2026-10-25)
+
+
+### Bug Fixes
+
+* **deps:** update PlayCanvas to 2.23.3, which keeps a hidden canvas drawable ([3dcb7e5](https://github.com/Loppas/playcanvas-quake3/commit/3dcb7e5a48ffe71fe6ae536a4fcdf644d5d9a3f3))
+
 ## [0.4.2](https://github.com/Loppas/playcanvas-quake3/compare/v0.4.1...v0.4.2) (2026-10-25)
 
 
