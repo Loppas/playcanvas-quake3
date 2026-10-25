@@ -1,7 +1,7 @@
 {
   "name": "playcanvas-quake3",
   "private": true,
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Quake III Arena, ported from ioquake3 to TypeScript on the PlayCanvas engine, for the browser and the desktop. Bring your own Quake III Arena.",
   "license": "GPL-2.0-or-later",
   "author": "Brandon Eberlin",
