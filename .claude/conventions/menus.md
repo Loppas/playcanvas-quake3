@@ -52,6 +52,11 @@ change once.
 - **Why**: a fixed frame over content at absolute places left gaps from 4 to 261 round it.
 - **What sits outside**: the page's title and its bottom buttons stand outside the panel, where
   they always are, so they don't move from page to page.
+- **q3_ui's 320 is not the screen's middle in a panel.** The panel is centred by its content's
+  middle, so what q3_ui centres on 320 lands off the middle wherever the content isn't balanced
+  about 320. The status line stands in the middle of what the panel holds, and a line q3_ui
+  centres with it stands with it (`withStatus`): the server browser's count line stood 24 left
+  of its status line.
 
 **A page that opens over another is a popup, as a modal `<dialog>` is.** Its box stands over the
 page it was opened from, which stays drawn under it, dimmed, its own work going on, and takes no

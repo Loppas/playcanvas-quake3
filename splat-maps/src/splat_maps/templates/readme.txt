@@ -25,6 +25,7 @@ Built with     playcanvas-quake3 {pipeline}, splat-transform {splat_transform}
 Polish         {polish}
                scaled {scale}x, to metres at 32 Quake units each
 Collision      {bake}
+Filters        {filters}
 Entities       {entities}
 Levelshot      {levelshot}
 Known bugs     {known}
@@ -36,7 +37,7 @@ This map is built on "{source_title}" by {source_author}
 It is licensed under {source_license} ({source_license_url}).
 
 The capture was changed: levelled and squared, scaled {scale}x,
-baked into a voxel collision octree, and given Quake 3 entities.
+{filtered}baked into a voxel collision octree, and given Quake 3 entities.
 
 Distribution and copyright
 --------------------------

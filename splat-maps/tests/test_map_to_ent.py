@@ -145,6 +145,15 @@ def test_map_to_ent_needs_worldspawn_first(tmp_path):
     assert not (tmp_path / "room.ent").exists()
 
 
+def test_map_to_ent_refuses_a_value_entity_text_cannot_hold(tmp_path):
+    path = tmp_path / "room.map"
+    path.write_bytes(MAP.replace('"Test Room"', '"Caf\xe9 Room"').encode("latin-1"))
+    code, log = run_cli("entities", "from-map", path, tmp_path / "room.ent")
+    assert code != 0 and "Traceback" not in log
+    assert "'message' holds U+00E9 LATIN SMALL LETTER E WITH ACUTE, which entity text" in log
+    assert not (tmp_path / "room.ent").exists()
+
+
 def test_map_to_ent_warns_of_a_map_with_no_spawn(tmp_path):
     text = MAP.replace('"info_player_deathmatch"', '"info_null"')
     code, log = run_cli("entities", "from-map", write_map(tmp_path, text), tmp_path / "room.ent")

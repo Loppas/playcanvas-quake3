@@ -109,7 +109,10 @@ def main(argv=None, prog=None):
     if not kept or classname(kept[0]) != "worldspawn":
         sys.exit("ERROR: the .map's first kept entity is not worldspawn")
 
-    text = sm.format_entities(kept, notes)
+    try:
+        text = sm.format_entities(kept, notes)
+    except sm.FormatError as e:
+        sys.exit(f"ERROR: {e}")
     with open(args.out, "w", encoding="ascii", newline="\n") as fh:
         fh.write(text)
     with open(args.out, "rb") as fh:

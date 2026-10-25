@@ -42,7 +42,7 @@ jobs:
           # and its settings, and the notices the build publishes.
           echo "app=$(match '^(src/|master/|scripts/|electron/|public/|index\.html$|vite(\.[a-z]+)?\.config\.ts$|tsconfig\.json$|package(-lock)?\.json$|\.nvmrc$|electron-builder\.config\.mjs$|LICENSE$|NOTICE$|CREDITS\.md$|\.github/workflows/)')" >> "$GITHUB_OUTPUT"
           echo "shell=$(match '^(electron/|scripts/|electron-builder\.config\.mjs$|package(-lock)?\.json$|\.github/workflows/)')" >> "$GITHUB_OUTPUT"
-          echo "splat-maps=$(match '^(splat-maps/|\.github/workflows/)')" >> "$GITHUB_OUTPUT"
+          echo "splat-maps=$(match '^(splat-maps/|\.claude/skills/splat-cleanup/|\.github/workflows/)')" >> "$GITHUB_OUTPUT"
 
   typecheck:
     needs: changes
@@ -118,12 +118,14 @@ jobs:
         working-directory: splat-maps
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.1
         with:
           working-directory: splat-maps
       - run: uv sync --locked
-      - run: uv run python -m compileall -q src
+      - run: uv run python -m compileall -q src ../.claude/skills/splat-cleanup/scripts
       - run: uv run pytest
+      # The splat-cleanup skill's scripts import splat_maps, so they are tested in its environment.
+      - run: uv run pytest ../.claude/skills/splat-cleanup/tests
 
   pr-title:
     if: github.event_name == 'pull_request'

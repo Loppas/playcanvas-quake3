@@ -16,20 +16,31 @@ The bake is splat-transform's own voxel writer. What this adds is the sizing and
      splats far past what was filmed, and the grid spans them all;
   6. `--outdoor` bakes with no exterior fill, for a capture with no hull to seal: outdoors the
      fill floods in through the open sky and closes everything. Outside the grid is solid, so
-     the box's sides and top then bound the map.
+     the box's sides and top then bound the map. The grid spans the splats' extents, past the
+     box where big splats reach out of it, and an unfilled grid is cropped to its solid voxels,
+     so with a box the bake seals it: a solid wall one voxel thick inside each of its six faces;
+  7. `--crop`, `--cluster` and `--decimate` filter the splat the map draws, each only when it is
+     given. The bake writes that splat as `<stem>.drawn.sog`, from the polished `<stem>.sog`,
+     which it leaves as it is, and bakes the collision from it, in this order:
+     - `--cluster` keeps the capture's main cluster: splat-transform's `--filter-cluster` on the
+       bake's voxel, from the seed. The splats off it go, and the giant spikes that only clip it;
+     - `--crop` cuts it to `--box`, as the collision is cut;
+     - `--decimate N|N%` merges it down to N splats, or N% of them.
 
 Then it loads the octree back and measures it: the port's own structural checks, whether
 splat-transform skipped a step (a leak skips the exterior fill without an error), every spawn
 spot in the `.ent` if there is one, the floor as the player will walk it, and everywhere the
-player's box can get to. The record, `<stem>.bake.json`, carries `_pcq_bake` for the package
-and the measurements.
+player's box can get to. The record, `<stem>.bake.json`, carries `_pcq_bake` for the package,
+`_pcq_filter` and the drawn splat's name when it filtered, and the measurements.
 
 Usage:
     splat-maps bake <map.sog> [--voxel 8] [--fill auto|UNITS] [--seed x,y,z] [--ent FILE]
-                    [--box=x0,y0,z0,x1,y1,z1] [--outdoor] [--mesh smooth|faces] [--out-dir DIR]
+                    [--box=x0,y0,z0,x1,y1,z1] [--outdoor] [--crop] [--cluster]
+                    [--decimate N|N%] [--mesh smooth|faces] [--out-dir DIR]
 
 Outputs, beside the .sog unless --out-dir is given: <stem>.voxel.json, <stem>.voxel.bin,
-<stem>.collision.glb, <stem>.bake.json and <stem>.bake.log (splat-transform's own output).
+<stem>.collision.glb, <stem>.bake.json, <stem>.bake.log (splat-transform's own output) and,
+with a filter, <stem>.drawn.sog.
 Requires numpy, and splat-transform at the pinned version on PATH.
 """
 
@@ -42,7 +53,9 @@ import shutil
 import struct
 import subprocess
 import sys
+import tempfile
 import time
+import zipfile
 
 import numpy as np
 
@@ -74,6 +87,18 @@ SKIPPED = {
 #: units. The polish puts the fitted floor plane at z = 0 (sog_inspect.py).
 FLOOR_BAND = 48
 
+#: The cluster filter's opacity for a solid voxel, and the contribution a splat must make to the
+#: cluster to stay. At splat-transform's default opacity, 0.999, the flood stops at the seed's
+#: own island on a translucent capture.
+CLUSTER_OPACITY, CLUSTER_MIN = 0.5, 0.1
+
+#: The most of the splat the cluster filter may remove. A flood that stopped at an island near
+#: the seed removes nearly all of it; one through the capture, a few percent.
+MAX_CLUSTER_REMOVED = 0.5
+
+#: splat-transform's counts, rounded to three figures (cli.mjs `fmtCount`).
+COUNT_SCALE = {"": 1, "K": 1e3, "M": 1e6, "B": 1e9}
+
 
 def filter_box(text):
     """`--box`'s corners, `x0,y0,z0,x1,y1,z1` in Q3 units, as splat-transform's `--filter-box`
@@ -86,6 +111,135 @@ def filter_box(text):
         raise ValueError(f"--box {text!r} is not x0,y0,z0,x1,y1,z1 with each 0 below its 1")
     a, b = sm.sim_to_octree(values[:3]), sm.sim_to_octree(values[3:])
     return ",".join(sm.fmt_num(c) for c in (*map(min, a, b), *map(max, a, b)))
+
+
+def decimate_value(text):
+    """`--decimate`'s value, as splat-transform takes it: a whole number of splats, or a
+    percentage of them, above none and at most all."""
+    m = re.fullmatch(r"(\d+(?:\.\d+)?)(%?)", text)
+    if not m or float(m.group(1)) <= 0 or (float(m.group(1)) > 100 if m.group(2)
+                                           else "." in m.group(1)):
+        raise ValueError(f"--decimate {text!r} is neither a whole number of splats nor a "
+                         "percentage of them, above 0 and at most 100%")
+    return text
+
+
+def splat_count(sog):
+    """The splats a SOG bundle holds, as its `meta.json` counts them."""
+    with zipfile.ZipFile(sog) as z:
+        return json.loads(z.read("meta.json"))["count"]
+
+
+def draw_splat(exe, src, out, options, actions):
+    """The drawn splat `out`, written from the polished `src` by splat-transform's `actions`
+    with its global `options`, and checked: a cluster filter's flood reached the capture, and the
+    bundle keeps `src`'s licence. Returns splat-transform's output, and what the bake record
+    keeps of the drawing. Exits on an error, with `out` removed.
+
+    `--decimate` must be the last action and write a PLY (cli.mjs), so a second run writes that
+    as the SOG.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        runs = [[exe, "-w", "--no-tty", *options, src, *actions, out]]
+        if "--decimate" in actions:
+            ply = os.path.join(tmp, "drawn.ply")
+            runs = [[*runs[0][:-1], ply], [exe, "-w", "--no-tty", ply, out]]
+        text = ""
+        for cmd in runs:
+            print(f"  splat-transform {' '.join(cmd[1:])}")
+            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                  text=True, encoding="utf-8", errors="replace")
+            text += proc.stdout
+            if proc.returncode != 0:
+                print(proc.stdout[-3000:])
+                sys.exit(f"ERROR: splat-transform failed ({proc.returncode}) drawing the splat")
+
+    def refuse(why):
+        os.remove(out)
+        sys.exit(f"ERROR: {why}")
+
+    given, kept = splat_count(src), splat_count(out)
+    record = {"drawn": os.path.basename(out), "polished_splats": given, "drawn_splats": kept}
+    if "--filter-cluster" in actions:
+        report = cluster_report(text)
+        if report is None:
+            refuse("splat-transform printed nothing of the cluster filter")
+        removed, said = report
+        print(f"  cluster filter: {'; '.join(said)}; removed {removed:,} splats")
+        if removed > MAX_CLUSTER_REMOVED * given:
+            refuse(f"the cluster filter removed {removed:,} of {given:,} splats, so its flood "
+                   "stopped at an island near the seed: at this voxel the capture's surfaces may "
+                   "not join up, or the solid nearest the seed is a floater. Bake without "
+                   "--cluster, or from another --seed")
+        record["cluster"] = {"removed": removed, "said": said}
+    with zipfile.ZipFile(src) as z:
+        lic = z.read("license.txt") if "license.txt" in z.namelist() else None
+    problems = sm.put_license(out, lic) if lic is not None else []
+    if problems:
+        refuse("; ".join(problems))
+    print(f"  drew {kept:,} of {given:,} splats ({kept / given:.1%}) into "
+          f"{os.path.basename(out)}, {os.path.getsize(out) / 1e6:.1f} MB")
+    return text, record
+
+
+def cluster_report(text):
+    """What splat-transform's cluster filter printed in its output `text`: the splats it
+    removed, and its lines on the cluster, such as `cluster is 1.7K of 2.01K blocks`. None if
+    it printed nothing (cli.mjs `filterCluster`)."""
+    lines = text.splitlines()
+    at = next((i for i, line in enumerate(lines) if line.rstrip().endswith("Filter cluster")),
+              None)
+    if at is None:
+        return None
+    indent = len(lines[at]) - len(lines[at].lstrip())
+    removed, said = 0, []
+    for line in lines[at + 1:]:
+        if len(line) - len(line.lstrip()) <= indent:
+            break
+        m = re.search(r"removed ([\d.]+)([KMB]?) gaussians", line)
+        if m:
+            removed = round(float(m.group(1)) * COUNT_SCALE[m.group(2)])
+        elif "cluster" in line or "seed" in line or "no occupied" in line:
+            said.append(line.strip(" ·!▸"))
+    return removed, said
+
+
+#: The shell's Gaussians as a PLY stores them: position, log scale, rotation (w first), logit
+#: opacity and colour.
+SHELL_PROPERTIES = ("x", "y", "z", "scale_0", "scale_1", "scale_2", "rot_0", "rot_1", "rot_2",
+                    "rot_3", "opacity", "f_dc_0", "f_dc_1", "f_dc_2")
+
+
+def shell_ply(box_sim, v):
+    """A PLY of opaque Gaussians that make a solid wall one voxel thick inside each face of
+    `box_sim`, (x0, y0, z0, x1, y1, z1) in Q3 units, at a `v`-unit voxel: a sealed box for an
+    outdoor bake, which has no fill to seal it.
+
+    Voxel faces lie on multiples of `v`, since the grid is aligned to whole blocks (cli.mjs
+    `alignGridBounds`). Each Gaussian sits in a wall's mid-plane at a voxel corner, an eighth of
+    a voxel across, so its three-sigma box reaches the four voxels at that corner and no others;
+    one at every other corner fills the wall. A PLY input is read in the polished splat's
+    frame, which `sim_to_world` gives.
+    """
+    lo = [math.ceil(c / v) for c in box_sim[:3]]
+    hi = [math.floor(c / v) for c in box_sim[3:]]
+    walls = []
+    for axis in range(3):
+        a, b = (i for i in range(3) if i != axis)
+        ia, ib = np.meshgrid(np.arange(lo[a], hi[a] + 1, 2), np.arange(lo[b], hi[b] + 1, 2),
+                             indexing="ij")
+        for layer in (lo[axis] + 0.5, hi[axis] - 0.5):
+            wall = np.empty((ia.size, 3))
+            wall[:, axis], wall[:, a], wall[:, b] = layer, ia.ravel(), ib.ravel()
+            walls.append(wall * v)
+    centres = np.concatenate(walls)
+    log_sigma = math.log(v / 8 / sm.UNITS_PER_METRE)
+    n = len(centres)
+    rows = np.column_stack([*sm.sim_to_world(centres.T), *np.full((3, n), log_sigma),
+                            np.ones(n), *np.zeros((3, n)), np.full(n, 10.0), *np.zeros((3, n))])
+    header = (f"ply\nformat binary_little_endian 1.0\nelement vertex {n}\n"
+              + "".join(f"property float {p}\n" for p in SHELL_PROPERTIES) + "end_header\n")
+    return header.encode("ascii") + rows.astype("<f4").tobytes()
 
 
 def main(argv=None, prog=None):
@@ -107,6 +261,13 @@ def main(argv=None, prog=None):
     ap.add_argument("--outdoor", action="store_true",
                     help="no exterior fill, for a capture with no hull to seal, such as one "
                          "outdoors; the --box then bounds the map")
+    ap.add_argument("--crop", action="store_true",
+                    help="draw only the splats inside --box, which the collision is cut to")
+    ap.add_argument("--cluster", action="store_true",
+                    help="draw only the capture's main cluster, found from the seed: the splats "
+                         "off it go, and the giant spikes that only clip it")
+    ap.add_argument("--decimate", metavar="N|N%",
+                    help="merge the drawn splat down to N splats, or N%% of them")
     ap.add_argument("--mesh", default="smooth", choices=("smooth", "faces"),
                     help="the debug overlay's shape (default smooth)")
     ap.add_argument("--out-dir", help="where to write (default beside the .sog)")
@@ -121,6 +282,9 @@ def main(argv=None, prog=None):
         v = args.voxel
         sizes = sm.bake_sizes(v, float(args.fill) if args.fill != "auto" else DEFAULT_FILL_UNITS)
         crop = ["--filter-box", filter_box(args.box)] if args.box else []
+        if args.crop and not args.box:
+            raise ValueError("--crop cuts the drawn splat to --box, and no --box is given")
+        decimate = decimate_value(args.decimate) if args.decimate else None
     except (sm.FormatError, ValueError) as e:
         sys.exit(f"ERROR: {e}")
     v = int(v)
@@ -156,6 +320,7 @@ def main(argv=None, prog=None):
         seed_sim = (ox, oy, oz + sm.SPAWN_RAISE + sm.PLAYER_MINS[2] + box_h / 2)
         seed_from = f"{os.path.basename(ent_path)}'s first spawn spot"
     seed_oct = sm.sim_to_octree(seed_sim)
+    seed_pos = ["--seed-pos", ",".join(sm.fmt_num(c) for c in seed_oct)]
 
     print(f"=== baking {args.sog}")
     print(f"  voxel {v} units ({sm.fmt_num(sizes['voxel_m'])} m)")
@@ -164,25 +329,42 @@ def main(argv=None, prog=None):
     print(f"  seed sim ({', '.join(sm.fmt_num(c) for c in seed_sim)}) from {seed_from}, "
           f"octree ({', '.join(sm.fmt_num(c) for c in seed_oct)})")
 
+    # The drawn splat. The cluster filter comes first, since a crop shifts the grid it floods,
+    # and a decimation last, as splat-transform requires.
+    options = seed_pos if args.cluster else []
+    cluster = f"{sm.fmt_num(sizes['voxel_m'])},{CLUSTER_OPACITY},{CLUSTER_MIN}"
+    actions = [*(["--filter-cluster", cluster] if args.cluster else []),
+               *(crop if args.crop else []),
+               *(["--decimate", decimate] if decimate else [])]
+    drawn = os.path.join(out_dir, stem + sm.DRAWN_SUFFIX)
+    drawn_log, drawn_record = "", {}
+    if actions:
+        drawn_log, drawn_record = draw_splat(exe, args.sog, drawn, options, actions)
+    elif os.path.exists(drawn):
+        os.remove(drawn)
+        print(f"  removed {os.path.basename(drawn)}, an earlier bake's: this one draws "
+              f"{os.path.basename(args.sog)} as it is")
+    voxelised = drawn if actions else args.sog
+
     def flags_for(s):
         fill = [] if args.outdoor else ["--voxel-external-fill", sm.fmt_num(s["fill_m"])]
         return ["--voxel-size", sm.fmt_num(s["voxel_m"]), *fill,
                 "--voxel-carve", f"{sm.fmt_num(s['carve_h_m'])},{sm.fmt_num(s['carve_r_m'])}",
-                "--seed-pos", ",".join(sm.fmt_num(c) for c in seed_oct),
-                "--collision-mesh", args.mesh]
+                *seed_pos, "--collision-mesh", args.mesh]
 
-    def bake(s, where):
-        """One splat-transform run into `where`: (its output, seconds, whether it leaked)."""
+    def bake(s, where, shell=()):
+        """One splat-transform run into `where`, with the shell's PLY as a second input if one
+        is given: (its output, seconds, whether it leaked)."""
         os.makedirs(where, exist_ok=True)
-        # The crop is an action on the input, so it follows it.
-        cmd = [exe, "-w", "--no-tty", *flags_for(s), args.sog, *crop,
+        # The crop is an action on the input, so it follows it, and the shell after it is uncut.
+        cmd = [exe, "-w", "--no-tty", *flags_for(s), voxelised, *crop, *shell,
                os.path.join(where, f"{stem}.voxel.json")]
         print(f"  splat-transform {' '.join(cmd[1:])}")
         t0 = time.time()
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               text=True, encoding="utf-8", errors="replace")
         with open(os.path.join(where, f"{stem}.bake.log"), "w", encoding="utf-8") as log:
-            log.write(proc.stdout)
+            log.write(drawn_log + proc.stdout)
         if proc.returncode != 0:
             print(proc.stdout[-3000:])
             sys.exit(f"ERROR: splat-transform failed ({proc.returncode}); see {where}")
@@ -192,9 +374,17 @@ def main(argv=None, prog=None):
         print(f"  cropped to the box ({args.box}) in Q3 units, octree ({crop[1]})")
     trail = []
     if args.outdoor:
-        print("  no exterior fill (--outdoor): " + ("the box bounds the map" if args.box else
+        print("  no exterior fill (--outdoor): " + ("the box bounds the map, sealed by a wall "
+                                                    "one voxel thick inside each face"
+                                                    if args.box else
                                                     "the capture's own extent bounds the map"))
-        text, seconds, leaked = bake(sizes, out_dir)
+        with tempfile.TemporaryDirectory() as tmp:
+            shell = []
+            if args.box:
+                shell = [os.path.join(tmp, f"{stem}.shell.ply")]
+                with open(shell[0], "wb") as fh:
+                    fh.write(shell_ply([float(c) for c in args.box.split(",")], v))
+            text, seconds, leaked = bake(sizes, out_dir, shell)
     elif not auto:
         print(f"  external fill {sizes['fill_voxels']} voxels: seals hull holes under "
               f"{sizes['fill_seals_under_units']} units")
@@ -355,8 +545,10 @@ def main(argv=None, prog=None):
 
     record = {
         "_pcq_bake": " ".join(flags),
+        **({"_pcq_filter": " ".join([*options, *actions])} if actions else {}),
         "_pcq_splat_transform": sm.SPLAT_TRANSFORM_VERSION,
         "input": os.path.basename(args.sog),
+        **drawn_record,
         "voxel_units": v,
         "carve_box_units": list(got_box),
         "fill_units": None if args.outdoor else sizes["fill_voxels"] * v,
@@ -383,6 +575,8 @@ def main(argv=None, prog=None):
     with open(rec_path, "w", encoding="utf-8") as fh:
         json.dump(record, fh, indent=2)
     print(f"\n  _pcq_bake \"{record['_pcq_bake']}\"")
+    if actions:
+        print(f"  _pcq_filter \"{record['_pcq_filter']}\"")
     print(f"  wrote {rec_path}")
     for w in warnings:
         print(f"  WARNING: {w}")
