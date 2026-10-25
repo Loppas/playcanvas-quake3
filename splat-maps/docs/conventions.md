@@ -73,6 +73,17 @@ scale together. Re-run `calibrate_transform.py` after any upgrade:
 - **`--voxel-floor-fill` walks each column up from the grid's y = 0**, which in the octree's frame
   is the map's top. It would fill the air, so the pipeline does not use it.
 
+**The filters, read in `cli.mjs` and measured (v3.1.6):**
+- **The cluster filter's failures are only warnings.** It floods from the seed's voxel, or else
+  from the occupied voxel nearest it, and with none it writes an empty splat. So the bake reads
+  the count it removed, which its log rounds to three figures (`fmtCount`).
+- **Its default opacity, 0.999, suits only an opaque capture.** On Vegetables HQ, median opacity
+  0.14, the flood stopped at the seed's own island and kept about 10k of 2.55M splats, as it did on
+  a 0.15 or 0.1 m grid. At 0.5 on the bake's 0.25 m voxel it kept the capture and removed 0.35%.
+- **Its grid is aligned to the splats' bounds**, so a crop before it shifts the grid and changes
+  what it keeps. The bake runs it first.
+- **`--decimate` must be the last action and write a PLY**, which a second run writes as a SOG.
+
 ## Fitting geometry in a splat cloud
 
 **Density proposes, area decides.** Choosing a surface by point count picks a rafter over the

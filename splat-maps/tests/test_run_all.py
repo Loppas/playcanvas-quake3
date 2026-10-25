@@ -150,6 +150,12 @@ def test_a_room_keeps_its_ceiling_and_its_bakes_their_fill(tmp_path, stages):
     assert [argv[-1] for argv in called[1:]] == [BOX, BOX]
 
 
+def test_both_bakes_filter_the_drawn_splat_when_told(tmp_path, stages):
+    run(tmp_path, "--crop", "--cluster", "--decimate", "50%")
+    bakes = [argv for name, argv in stages if name == "bake"]
+    assert [argv[-4:] for argv in bakes] == [[BOX, "--crop", "--cluster", "--decimate=50%"]] * 2
+
+
 def test_all_runs_in_a_fresh_clone(tmp_path, stages):
     shutil.rmtree(tmp_path / "port" / "public")
     run(tmp_path)
@@ -174,7 +180,8 @@ def test_all_needs_a_box(tmp_path, stages, capsys):
      "--license gives no source, license url"),
     (lambda argv, tmp: (tmp / "port" / "package.json").unlink(), "does not look like the port"),
     (lambda argv, tmp: argv.__setitem__(7, "--box=0,0,0,640,640"), "is not x0,y0,z0,x1,y1,z1"),
-], ids=["stem", "dataset", "licence", "port", "box"])
+    (lambda argv, tmp: argv.append("--decimate=0%"), "--decimate '0%' is neither"),
+], ids=["stem", "dataset", "licence", "port", "box", "decimate"])
 def test_all_refuses_before_the_first_stage(tmp_path, stages, change, error):
     argv = [str(tmp_path / "yard.mov"), "yard", "7.3", "--license", FIELDS, "--author",
             "A Mapper", BOX, "--data", str(tmp_path / "data"), "--port", str(tmp_path / "port")]

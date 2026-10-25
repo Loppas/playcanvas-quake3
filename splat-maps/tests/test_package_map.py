@@ -9,7 +9,7 @@ import pytest
 
 from splat_maps import package_map
 from splat_maps import splat_map as sm
-from room import BAKE, ENT, POLISH, lint_failures, read_pk3, run_cli
+from room import BAKE, ENT, GENERATOR, POLISH, lint_failures, read_pk3, run_cli, sog_bytes
 
 
 def test_a_package_that_lints_clean_returns_to_its_caller(room):
@@ -100,6 +100,7 @@ Polish         sog_inspect --metric-height 3.0 --player-height 1.8
 Collision      splat-transform --voxel-size 0.25 --voxel-external-fill 0.125
                --voxel-carve 0.75,0.125 --seed-pos 0,0,0
                --collision-mesh smooth
+Filters        none
 Entities       1 spawn spot, 2 others, in Q3 units
 Levelshot      levelshots/room.tga, from the intermission point
 Known bugs     none measured
@@ -157,6 +158,28 @@ def test_package_leaves_out_a_part_that_is_optional(room):
         assert "Levelshot      none" in z.read("room.txt").decode("ascii")
 
 
+#: The filters a bake ran, as its record gives them.
+FILTERS = "--seed-pos 0,0,0 --filter-cluster 0.25,0.5,0.1 --filter-box -20,-8,-22,20,1,22"
+
+
+def test_package_packs_the_splat_a_filtered_bake_drew_and_says_how(room):
+    drawn = sog_bytes({"version": 2, "count": 1, "asset": {"generator": GENERATOR}, "drawn": 1})
+    room.with_name("room.drawn.sog").write_bytes(drawn)
+    rewrite_json("room.bake.json",
+                 lambda b: {**b, "_pcq_filter": FILTERS, "drawn": "room.drawn.sog"})(room.parent)
+    code, log = run_cli("package", room, "--author", "A Mapper")
+    assert code == 0, log
+    with zipfile.ZipFile(room.with_name("map-room.pk3")) as z:
+        assert z.read("maps/room.sog") == drawn
+        entities, _ = sm.parse_entities(z.read("maps/room.ent"))
+        readme = " ".join(z.read("room.txt").decode("ascii").split())
+    keys = [k for k, _ in entities[0].pairs]
+    assert keys[keys.index("_pcq_bake") + 1] == "_pcq_filter"
+    assert entities[0].get("_pcq_filter") == FILTERS
+    assert f"Filters splat-transform {FILTERS} Entities" in readme
+    assert "scaled 1.00000000x, filtered with splat-transform, as Construction says, baked" in readme
+
+
 def rewrite_json(name, change):
     def apply(folder):
         path = folder / name
@@ -181,6 +204,8 @@ def rename_parts(folder):
 
 @pytest.mark.parametrize("change, sog, message", [
     (lambda f: (f / "room.bake.json").unlink(), "room.sog", "missing room.bake.json"),
+    (rewrite_json("room.bake.json", lambda b: {**b, "drawn": "room.drawn.sog"}), "room.sog",
+     "names the drawn splat room.drawn.sog, which is missing"),
     (rewrite_json("room.polish.json", lambda p: {**p, "errors": ["a tilt"]}), "room.sog",
      "the polish or the bake recorded errors"),
     (rewrite_json("room.polish.json", lambda p: {**p, "_pcq_splat_transform": "3.1.5"}),
@@ -200,7 +225,7 @@ def test_package_refuses(room, change, sog, message):
     change(room.parent)
     code, log = run_cli("package", room.parent / sog, "--author", "A Mapper")
     assert code != 0
-    assert message in log
+    assert message in log and "Traceback" not in log
     assert not list(room.parent.glob("*.pk3"))
 
 

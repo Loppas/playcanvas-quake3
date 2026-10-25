@@ -193,10 +193,27 @@ The voxel is 8 units unless `--voxel` says otherwise. `map-format.md` §6.1 says
 pays. The external fill defaults to `auto`, which bakes several times to find the smallest reach
 that seals the capture's hull. That took the garage about two minutes.
 
+**The drawn splat.** Three flags filter the splat the map draws, each only when given. The bake
+writes the filtered splat as `<stem>.drawn.sog`, leaves `<stem>.sog` as the polish wrote it, and
+bakes the collision from the drawn one, so the player collides with what they see. The levelshot
+and the package take it in place of `<stem>.sog`. They run in this order:
+- **`--cluster`** keeps the capture's main cluster, flooded from the seed through the bake's
+  voxels. The splats off it go, and so do the giant spikes that only clip it: on Vegetables HQ at
+  mouse size, 0.35% of the splats, which drew 30% of its area as plumes off the board's corners.
+  A flood that stops at an island near the seed removes nearly everything, so the bake refuses one
+  that removes more than half the splat.
+- **`--crop`** cuts it to the `--box`, as the collision is cut. Nothing past the box can be
+  reached, but a translucent capture shows it through its surfaces: on the same map, 21% of the
+  splats lay under the tea towel or past its edge, and made most of its fog. Outdoors, it also cuts
+  what a player sees past the box and never reaches, a tree or a skyline.
+- **`--decimate N|N%`** merges it down to N splats, or N% of them, for the frame rate. At 50% the
+  St. Maurice church kept its look and ran 47% faster.
+
 **Check:** it ends `the bake re-measures clean`. Read the warnings. `the player can get N box
 positions under the floor` means the capture has holes a crouching player fits through, and only a
 better capture or a cleanup closes them (L24). It writes `<stem>.voxel.json`,
-`.voxel.bin`, `.collision.glb`, `.bake.json` and `.bake.log`.
+`.voxel.bin`, `.collision.glb`, `.bake.json` and `.bake.log`. With a filter it prints `drew N of M
+splats` and writes `<stem>.drawn.sog` too: look at it in the levelshot (step 6).
 
 ### 4. Place the entities
 
@@ -283,7 +300,8 @@ splat-maps bake data/<project>/map/<stem>.sog
 
 With no `--seed`, the bake seeds from the `.ent`'s first spawn spot, so the carve keeps open
 exactly the space players start in. It also checks every spawn spot: `box free` and a silent
-landing. A rebuild then needs no remembered seed.
+landing. A rebuild then needs no remembered seed. Give it step 3's other flags again, `--box`,
+`--outdoor` and the filters among them: the bake keeps none, and filters from `<stem>.sog` afresh.
 
 **Check:** as in step 3, and `spawn at (…): box free, drop N units, landing silent` for each spot.
 A spot `in solid` must move. One that `thuds` or `lands hurt` is too high above the floor
@@ -295,8 +313,9 @@ A spot `in solid` must move. One that `thuds` or `lands hurt` is too high above 
 splat-maps levelshot data/<project>/map/<stem>.sog
 ```
 
-It renders the view from the intermission point as Q3's `levelshot` command does, and writes
-`<stem>.tga`, 128 × 128, with `<stem>.levelshot.png`, the full frame, for people. **Check:** the
+It renders the view from the intermission point as Q3's `levelshot` command does, from the drawn
+splat if the bake filtered one, and writes `<stem>.tga`, 128 × 128, with `<stem>.levelshot.png`,
+the full frame, for people. **Check:** the
 PNG shows the room. The warning `N% of the frame is empty background` means the camera faces out
 of the capture or sits in a wall: move the intermission point or its target (step 4), then run
 this again.
@@ -318,8 +337,9 @@ the file back by Q3's rules.
 splat-maps package data/<project>/map/<stem>.sog --author "<who made the map>"
 ```
 
-It writes `map-<stem>.pk3` beside the `.sog`: every part at its Q3 path, the `_pcq_*` keys in the
-packed `.ent`'s worldspawn, and the readme `<stem>.txt`, which credits the source. Then it reads
+It writes `map-<stem>.pk3` beside the `.sog`: every part at its Q3 path, the drawn splat as
+`maps/<stem>.sog` if the bake filtered one, the `_pcq_*` keys in the packed `.ent`'s worldspawn,
+and the readme `<stem>.txt`, which credits the source and names the filters. Then it reads
 the pk3 back entry by entry and runs the lint, `map_lint.py`, whose 29 rules are `map-format.md`
 §10.
 
@@ -354,8 +374,8 @@ changes to one, bound to a key in `q3config.cfg` (`bind F9 "map <stem>"`).
 
 - **Keep the hand-made parts**: `<stem>.ent`, and the editor's `.map` if it was used. Everything
   else is rebuilt from them and the source `.sog`, with the arguments the pk3 records in
-  `_pcq_polish` and `_pcq_bake`. The packed `.ent` works as the source too, since `package_map`
-  replaces the `_pcq_*` keys it finds.
+  `_pcq_polish`, `_pcq_bake` and `_pcq_filter`. The packed `.ent` works as the source too, since
+  `package_map` replaces the `_pcq_*` keys it finds.
 - **Moving spawn spots or items** is steps 4, 5, 8, 9 and 10. The levelshot and the arena block
   read only the intermission point, its target and worldspawn's `message`, so steps 6 and 7 wait
   for a change to those.
@@ -381,6 +401,8 @@ changes to one, bound to a key in `q3config.cfg` (`bind F9 "map <stem>"`).
 | bake: `no seed` | there is no `.ent` yet | give `--seed x,y,z` (step 3) |
 | bake: `LEAK: the hull does not seal even at N units of fill` | a hole in the capture is wider than the fill can close | find it in the collision overlay, or accept it with a larger `--fill` |
 | bake: `the seed is walled in` / `outside the capture` | the seed is not in the room's open air | move the seed |
+| bake: `the cluster filter removed N of M splats` | its flood stopped at an island near the seed: the capture's surfaces don't join up at this voxel, or the solid nearest the seed is a floater | bake without `--cluster`, or from another seed |
+| package or levelshot: `the bake record names the drawn splat …, which is missing` | the drawn splat was removed or moved after the bake | bake again |
 | bake or `write_ent`: `spawn … is in solid (L20)` | the spot's box overlaps the collision | move it up or away from the wall |
 | bake or `write_ent`: `drops N units and thuds` / `lands hurt (L21)` | the spot is too high above the floor | lower it: its box should rest on the floor |
 | levelshot: `no info_player_intermission` | the `.ent` has none | add one, with its target (step 4) |

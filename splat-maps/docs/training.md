@@ -243,9 +243,11 @@ game or for collision:
 
 1. **Clean, by eye, if it needs it.** In SuperSplat (https://superspl.at/editor), sphere/box-select
    the keep-volume → Invert → Delete, and remove floaters in Rings mode. Deciding what is clutter
-   and what is the room is a judgement no script makes. Export the `.sog`. Once the map is built,
-   the optional [splat-cleanup skill](../../.claude/skills/splat-cleanup/SKILL.md) has an agent
-   survey it for artefacts and try splat-transform's filters on a test map, for you to judge.
+   and what is the room is a judgement no script makes. Export the `.sog`. The bake can filter
+   the splat the map draws too: keep its main cluster, crop it to the map's box and decimate it
+   ([maps.md](maps.md), step 3). Once the map is built, the optional
+   [splat-cleanup skill](../../.claude/skills/splat-cleanup/SKILL.md) has an agent survey it for
+   artefacts and try splat-transform's filters on a test map, for you to judge.
 2. **Polish, by script.** `polish` levels the floor, squares the walls to the axes, scales to
    metres from the room's floor-to-ceiling height and moves the floor to y = 0, then measures its
    own output and fails unless it is level ([maps.md](maps.md), step 2). It is the first step of a

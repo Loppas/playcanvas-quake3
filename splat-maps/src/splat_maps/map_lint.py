@@ -24,7 +24,8 @@ from . import splat_map as sm
 REQUIRED = ("maps/{n}.sog", "maps/{n}.voxel.json", "maps/{n}.voxel.bin", "maps/{n}.ent", "{n}.txt")
 OPTIONAL = ("maps/{n}.collision.glb", "scripts/{n}.arena", "levelshots/{n}.tga")
 
-#: The `_pcq_*` keys of §7, which `package_map` writes into worldspawn.
+#: The `_pcq_*` keys of §7 that `package_map` writes into every worldspawn; `_pcq_filter` it
+#: writes only for a map whose bake filtered the splat.
 PCQ_KEYS = ("_pcq_format", "_pcq_source", "_pcq_license", "_pcq_polish", "_pcq_scale",
             "_pcq_bake", "_pcq_splat_transform", "_pcq_pipeline")
 KNOWN_FORMATS = ("1",)

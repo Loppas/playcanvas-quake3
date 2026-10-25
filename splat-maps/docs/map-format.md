@@ -118,7 +118,7 @@ should reproduce, and then what the port does.
 
 | Path | Required | Written by | Read by (port) | If missing |
 |---|---|---|---|---|
-| `maps/<n>.sog` | **yes** | `splat-maps polish`; renamed into place by `package_map` | PlayCanvas's gsplat asset, through `loadSplat` (`src/game-map.ts`), from the mount: `SogBundleParser` takes `file.contents` (`sog-bundle.js:72–73`) | It fails the `map` command's existence check, as a missing BSP does: `Can't find map`, and the current map keeps running (`sv_ccmds.c:165–171`) |
+| `maps/<n>.sog` | **yes** | `splat-maps polish`, or the bake (`bake_map.py`) when it filters the polished splat into `<n>.drawn.sog`; renamed into place by `package_map` | PlayCanvas's gsplat asset, through `loadSplat` (`src/game-map.ts`), from the mount: `SogBundleParser` takes `file.contents` (`sog-bundle.js:72–73`) | It fails the `map` command's existence check, as a missing BSP does: `Can't find map`, and the current map keeps running (`sv_ccmds.c:165–171`) |
 | `maps/<n>.voxel.json`, `maps/<n>.voxel.bin` | **yes** | the bake (`bake_map.py`) | `readOctree` (`src/formats/splat-map.ts`) → `SparseVoxelOctree.fromBuffers` (`src/sim/voxel-svo.ts`) → `SvoVoxelGrid` (`src/svo-voxel-grid.ts`) → `createVoxelTrace` (`src/sim/voxel-trace.ts`), from the mount | Q3: `ERR_DROP "Couldn't load"` (`cm_load.c:618`). The port stops the load with the same words |
 | `maps/<n>.collision.glb` | no | the bake (`bake_map.py`) | `loadCollisionOverlay` (`src/collision-overlay.ts`), from the mount | No Q3 equivalent. The port warns and loads without the overlay |
 | `maps/<n>.ent` | **yes** | a person: `viewpos` readings through `write_ent.py`, or an editor's `.map` through `map_to_ent.py`; the `_pcq_*` keys by `package_map` (§7) | `readEntityText` (`src/formats/entity-text.ts`), then the game's spawn loop through an entity-token trap | Q3: `G_Error "SpawnEntities: no entities"` (`g_spawn.c:623–642`). A file without a spawn point fails later, at the first spawn: `Couldn't find a spawn point` (`g_client.c:238–249`) |
@@ -155,6 +155,7 @@ flowchart LR
   end
   LINT["map_lint.py<br/>re-measures the pk3"]
   POL --> SOG --> GS
+  BAKE -.->|"or, filtered"| SOG
   BAKE --> VOX --> OCT
   BAKE --> GLB --> OVL
   HAND --> ENT --> ER
@@ -609,6 +610,7 @@ them (§3.1).
 | `_pcq_polish` | `sog_inspect`'s arguments: metric height, player height, up hint | the polish record | `--metric-height 3.0 --player-height 0.1` |
 | `_pcq_scale` | Metres of the finished map per unit of the polish's input: the `-s` factor, metric correction included | the polish record, from the `-s` it applied | `17.49962417` |
 | `_pcq_bake` | The bake's splat-transform flags, sized as §6.1 sizes them, with the seed in the octree frame | the bake record `<n>.bake.json` | `--voxel-size 0.25 --voxel-external-fill 0.875 --voxel-carve 0.75,0.125 --seed-pos 0.125,-1.5,0.125 --collision-mesh smooth` |
+| `_pcq_filter` | The splat-transform actions the bake ran on the polished splat to make the one the map draws, in order, with the seed in the octree frame, such as `--seed-pos 8.25,-2.40625,4.25 --filter-cluster 0.25,0.5,0.1 --filter-box -11,-20,-8.5,12.5,1,7.5`. Only on a map whose bake filtered it | the bake record | absent: drawn as polished |
 | `_pcq_splat_transform` | The splat-transform version the polish and the bake ran | both records; the lint refuses a mismatch | `3.1.6` |
 | `_pcq_pipeline` | The commit of this repository, playcanvas-quake3, that built the map | `package_map` | `16cf643` |
 
@@ -625,7 +627,8 @@ The rules:
 - title, map name, pk3 name and author;
 - gametypes;
 - botplay: none, since there is no `.aas`;
-- how it was built: capture, pipeline commit, splat-transform version, polish and bake arguments;
+- how it was built: capture, pipeline commit, splat-transform version, polish and bake arguments,
+  and the filters;
 - credits;
 - licence.
 
@@ -713,7 +716,7 @@ port's reader lays out its words (`src/sim/voxel-svo.ts`).
 | L16 | Every `target` names a `targetname` that exists | E |
 | L17 | Classnames are exact matches for Q3's spawn table or item list (`g_spawn.c:184–258`; `bg_misc.c`) | W |
 | L18 | `misc_model` and `light` are present | W |
-| L19 | Every `_pcq_*` key of §7 is present, `_pcq_format` is known, no value holds an absolute path, and `_pcq_splat_transform` matches both records | E |
+| L19 | Every `_pcq_*` key of §7 but `_pcq_filter` is present, `_pcq_format` is known, no value holds an absolute path, and `_pcq_splat_transform` matches both records | E |
 | **Placement** | | |
 | L20 | For every spawn spot, the player box `(-15 -15 -24)–(15 15 32)` (`g_client.c:27–28`), raised 9 units above the origin, touches no solid voxel. So it is inside `gridBounds`, since everything outside it is solid | E |
 | L21 | For every spawn spot, the drop `h` from the spawned box's feet (origin z − 15) to the first solid below, at the map's gravity `g` (worldspawn `gravity`, default 800). Q3 grades a landing by `0.0002·g·h` (`bg_pmove.c:954–955`). **W** when that is over 7, which makes a landing thud and view dip (`bg_pmove.c:991–992`; `cg_event.c:589–594`): a drop over 43 units at 800. **E** when it is over 40, a landing that hurts (`g_active.c:556–567`): a drop over 250 units at 800 | E / W |
