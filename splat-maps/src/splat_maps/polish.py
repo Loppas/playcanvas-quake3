@@ -171,17 +171,8 @@ def record_polish(src, out, measure, verify, inspect_args, given):
         warnings.append(f"{os.path.basename(src)} carries no license.txt, so the package will "
                         "refuse it (L29). Give the source's credit with --license")
     else:
+        errors += sm.put_license(out, lic_bytes)
         with zipfile.ZipFile(out) as z:
-            has = "license.txt" in z.namelist()
-        if not has:
-            with zipfile.ZipFile(out, "a", compression=zipfile.ZIP_STORED) as z:
-                z.writestr("license.txt", lic_bytes)
-        with zipfile.ZipFile(out) as z:
-            bad = z.testzip()
-            if bad:
-                errors.append(f"{os.path.basename(out)} fails its CRC check at {bad}")
-            if z.read("license.txt") != lic_bytes:
-                errors.append("license.txt in the output differs from the one it was given")
             if json.loads(z.read("meta.json"))["count"] != measure["splats"]:
                 errors.append("the output's splat count differs from the input's")
         lic = read_license(lic_bytes.decode("utf-8", errors="replace"))

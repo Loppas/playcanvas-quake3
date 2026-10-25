@@ -12,7 +12,8 @@ What is here:
   - the bake's sizes, chosen in Quake units and rounded as splat-transform rounds them;
   - a reader for the collision octree, answering in the sim's own voxels as the port does;
   - the splat-transform these scripts are pinned to: found, its version checked, and installed
-    with npm when it is missing.
+    with npm when it is missing;
+  - the splat a map draws, and the licence its bundle keeps.
 
 Requires numpy (present in the `gsplat` conda env).
 """
@@ -23,6 +24,7 @@ import os
 import re
 import shutil
 import subprocess
+import zipfile
 
 import numpy as np
 
@@ -847,3 +849,48 @@ def stem_of(path, suffix):
     if not base.lower().endswith(suffix):
         raise FormatError(f"{base} does not end in {suffix}")
     return base[:-len(suffix)]
+
+
+# ------------------------------------------------------------------------------ the drawn splat
+
+#: The splat the bake filters out of the polished `<stem>.sog`, beside it.
+DRAWN_SUFFIX = ".drawn.sog"
+
+
+def drawn_splat(sog):
+    """The splat the map at `sog` draws: the one the bake record beside it names, which the bake
+    filtered from `sog` and baked its collision from, or else `sog` itself. A FormatError if the
+    record names a file that is not there."""
+    here = os.path.dirname(os.path.abspath(sog))
+    record = os.path.join(here, stem_of(sog, ".sog") + ".bake.json")
+    drawn = None
+    if os.path.exists(record):
+        with open(record, encoding="utf-8") as fh:
+            drawn = json.load(fh).get("drawn")
+    if not drawn:
+        return sog
+    path = os.path.join(here, drawn)
+    if not os.path.exists(path):
+        raise FormatError(f"the bake record names the drawn splat {drawn}, which is missing: "
+                          "bake again")
+    return path
+
+
+def put_license(sog, lic_bytes):
+    """`lic_bytes` into the SOG bundle `sog` as its `license.txt`, stored, as superspl.at's
+    bundles hold it, unless it holds one already: `splat-transform -w` drops a bundle's. Returns
+    what reading it back finds wrong."""
+    with zipfile.ZipFile(sog) as z:
+        has = "license.txt" in z.namelist()
+    if not has:
+        with zipfile.ZipFile(sog, "a", compression=zipfile.ZIP_STORED) as z:
+            z.writestr("license.txt", lic_bytes)
+    problems = []
+    with zipfile.ZipFile(sog) as z:
+        bad = z.testzip()
+        if bad:
+            problems.append(f"{os.path.basename(sog)} fails its CRC check at {bad}")
+        if z.read("license.txt") != lic_bytes:
+            problems.append(f"license.txt in {os.path.basename(sog)} differs from the one it "
+                            "was given")
+    return problems

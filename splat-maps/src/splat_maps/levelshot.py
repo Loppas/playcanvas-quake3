@@ -20,6 +20,9 @@ vertical. So the camera goes through `sim_to_octree`, not `sim_to_world`.
 Then it reads the TGA back and checks it byte for byte, and checks the view is not into the
 void or a wall.
 
+It renders the splat the map draws: the bake's drawn splat when the bake filtered one, or else
+the `.sog` itself (`splat_map.drawn_splat`).
+
 Usage:
     splat-maps levelshot <map.sog> [--ent <stem>.ent] [--out <stem>.tga]
 
@@ -92,7 +95,7 @@ def tga_header():
 def main(argv=None, prog=None):
     ap = argparse.ArgumentParser(
         prog=prog, description="Make a splat map's levelshot, as Q3 makes one.")
-    ap.add_argument("sog", help="the map's polished .sog")
+    ap.add_argument("sog", help="the map's polished .sog, beside the bake's outputs")
     ap.add_argument("--ent", help="the map's entity text (default <stem>.ent beside the .sog)")
     ap.add_argument("--out", help="the TGA to write (default <stem>.tga beside the .sog)")
     args = ap.parse_args(argv)
@@ -104,6 +107,7 @@ def main(argv=None, prog=None):
     out = args.out or os.path.join(here, f"{stem}.tga")
     try:
         exe = sm.require_splat_transform()
+        drawn = sm.drawn_splat(args.sog)
         with open(ent_path, "rb") as fh:
             entities, _ = sm.parse_entities(fh.read())
     except (OSError, sm.FormatError) as e:
@@ -163,7 +167,7 @@ def main(argv=None, prog=None):
             print("  the intermission origin is in open space")
 
     webp = os.path.splitext(out)[0] + ".levelshot.webp"
-    cmd = [exe, "-w", "-q", args.sog,
+    cmd = [exe, "-w", "-q", drawn,
            "--camera-pos", ",".join(f"{c:.6f}" for c in pos),
            "--camera-target", ",".join(f"{c:.6f}" for c in target),
            "--camera-up", ",".join(f"{c:.6f}" for c in cam_up),

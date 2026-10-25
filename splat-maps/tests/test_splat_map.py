@@ -1,6 +1,7 @@
 """`splat_map.py`, the format's shared pieces, each held to the rule it follows."""
 
 import json
+import zipfile
 
 import numpy as np
 import pytest
@@ -406,3 +407,39 @@ def test_stem_of_strips_the_suffix_in_any_case():
 ])
 def test_stem_is_lowercase_digits_and_underscores_up_to_44(stem, ok):
     assert bool(sm.STEM_RE.match(stem)) is ok
+
+
+@pytest.mark.parametrize("record, drawn", [
+    (None, "room.sog"),
+    ({"_pcq_bake": "--voxel-size 0.25"}, "room.sog"),
+    ({"drawn": "room.drawn.sog"}, "room.drawn.sog"),
+], ids=["no bake", "a bake that filtered nothing", "a bake that filtered"])
+def test_the_drawn_splat_is_the_one_the_bake_record_names(tmp_path, record, drawn):
+    for name in ("room.sog", "room.drawn.sog"):
+        (tmp_path / name).write_bytes(b"")
+    if record is not None:
+        (tmp_path / "room.bake.json").write_text(json.dumps(record), encoding="utf-8")
+    assert sm.drawn_splat(str(tmp_path / "room.sog")) == str(tmp_path / drawn)
+
+
+@pytest.mark.parametrize("held", [None, b"Title: Another\n"], ids=["none", "another"])
+def test_a_licence_is_put_into_a_bundle_stored_unless_it_holds_one(tmp_path, held):
+    sog = tmp_path / "room.sog"
+    with zipfile.ZipFile(sog, "w") as z:
+        z.writestr("meta.json", "{}")
+        if held:
+            z.writestr("license.txt", held)
+    problems = sm.put_license(str(sog), b"Title: Test Room\n")
+    with zipfile.ZipFile(sog) as z:
+        assert z.getinfo("license.txt").compress_type == zipfile.ZIP_STORED
+        assert z.read("license.txt") == (held or b"Title: Test Room\n")
+    assert problems == ([] if held is None else
+                        ["license.txt in room.sog differs from the one it was given"])
+
+
+def test_a_drawn_splat_that_is_missing_is_refused(tmp_path):
+    (tmp_path / "room.sog").write_bytes(b"")
+    (tmp_path / "room.bake.json").write_text(json.dumps({"drawn": "room.drawn.sog"}),
+                                             encoding="utf-8")
+    with pytest.raises(sm.FormatError, match="room.drawn.sog, which is missing: bake again"):
+        sm.drawn_splat(str(tmp_path / "room.sog"))

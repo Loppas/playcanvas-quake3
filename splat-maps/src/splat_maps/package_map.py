@@ -4,6 +4,7 @@ The working folder holds each part under the map's stem, as the steps write them
 
     <stem>.sog              the polished splat (polish)
     <stem>.polish.json      what the polish did, and the source's licence
+    <stem>.drawn.sog        the splat the bake filtered from it, if the bake filtered (bake)
     <stem>.voxel.json/.bin  the collision octree (bake)
     <stem>.collision.glb    its debug mesh
     <stem>.bake.json        the bake's flags and measurements
@@ -11,9 +12,10 @@ The working folder holds each part under the map's stem, as the steps write them
     <stem>.arena            the arena block (arena)
     <stem>.tga              the levelshot (levelshot)
 
-This puts each at its Q3 path (`map-format.md` §2.1). It writes the `_pcq_*` keys into the
-packed `.ent`'s worldspawn, replacing any it finds, as q3map2 writes its own keys at compile
-time (§7). It writes the readme `<stem>.txt` from `templates/readme.txt`. The `.sog` is stored,
+This puts each at its Q3 path (`map-format.md` §2.1), the splat as the map draws it
+(`splat_map.drawn_splat`). It writes the `_pcq_*` keys into the packed `.ent`'s worldspawn,
+replacing any it finds, as q3map2 writes its own keys at compile time (§7). It writes the
+readme `<stem>.txt` from `templates/readme.txt`. The `.sog` is stored,
 since it is a zip already, and everything else is deflated (§8). Entries carry a fixed date,
 so the same inputs always make the same bytes.
 
@@ -85,6 +87,11 @@ def main(argv=None, prog=None):
     if not lic:
         sys.exit("ERROR: the polish record carries no source licence, and the readme must credit "
                  "the source (L29). Polish from a .sog that holds the source's license.txt")
+    try:
+        drawn = sm.drawn_splat(part(".sog"))
+    except sm.FormatError as e:
+        sys.exit(f"ERROR: {e}")
+    filters = bake.get("_pcq_filter")
 
     # The packed .ent: the person's entities, with the pipeline's keys in worldspawn.
     with open(part(".ent"), "rb") as fh:
@@ -104,6 +111,7 @@ def main(argv=None, prog=None):
         ("_pcq_polish", polish["_pcq_polish"]),
         ("_pcq_scale", polish["_pcq_scale"]),
         ("_pcq_bake", bake["_pcq_bake"]),
+        *([("_pcq_filter", filters)] if filters else []),
         ("_pcq_splat_transform", bake["_pcq_splat_transform"]),
         ("_pcq_pipeline", pipeline_commit()),
     ]
@@ -170,6 +178,8 @@ def main(argv=None, prog=None):
         "pipeline": pcq[-1][1], "splat_transform": bake["_pcq_splat_transform"],
         "polish": wrap("sog_inspect " + polish["_pcq_polish"]), "scale": polish["_pcq_scale"],
         "bake": wrap("splat-transform " + bake["_pcq_bake"]),
+        "filters": wrap("splat-transform " + filters) if filters else "none",
+        "filtered": "filtered with splat-transform, as Construction says,\n" if filters else "",
         "entities": f"{len(spawns)} spawn spot{'s' * (len(spawns) != 1)}, "
                     f"{len(others)} other{'s' * (len(others) != 1)}, in Q3 units",
         "levelshot": "levelshots/" + stem + ".tga, from the intermission point"
@@ -184,7 +194,7 @@ def main(argv=None, prog=None):
 
     # The pk3, in section 2.1's order.
     entries = [
-        (f"maps/{stem}.sog", part(".sog"), zipfile.ZIP_STORED),
+        (f"maps/{stem}.sog", drawn, zipfile.ZIP_STORED),
         (f"maps/{stem}.voxel.json", part(".voxel.json"), zipfile.ZIP_DEFLATED),
         (f"maps/{stem}.voxel.bin", part(".voxel.bin"), zipfile.ZIP_DEFLATED),
         (f"maps/{stem}.collision.glb", part(".collision.glb"), zipfile.ZIP_DEFLATED),

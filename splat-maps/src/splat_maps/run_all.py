@@ -5,7 +5,8 @@
   5.   polish, into <data>/<stem>/map/<stem>.sog, hinting +Z up, as gsplat's trainer leaves a
        capture (examples/datasets/colmap.py normalises the world to it);
   6.   bake, cropped to `--box`, seeded a metre above the middle of the most densely captured
-       patch of floor: the plan's centre can be off the floor, inside a building or under a bed;
+       patch of floor: the plan's centre can be off the floor, inside a building or under a bed.
+       Both bakes filter the drawn splat with `--crop`, `--cluster` and `--decimate`, if given;
   7.   starter entities: one spawn on what lies under the seed, facing +X, and the intermission
        above it, looking along +X down to the spawn's eye height 4 m on. Place the real ones
        afterwards, as `docs/maps.md` step 4 does, and run its steps 5-9 again;
@@ -16,9 +17,10 @@ every check. The tools are looked for, and the arguments checked, before the fra
 
 Usage:
     splat-maps all <video> <stem> <metric_height_m> --license FILE|FIELDS --author WHO
-                   --box=x0,y0,z0,x1,y1,z1 [--outdoor] [--message TEXT] [--data DIR] [--fps 1.5]
-                   [--width 1920] [--min-sharpness 0.25] [--cap-max N] [--max-steps N]
-                   [--port DIR] [--replace] [the polish's arguments]
+                   --box=x0,y0,z0,x1,y1,z1 [--outdoor] [--crop] [--cluster] [--decimate N|N%]
+                   [--message TEXT] [--data DIR] [--fps 1.5] [--width 1920]
+                   [--min-sharpness 0.25] [--cap-max N] [--max-steps N] [--port DIR] [--replace]
+                   [the polish's arguments]
 
 `--box` is the bake's: the corners of the map in Q3 units, about the polished plan's centre,
 the floor at z = 0. A trained capture holds stray splats far past what was filmed, so every run
@@ -122,6 +124,11 @@ def main(argv=None, prog=None):
     ap.add_argument("--outdoor", action="store_true",
                     help="a capture with no ceiling and no hull: the polish scales to its top, "
                          "and the bakes leave out the exterior fill")
+    ap.add_argument("--crop", action="store_true", help="the bakes' --crop: draw only the box")
+    ap.add_argument("--cluster", action="store_true",
+                    help="the bakes' --cluster: draw only the capture's main cluster")
+    ap.add_argument("--decimate", metavar="N|N%",
+                    help="the bakes' --decimate: merge the drawn splat down to N splats, or N%%")
     ap.add_argument("--message", help="the map's long name (default the licence's Title)")
     ap.add_argument("--data", default="data", help="where the capture's folder goes (default data)")
     ap.add_argument("--fps", default="1.5", help="frames a second (default 1.5)")
@@ -152,6 +159,8 @@ def main(argv=None, prog=None):
     message = args.message or licence["title"]
     try:
         bake_map.filter_box(args.box)
+        if args.decimate:
+            bake_map.decimate_value(args.decimate)
     except ValueError as e:
         sys.exit(f"ERROR: {e}")
     frames.find_ffmpeg()
@@ -169,7 +178,9 @@ def main(argv=None, prog=None):
     octree = os.path.join(folder, f"{args.stem}.voxel.json")
 
     outdoor = ["--outdoor"] if args.outdoor else []
-    bounds = [f"--box={args.box}", *outdoor]
+    bounds = [f"--box={args.box}", *outdoor, *(["--crop"] if args.crop else []),
+              *(["--cluster"] if args.cluster else []),
+              *([f"--decimate={args.decimate}"] if args.decimate else [])]
 
     def stage(n, name, module, stage_argv):
         print(f"\n########## all {n}/12: {name}", flush=True)
