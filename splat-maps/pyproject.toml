@@ -5,7 +5,7 @@ description = "Gaussian-splat captures to Quake 3 maps for playcanvas-quake3"
 # numpy below 2 has no wheels past 3.12.
 requires-python = ">=3.11,<3.13"
 dependencies = [
-    "numpy<2",
+    "numpy<3",
     "Pillow",
     "scipy",
 ]
