@@ -7,17 +7,10 @@ test stem goes through their steps, and these are what tripped those steps up.
 
 ## Naming and licence
 
-- **A stem is at most 15 characters**, though the format allows 44. Start Server cuts a map's
-  name to q3_ui's `MAX_NAMELENGTH` and looks its levelshot up by the cut name (`shownMapName`,
-  `src/formats/arena-list.ts`), as Quake 3 does. `vegetables_beetles` showed no levelshot there,
-  and became `vegetables_bugs`.
 - **Read the capture's `license.txt` before building.** An NC or ND capture can be built for local
   play, but never shipped. A shell build packs every `public/maps/*.pk3` (`electron-builder.config.mjs`),
   so a build shared with anyone must leave such maps out. A test stem from such a capture is local
   only too.
-- **A non-ASCII author breaks the package.** It crashes encoding `_pcq_source` into the ASCII
-  `.ent`. Until that's fixed, fold the name to ASCII in the `.polish.json` records by hand, with the
-  user's say on the spelling.
 
 ## Polish and scale
 

@@ -70,6 +70,8 @@ reads.
 
 The **stem** is the map's name everywhere: lowercase letters, digits and underscores, at most 44
 characters (`map-format.md` §2.3). Every file is named by it. The garage's is `garage_rats`.
+Keep it to **15**: Start Server shows 15 characters of a map's name, and finds no levelshot for a
+longer one. `all` and the lint warn of a longer stem.
 
 ### 1. Check the source carries its licence
 
@@ -97,6 +99,11 @@ Creative Commons License URL. The Author may carry a link in brackets, as Ethan'
 The polish puts it inside the polished `.sog` as `license.txt`, so the credit travels with the
 splat from then on. A source that carries its own licence keeps it: the polish refuses a
 `--license` that differs from it.
+
+**A credit spelt past ASCII is fine.** The map's entity text is ASCII, so the polish folds the
+credit into it: an author `Jörg Example` is `Joerg Example` there. The readme credits the source
+as the licence spells it (`map-format.md` §7). The polish refuses a credit in a script no fold
+reaches, such as Cyrillic.
 
 ### 2. Polish
 

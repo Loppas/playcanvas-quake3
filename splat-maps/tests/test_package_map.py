@@ -188,6 +188,23 @@ def rewrite_json(name, change):
     return apply
 
 
+def test_package_takes_a_credit_spelt_past_ascii_folded_and_credits_it_as_spelt(room):
+    # The polish folds the credit into _pcq_source, and keeps the licence as the source spells it.
+    rewrite_json("room.polish.json", lambda p: {
+        **p, "_pcq_source": "Cafe Room by Joerg Example, https://example.com/scene/1",
+        "license": {**p["license"], "title": "Caf\xe9 Room",
+                    "author": "J\xf6rg Example (https://example.com/user/1)"}})(room.parent)
+    code, log = run_cli("package", room, "--author", "A Mapper")
+    assert code == 0, log
+    assert "0 error(s), 0 warning(s): passes" in log and "non-ASCII" not in log
+    with zipfile.ZipFile(room.with_name("map-room.pk3")) as z:
+        entities, _ = sm.parse_entities(z.read("maps/room.ent"))
+        readme = " ".join(z.read("room.txt").decode("utf-8").split())
+    assert entities[0].get("_pcq_source") == ("Cafe Room by Joerg Example, "
+                                              "https://example.com/scene/1")
+    assert 'built on "Caf\xe9 Room" by J\xf6rg Example (https://example.com/user/1)' in readme
+
+
 def rewrite_ent(old, new):
     def apply(folder):
         path = folder / "room.ent"
@@ -212,6 +229,10 @@ def rename_parts(folder):
      "room.sog", "(L19)"),
     (rewrite_json("room.polish.json", lambda p: {k: v for k, v in p.items() if k != "license"}),
      "room.sog", "(L29)"),
+    # A record the polish wrote before it folded a credit.
+    (rewrite_json("room.polish.json",
+                  lambda p: {**p, "_pcq_source": "Test Room by Zo\xeb, https://example.com/scene/1"}),
+     "room.sog", "holds U+00EB LATIN SMALL LETTER E WITH DIAERESIS, which entity text"),
     (rewrite_ent('"classname" "worldspawn"', '"classname" "info_null"'), "room.sog",
      "not worldspawn"),
     (rewrite_ent('"message" "Test Room"', '"message" "' + "x" * 1100 + '"'), "room.sog",

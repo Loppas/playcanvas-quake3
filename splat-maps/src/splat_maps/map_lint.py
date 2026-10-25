@@ -87,6 +87,9 @@ def main(argv=None, prog=None):
     rep.check("L4", "E", named, f"{base} is map-<stem>.pk3 or map-<stem>_<tag>.pk3")
     if not n:
         return finish(rep, pk3)
+    rep.check("L4", "W", len(n) <= sm.MENU_NAME_LENGTH,
+              f"a stem Start Server shows whole, with its levelshot, at most "
+              f"{sm.MENU_NAME_LENGTH} characters: {len(n)}")
     zip64 = b"PK\x06\x06" in raw[-65536:] or b"PK\x06\x07" in raw[-65536:] or any(
         _has_zip64_extra(i.extra) for i in infos)
     rep.check("L1", "E", not zip64, "no zip64 records")
@@ -157,8 +160,8 @@ def main(argv=None, prog=None):
         rep.check("L11", "E", not dups, f"no duplicate keys in a block: {dups or 'yes'}")
     except sm.FormatError as e:
         rep.check("L11", "E", False, str(e))
-    printable = all(b in (9, 10, 13) or 32 <= b < 127 for b in ent_raw)
-    rep.check("L12", "E", printable, "printable ASCII")
+    stray = sm.unprintable(ent_raw.decode("latin-1"))
+    rep.check("L12", "E", not stray, f"printable ASCII: {sm.named(stray) or 'yes'}")
     if entities is None:
         return finish(rep, pk3)
     quoted = [(e.line, k) for e in entities for k, v in e.pairs if '"' in k or '"' in v]
@@ -273,7 +276,8 @@ def main(argv=None, prog=None):
         rep.check("L28", "E", len(tga) == 18 + 128 * 128 * 3 and tga[:18] == bytes(head),
                   f"{len(tga):,} bytes, R_LevelShot's header: {tga[:18] == bytes(head)}")
 
-    readme = read("{n}.txt").decode("utf-8", errors="replace")
+    # The readme credits the source as its licence spells it, and _pcq_source holds that folded.
+    readme = sm.to_ascii(read("{n}.txt").decode("utf-8", errors="replace"))
     src = re.match(r"^(.*) by (.*), (\S+)$", world.get("_pcq_source") or "")
     lic = world.get("_pcq_license") or ""
     needs = {}

@@ -89,6 +89,15 @@ def test_write_ent_needs_a_spawn(tmp_path):
     assert not (tmp_path / "room.ent").exists()
 
 
+def test_write_ent_refuses_a_message_entity_text_cannot_hold(tmp_path):
+    code, log = run_cli("entities", "readings", tmp_path / "room.ent", "--message", "Caf\xe9",
+                        "--spawn", "(0 0 50) : 0", "--intermission", "(0 -32 100) : 0",
+                        "--look-at", "(0 0 24) : 0")
+    assert code != 0 and "Traceback" not in log
+    assert "'message' holds U+00E9 LATIN SMALL LETTER E WITH ACUTE, which entity text" in log
+    assert not (tmp_path / "room.ent").exists()
+
+
 @pytest.fixture
 def octree(tmp_path):
     def write(hole=False):

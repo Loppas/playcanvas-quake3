@@ -28,8 +28,8 @@ names one, as `--box=x0,...`, since a value that starts with a minus is read as 
 Which way the plan faces is known only after the polish, so make it square in plan.
 `--outdoor` is for a capture with no ceiling and no hull: the polish scales it to its top, and
 the bakes leave out the exterior fill, so the box bounds the map. `--message`, the map's long
-name, defaults to the licence's Title. Any other argument is the polish's: `--player-height`,
-say, or `--up-hint`.
+name, defaults to the licence's Title, folded into ASCII. Any other argument is the polish's:
+`--player-height`, say, or `--up-hint`.
 """
 
 import argparse
@@ -149,6 +149,10 @@ def main(argv=None, prog=None):
     if not sm.STEM_RE.match(args.stem):
         sys.exit(f"ERROR: {args.stem!r} is not a map name: 1 to 44 lowercase letters, digits "
                  "and _")
+    if len(args.stem) > sm.MENU_NAME_LENGTH:
+        print(f"WARNING: {args.stem!r} is {len(args.stem)} characters, and Start Server shows "
+              f"{sm.MENU_NAME_LENGTH}: the map will play, but be listed cut, with no levelshot "
+              "(map-format.md section 2.3)")
     dataset = os.path.join(args.data, args.stem)
     if os.path.isdir(dataset) and os.listdir(dataset):
         sys.exit(f"ERROR: {dataset} is not empty. Remove it, or name the map otherwise")
@@ -156,7 +160,14 @@ def main(argv=None, prog=None):
     missing = [k for k in polish.NEEDED if not licence.get(k)]
     if missing:
         sys.exit(f"ERROR: --license gives no {', '.join(missing)}")
-    message = args.message or licence["title"]
+    stray = sm.unprintable(polish.source_credit(licence))
+    if stray:
+        sys.exit(f"ERROR: --license's Title, Author or Source holds {sm.named(stray)}, which "
+                 "entity text cannot hold and no fold brings into ASCII")
+    message = args.message or sm.to_ascii(licence["title"])
+    stray = sm.unprintable(message)
+    if stray:
+        sys.exit(f"ERROR: --message holds {sm.named(stray)}, which entity text cannot hold")
     try:
         bake_map.filter_box(args.box)
         if args.decimate:

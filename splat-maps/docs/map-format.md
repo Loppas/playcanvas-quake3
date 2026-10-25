@@ -175,6 +175,11 @@ Two dependencies are not drawn. The levelshot step reads its viewpoint from the 
   case, but Unix file systems do not, which is why id's shader manual asks for lowercase. The
   longest path, `maps/<n>.collision.glb`, must fit Q3's `MAX_QPATH` of 64 bytes including its NUL
   (`q_shared.h:246`). The stem is therefore at most **44** characters.
+- **Start Server shows 15 of them.** q3_ui cuts a map's name to `MAX_NAMELENGTH`, 16 bytes with
+  its NUL (`ui_startserver.c:54`), and builds the levelshot's path from what it keeps
+  (`:176–179`), as the port does (`shownMapName`, `src/formats/arena-list.ts`). A longer stem
+  still plays, since the map is launched by its full name (`:794–795`), but it is listed cut and
+  with no levelshot. So keep a stem to **15**, and the lint warns past it (L4).
 - **Every per-map file is named by the stem**, the arena file included. Q3 lets an arena file take
   any name, but q3map2's packager looks for `scripts/<map>.arena` (`autopk3.cpp:628–653`).
 - **The pk3 is `map-<n>.pk3`**, the prefix id's editor manual gives map releases ([Q3Radiant
@@ -190,8 +195,9 @@ Two dependencies are not drawn. The levelshot step reads its viewpoint from the 
 
 The file holds exactly what a BSP's lump 0 holds. q3map2's `-exportents` writes this file from a
 BSP, and `-onlyents` splices it back into one (`exportents.cpp:49–73`; `bsp.cpp:570–603`,
-`:889–890`). It is plain ASCII, and LF or CRLF line endings are both fine, since the tokenizer
-treats both as whitespace.
+`:889–890`). It is printable ASCII (L12), and text from elsewhere, a licence's credit, is folded
+into it (§7). LF or CRLF line endings are both fine, since the tokenizer treats both as
+whitespace.
 
 ### 3.1 How it is read
 
@@ -605,7 +611,7 @@ them (§3.1).
 | Key | Holds | Written from | `garage_rats` |
 |---|---|---|---|
 | `_pcq_format` | This layout's version, an integer | `package_map` | `1` |
-| `_pcq_source` | The source capture: title, creator, link | the source's `license.txt`, or `splat-maps polish --license` for a capture with none, through the polish record `<n>.polish.json` | `Garage - High Detail Test by Ethan, https://superspl.at/scene/8f4d8e05` |
+| `_pcq_source` | The source capture: title, creator, link, folded into ASCII | the source's `license.txt`, or `splat-maps polish --license` for a capture with none, through the polish record `<n>.polish.json` | `Garage - High Detail Test by Ethan, https://superspl.at/scene/8f4d8e05` |
 | `_pcq_license` | The source's licence, as an SPDX identifier | as above | `CC-BY-4.0` |
 | `_pcq_polish` | `sog_inspect`'s arguments: metric height, player height, up hint | the polish record | `--metric-height 3.0 --player-height 0.1` |
 | `_pcq_scale` | Metres of the finished map per unit of the polish's input: the `-s` factor, metric correction included | the polish record, from the `-s` it applied | `17.49962417` |
@@ -621,6 +627,15 @@ The rules:
 - **No absolute paths** in any value. `report.json`'s `input` is one, and it stays out.
 - **They stay within §3.1's limits.** Worldspawn's pairs are counted against the 64 pairs and 4096
   bytes, and each value is at most 1023 bytes.
+- **They are ASCII, as all entity text is (§3).** The polish folds a credit spelt past ASCII as it
+  builds `_pcq_source` (`to_ascii`, `splat_map.py`):
+  - a letter that dropping its mark would misspell is spelt out: ä, ö and ü are ae, oe and ue, ß
+    is ss, ø is oe;
+  - every other letter loses its marks, so é is e;
+  - typographic quotes and dashes become `'` and `-`.
+
+  So Jörg Example is credited as Joerg Example. The polish refuses what no fold reaches, such as
+  another script.
 
 **The readme** carries the same facts for people, in the sections of OpenArena's template
 ([Readme model][oa-readme]):
@@ -634,7 +649,9 @@ The rules:
 
 The credits give the attribution CC BY 4.0 asks for: the creator, the title, the source
 link, the licence and its link, and a statement that the capture was modified (polished,
-rescaled and cleaned).
+rescaled and cleaned). They spell the creator and the title as the licence does, since a readme
+is UTF-8 and no engine reads it. The lint folds the readme as the polish folds the credit before
+looking for it there (L29).
 
 ---
 
@@ -699,7 +716,7 @@ port's reader lays out its words (`src/sim/voxel-svo.ts`).
 | L2 | `maps/<n>.sog` stored | E |
 | L3 | Every path lowercase, with forward slashes. Nothing outside §2.1's tree | E / W |
 | **Names** | | |
-| L4 | The stem is the one `maps/<n>.sog`'s, and matches `[a-z0-9_]{1,44}`. The pk3 is `map-<n>.pk3`, or `map-<n>_<tag>.pk3` for a later release (§9). Every per-map file uses the stem | E |
+| L4 | The stem is the one `maps/<n>.sog`'s, and matches `[a-z0-9_]{1,44}`. The pk3 is `map-<n>.pk3`, or `map-<n>_<tag>.pk3` for a later release (§9). Every per-map file uses the stem. **W** when the stem is over the 15 characters Start Server shows (§2.3) | E / W |
 | L5 | The required files are present: `.sog`, `.voxel.json`, `.voxel.bin`, `.ent`, `<n>.txt` | E |
 | **The splat and the octree** | | |
 | L6 | The `.sog` opens as a zip, its `meta.json` has `version` 2, and `count` > 0 | E |
@@ -728,7 +745,7 @@ port's reader lays out its words (`src/sim/voxel-svo.ts`).
 | L26 | `type` tokens are outside `ffa tourney single team ctf clanarena` | W |
 | L27 | `longname` differs from worldspawn's `message` | W |
 | L28 | The levelshot matches §5 byte for byte in its header and is 49,170 bytes | E, if the file is present |
-| L29 | The readme names the source, its creator, its licence and the licence's link | E |
+| L29 | The readme names the source, its creator, its licence and the licence's link, read folded into ASCII as `_pcq_source` is (§7) | E |
 
 ---
 
@@ -803,11 +820,13 @@ for the client's `PlayerView` (`GameMap`, `src/game-map.ts`) and for the host
 Filling in the format's detail took these choices.
 
 1. **The pk3 is `map-<n>.pk3`**, id's prefix for map releases (§2.3).
-2. **The stem is `[a-z0-9_]`, at most 44 characters**, from `MAX_QPATH` (§2.3).
+2. **The stem is `[a-z0-9_]`, at most 44 characters**, from `MAX_QPATH`, and the lint warns of
+   one over the 15 Start Server shows (§2.3).
 3. **The readme is `<n>.txt` at the root**, and the lint requires it (§2.3, §10 L29).
 4. **The `_pcq_*` keys.** Three go beyond the source, its licence, the polish and bake arguments
    and the splat-transform version: `_pcq_format`, `_pcq_scale` and `_pcq_pipeline`.
-   `package_map` writes all the keys, and a hand-written `.ent` leaves them out (§7).
+   `package_map` writes all the keys, and a hand-written `.ent` leaves them out (§7). A credit
+   spelt past ASCII is folded into `_pcq_source`, and the readme spells it as the licence does.
 5. **One `info_player_intermission` is required**, for the levelshot (§3.2, L15).
 6. **Brush classnames and `*N` models are refused** (§3.3, L13).
 7. **The levelshot carries no gamma table**, and it is rendered at 512 × 384 and averaged as 4 × 3
