@@ -22,7 +22,8 @@ cfg run with `exec` that sets every cvar in its family with `seta`, so switching
 the last one behind and what it sets is saved; the default preset sets exactly the defaults, and
 tests hold both. A label cvar (`g_gamepreset`) records which preset ran and applies nothing, and
 no mode-switch cvar re-applies a ruleset at each start, which would wipe a player's own changes.
-Rules the client needs travel as serverinfo cvars, and a serverinfo without them means id's rules.
+Rules the client needs travel in a configstring, prediction's in the systeminfo and the rest in
+the serverinfo, as `CG_ParseServerinfo` reads them, and one that leaves a rule out means id's.
 
 **A new cvar takes the first name that fits:** Quake 3's own; then Quake Live's, where a source
 confirms it means the same, with id's default rather than Quake Live's; then a new name in its

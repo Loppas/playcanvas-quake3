@@ -1,13 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { CvarStore } from '../net/cvar';
+import { SV_FPS } from '../net/snapshot-rate';
 import { GAME_CVARS } from './game';
 import {
+  ID_RULES,
   RULE_CVARS,
   RuleCvars,
   SYSTEMINFO_CVARS,
   SYSTEMINFO_RULES,
-  defaultRules
+  defaultRules,
+  idSysteminfoRecord,
+  isSysteminfoRecordKey,
+  readSysteminfoRecord
 } from './rules';
 
 /** A store over `values`, counting a modification whenever `set` changes one. */
@@ -223,5 +228,48 @@ describe('the systeminfo', () => {
       'xp_unlagged',
       'sv_fps'
     ]);
+  });
+
+  it("is read into a client's record as each rule's cvar is read, at id's values first", () => {
+    const record = idSysteminfoRecord();
+    expect(Object.keys(record).sort()).toEqual(
+      [...SYSTEMINFO_RULES, 'g_allowGrapple', 'xp_unlagged', 'sv_fps'].sort()
+    );
+    for (const name of SYSTEMINFO_RULES) expect(record[name]).toBe(ID_RULES[name]);
+    // No hook and no shot rewound, as in Quake 3, and the port's own frame rate.
+    expect(record).toMatchObject({ g_allowGrapple: 0, xp_unlagged: 0, sv_fps: SV_FPS });
+
+    // Keys match without regard to case, as `Cvar_FindVar` matches them.
+    const rules = '\\PMOVE_JUMPVELOCITY\\275.5\\pmove_AirControl\\1.9\\sv_serverid\\4';
+    readSysteminfoRecord(`${rules}\\G_ALLOWGRAPPLE\\3.7\\xp_unlagged\\204\\sv_fps\\40`, record);
+    expect(record.pmove_JumpVelocity).toBe(275.5);
+    expect(record.pmove_AirControl).toBe(1);
+    // The server's own cvars beside the rules are whole numbers, as the client has read them.
+    expect(record).toMatchObject({ g_allowGrapple: 3, xp_unlagged: 204, sv_fps: 40 });
+    // What the systeminfo carries beside them is not the record's.
+    readSysteminfoRecord('\\pmove_msec\\16\\g_speed\\400', record);
+    expect(Object.keys(record)).toHaveLength(SYSTEMINFO_RULES.length + 3);
+  });
+
+  it("rebuilds the record whole at each read: a key a server does not send is id's", () => {
+    const record = idSysteminfoRecord();
+    readSysteminfoRecord('\\pmove_JumpVelocity\\300\\pmove_WalkAccel\\15\\sv_fps\\40', record);
+
+    readSysteminfoRecord('\\pmove_WalkAccel\\12', record);
+    expect(record.pmove_JumpVelocity).toBe(ID_RULES.pmove_JumpVelocity);
+    expect(record.pmove_WalkAccel).toBe(12);
+    expect(record.sv_fps).toBe(SV_FPS);
+  });
+
+  it('names the keys a client reads into its record, and none it leaves to its cvars', () => {
+    expect(isSysteminfoRecordKey('pmove_JumpVelocity')).toBe(true);
+    expect(isSysteminfoRecordKey('DMFLAGS')).toBe(true);
+    expect(isSysteminfoRecordKey('g_allowGrapple')).toBe(true);
+    expect(isSysteminfoRecordKey('SV_FPS')).toBe(true);
+    for (const name of ['pmove_msec', 'sv_cheats', 'sv_serverid', 'g_speed']) {
+      expect(isSysteminfoRecordKey(name)).toBe(false);
+    }
+    // Every key it names is one the host writes.
+    for (const name of Object.keys(idSysteminfoRecord())) expect(SYSTEMINFO_CVARS).toContain(name);
   });
 });

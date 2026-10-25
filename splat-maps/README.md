@@ -114,19 +114,13 @@ does.
 
 ### Cleaning a capture
 
-A capture holds more than the space: floaters, stray splats past the walls, and clutter. Cleaning
-them out is done by hand, by trial and error, mostly in [SuperSplat](https://superspl.at/editor).
-Nothing here does it: the polish only levels, squares and scales, and the bake's `--box` bounds
-what is voxelised, not what is drawn.
-
-The garage needed no cleaning ([the examples' README](examples/README.md#the-aligned-garage)). A
-crop to a box can be made with splat-transform's `-B x,y,z,X,Y,Z` (`--filter-box`), with two
-catches:
-
-- its corners are in the file's own frame: for a polished splat, metres with Y up and the floor
-  at 0, not the Q3 units of the bake's `--box`;
-- its output carries no `license.txt`, so the polish after it needs the capture's credit through
-  `--license` ([maps.md](docs/maps.md#1-check-the-source-carries-its-licence)).
+A capture holds more than the space: floaters, stray splats past the walls, and clutter. The bake
+can filter some of it out of the splat the map draws, each filter only when it is given:
+`--cluster` keeps the capture's main cluster, `--crop` cuts it to the bake's `--box`, and
+`--decimate` merges it down for the frame rate ([maps.md](docs/maps.md#3-bake-from-a-seed), "The
+drawn splat"). The rest is done by hand, by trial and error, mostly in
+[SuperSplat](https://superspl.at/editor): clutter, and whatever a filter cannot tell from the
+space. The garage needed no cleaning ([the examples' README](examples/README.md#the-aligned-garage)).
 
 ## Placing entities
 

@@ -6,7 +6,7 @@ import json
 import pytest
 
 from room import encode_octree, lint_failures, read_pk3, room_grid, run_cli, sog_bytes, \
-    write_pk3
+    write_pk3, write_room
 
 
 def lint(pk3):
@@ -222,6 +222,16 @@ def test_lint_reads_the_stem_from_the_pk3s_name(room_pk3, name, failed):
     renamed = room_pk3.rename(room_pk3.with_name(name))
     code, log, got = lint(renamed)
     assert got == failed, log
+
+
+@pytest.mark.parametrize("stem, failed", [
+    ("room_fifteen_ch", set()),
+    ("room_sixteen_chr", {(W, "L4")}),
+])
+def test_lint_warns_of_a_stem_start_server_cuts(tmp_path, stem, failed):
+    # Start Server keeps 15 characters of a map's name, and looks its levelshot up by them.
+    code, log = run_cli("package", write_room(tmp_path, stem), "--author", "A Mapper")
+    assert (code, lint_failures(log)) == (0, failed), log
 
 
 def test_lint_refuses_what_is_not_a_zip(tmp_path):

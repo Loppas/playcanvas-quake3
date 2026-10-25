@@ -18,7 +18,7 @@ import type { InfoFile } from './formats/arena';
 import { InProcessHost, type HostChannel } from './server/channel';
 import { MAX_FRAME_MSEC, type ServerMaps, type ServerProgram } from './server/program';
 import { Game, grappleMode } from './sim/game';
-import { RuleCvars, type SysteminfoRules } from './sim/rules';
+import type { SysteminfoRules } from './sim/rules';
 import { createUserCmd, type TraceFn, type UserCmd } from './sim/types';
 import type { GrappleMode } from './sim/weapons/grapple';
 import type { SourceSnapshot } from './view/player-view';
@@ -161,10 +161,8 @@ export class LocalGame {
   /** The gamestate those commands came after: a new one leaves the old world's unread. */
   private commandsGamestate = 0;
 
-  /** The one cvar store, which the client takes the systeminfo's rules into. */
+  /** The one cvar store. */
   private readonly cvars: CvarStore;
-  /** The client's own rules, kept in step with the store as `CL_SystemInfoChanged` sets it. */
-  private readonly ruleCvars: RuleCvars;
   /** The frame the view drew last, which the commands made next carry: none before the first. */
   private drawnFrame: DrawnFrame = { time: 0, snapTime: 0, nextSnapTime: 0 };
 
@@ -186,7 +184,6 @@ export class LocalGame {
     // every server frame at the port's `sv_fps`; a player's own value stands, and the server holds
     // it to `sv_fps` where it reads it.
     this.cvars = cvars;
-    this.ruleCvars = new RuleCvars(cvars);
     // The client's timeout exemption reads `sv_paused` from the channel: the store's where the
     // server is this process's, the worker's word where it is not.
     this.connection = new ClientConnection(cvars, {
@@ -344,9 +341,7 @@ export class LocalGame {
    * @param cmd - What the player is holding, with its angles in degrees.
    */
   private comFrame(msec: number, cmd: Omit<UserCmd, 'serverTime'>): void {
-    // `CL_Frame` (`cl_main.c:2964–3112`). Cgame's own cvars are refreshed first each frame
-    // (`cg_main.c:380–407`), which is where the client's rules come from the systeminfo.
-    this.ruleCvars.update();
+    // `CL_Frame` (`cl_main.c:2964–3112`).
     const { connection } = this;
     connection.clock.realtime += msec;
     connection.checkTimeout();
@@ -398,7 +393,7 @@ export class LocalGame {
 
   /** The rules the client predicts with, as `CS_SYSTEMINFO` carried them. */
   get rules(): Readonly<SysteminfoRules> {
-    return this.ruleCvars.rules;
+    return this.connection.rules;
   }
 
   /** `pmove_msec`, as the client's commands step by it. */
@@ -406,9 +401,12 @@ export class LocalGame {
     return this.connection.pmoveMsec;
   }
 
-  /** `g_allowGrapple`'s style, or null for a client whose match has no hook. */
+  /**
+   * `g_allowGrapple`'s style, as the systeminfo carried it, or null for a client whose match has
+   * no hook.
+   */
   get grappleMode(): GrappleMode | null {
-    return grappleMode(Number.parseInt(this.cvars.get('g_allowGrapple'), 10) || 0);
+    return grappleMode(this.connection.rules.g_allowGrapple);
   }
 
   /**
@@ -416,13 +414,13 @@ export class LocalGame {
    * systeminfo's `sv_fps` and rounded up to whole frames, as the host holds them apart.
    */
   get snapshotGap(): number {
-    const svFps = Math.max(1, Number.parseInt(this.cvars.get('sv_fps'), 10) || 0);
+    const svFps = Math.max(1, this.connection.rules.sv_fps);
     return snapshotGap(snapshotMsec(this.cvars.get('snaps'), svFps), frameMsec(svFps));
   }
 
   /** `xp_unlagged`, as the systeminfo carried it: which weapons the server rewinds for. */
   get unlagged(): number {
-    return Number.parseInt(this.cvars.get('xp_unlagged'), 10) || 0;
+    return this.connection.rules.xp_unlagged;
   }
 
   /** The message the last gamestate came in, where cgame's snapshot numbers start. */

@@ -24,9 +24,12 @@ The code in this repository, wherever it runs:
 - **The desktop shell**: its `app://` scheme, with the shell's own `/install` and `/launch`, and
   its folder picker.
 - **The servers**: the Node dedicated server (its connectionless packets and data channels on
-  `net_port`), the master (its WebSocket on 27950, and the WebRTC signals and datagrams it passes
-  between sockets), and a page's listen server.
+  `net_port`), a page's listen server, and the master, run locally (its WebSocket on 27950) or
+  hosted on Cloudflare (its Worker and Durable Object, at `sv_master1`'s default address), with
+  the WebRTC signals and datagrams it passes between sockets.
+- **The hosted master's deploy**: the release workflow's jobs that build it and deploy it with the
+  `cloudflare` environment's token.
 
-Out of scope: Quake III Arena itself and its mods; a dev server opened with `--host` on a network
-its owner does not trust; and a dependency's vulnerability already published upstream, which
-Dependabot raises here.
+Out of scope: Quake III Arena itself and its mods; Cloudflare's platform, which Cloudflare takes
+reports on itself; a dev server opened with `--host` on a network its owner does not trust; and a
+dependency's vulnerability already published upstream, which Dependabot raises here.

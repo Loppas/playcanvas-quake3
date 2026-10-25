@@ -7,15 +7,19 @@ import { CA, ClientConnection } from '../net/connection';
 import { infoValueForKey } from '../net/info';
 import { RETRY_MSEC } from '../net/masters';
 import { NA, Net, netadr, stringToAdr, type NetPacket } from '../net/net';
-import { testCvars } from '../net/net-test-fixtures';
+import { MemoryNetwork, testCvars } from '../net/net-test-fixtures';
 import { createNetUserCmd, ENTITYNUM_NONE, ENTITYNUM_WORLD } from '../net/protocol';
 import { FakeMaster, FakeRtc, fakePeer, settle } from '../net/peer-test-fixtures';
 import { Cvars } from '../settings/cvars';
+import { GameConfig } from '../settings/game-config';
+import { shippedCfg } from '../settings/presets';
+import { createFlatWorldTrace } from '../sim/box-world';
 import { cubeBsp, patchBsp } from '../sim/cm/collision-test-fixtures';
 import { EF_TELEPORT_BIT, GT, PERS, PMOVE_MSEC, TEAM } from '../sim/constants';
 import { Game } from '../sim/game';
 import { mapOf, spawnSpot } from '../sim/map-test-fixtures';
 import { packBin } from '../sim/octree-test-fixtures';
+import { ID_RULES, isSysteminfoRecordKey, SYSTEMINFO_RULES } from '../sim/rules';
 import { createUserCmd } from '../sim/types';
 import { vec3 } from '../sim/vec3';
 import type { VoxelOctreeHeader } from '../sim/voxel-svo';
@@ -23,6 +27,7 @@ import { serverInfo } from '../view/server-info';
 import { RemoteChannel } from './channel';
 import { Host } from './host';
 import type { HostMapData } from './host-map';
+import { ServerProgram } from './program';
 import {
   WorkerChannel,
   type MapFiles,
@@ -504,6 +509,30 @@ describe('the page and a worker, over the messages', () => {
     expect(cvarsTold(wire, 'page').map(({ name }) => name)).not.toContain('g_gravity');
   });
 
+  it("leaves the game's rules to the page's console, and predicts by them once sent", async () => {
+    const wire = boundary();
+    const { game, cvars } = page(wire);
+    await enter(wire, game);
+    expect(game.rules.pmove_JumpVelocity).toBe(270);
+
+    // The game registered its rules in the worker's store, which the page now holds as Quake 3's
+    // one store holds qagame's: the console's to set, a preset's `seta` among them, though the
+    // systeminfo carries them.
+    expect(cvars.get('pmove_JumpVelocity')).toBe('270');
+    expect(cvars.set('pmove_JumpVelocity', '275', true)).toBe(true);
+    expect(cvars.set('weapon_reload_rg', '1250', true)).toBe(true);
+
+    for (let i = 0; i < 4; i++) await wire.step(game);
+    const systeminfo = game.configstring(CONFIGSTRING.SYSTEMINFO);
+    expect(infoValueForKey(systeminfo, 'pmove_JumpVelocity')).toBe('275');
+    expect(infoValueForKey(systeminfo, 'weapon_reload_rg')).toBe('1250');
+    // The client predicts by what its server sent back, as a client elsewhere does.
+    expect(game.rules.pmove_JumpVelocity).toBe(275);
+    expect(game.rules.weapon_reload_rg).toBe(1250);
+    // The file keeps them as the game spells them.
+    expect(cvars.archived()).toContainEqual({ name: 'pmove_JumpVelocity', value: '275' });
+  });
+
   it('counts a page change to a cvar no setting names, and hears the answer', async () => {
     const wire = boundary();
     const { game, cvars } = page(wire);
@@ -629,8 +658,8 @@ describe('the page and a worker, over the messages', () => {
 
 describe('the page hosting players elsewhere', () => {
   /**
-   * A tab whose server is at 203.0.113.9 through the master on this machine, which both slots name
-   * by default, and whose own client is in the world. The masters' frame runs when the test ticks.
+   * A tab whose server is at 203.0.113.9 through the master on this machine, which both slots
+   * name, and whose own client is in the world. The masters' frame runs when the test ticks.
    */
   async function hosting(channels = true, setup: (cvars: Cvars) => void = () => {}) {
     const wire = boundary(channels);
@@ -638,7 +667,12 @@ describe('the page hosting players elsewhere', () => {
     const rtc = new FakeRtc();
     const urls: string[] = [];
     let tick: (() => void) | null = null;
-    const tab = page(wire, setup, {
+    const slots = (cvars: Cvars) => {
+      cvars.set('sv_master1', 'localhost');
+      cvars.set('sv_master2', 'localhost');
+      setup(cvars);
+    };
+    const tab = page(wire, slots, {
       createPeerConnection: rtc.create,
       connect: (url) => {
         urls.push(url);
@@ -866,6 +900,95 @@ describe('the page hosting players elsewhere', () => {
     const { urls, printed } = await hosting(false);
     expect(urls).toEqual([]);
     expect(printed.some((line) => line.startsWith("WARNING: this browser can't hand"))).toBe(true);
+  });
+});
+
+describe('the page on a server elsewhere, then hosting its own', () => {
+  it("predicts by each server's rules, and keeps the player's in its store and file", async () => {
+    // A q3config.cfg that VQ3's preset saved, and the page's one store read from it.
+    const vq3 = new GameConfig({ debugMode: true, warn: () => {} });
+    vq3.exec(shippedCfg('presets/vq3.cfg')!);
+    const saved = vq3.text();
+    // What the store warns of, and the warnings printed, a refused systeminfo key's among them.
+    const warnings: string[] = [];
+    const warn = (message: string) => warnings.push(message);
+    const print = (text: string) => {
+      if (text.startsWith('WARNING')) warnings.push(text);
+    };
+    const config = new GameConfig({ config: saved, debugMode: true, warn });
+    const held = () => SYSTEMINFO_RULES.map((name) => config.cvars.get(name));
+    const own = held();
+    /** The file's lines for what the systeminfo's record takes. */
+    const ruleLines = (text: string) =>
+      text.split('\n').filter((line) => isSysteminfoRecordKey(line.split(' ')[1] ?? ''));
+    // Every rule, and the hook and the rewind, which are the player's settings too.
+    expect(ruleLines(saved)).toHaveLength(SYSTEMINFO_RULES.length + 2);
+
+    // A dedicated server elsewhere running CPM, with no hook, the preset run before its map.
+    const network = new MemoryNetwork();
+    const remote = new GameConfig({ debugMode: true, warn: () => {} });
+    remote.exec(shippedCfg('presets/cpm.cfg')!);
+    remote.cvars.set('g_allowGrapple', '0');
+    const now = () => network.now;
+    const entities = mapOf(spawnSpot(vec3(0, 0, 16)));
+    const program = new ServerProgram({
+      cvars: remote.cvars,
+      map: { name: 'garage', entities, trace: createFlatWorldTrace() },
+      socket: network.socket('10.0.0.1'),
+      random: () => 0,
+      now
+    });
+    // The page joins it through its own socket, as `connect` does.
+    const socket = network.socket('10.0.0.2');
+    const net = new Net({ cvars: config.cvars, socket, now, print });
+    const visit = new LocalGame({
+      cvars: config.cvars,
+      channel: new RemoteChannel(net),
+      connect: { server: '10.0.0.1', address: stringToAdr('10.0.0.1')! }
+    });
+    for (let i = 0; i < 100 && visit.connection.state !== CA.ACTIVE; i++) {
+      network.advance(PMOVE_MSEC);
+      visit.tick(createUserCmd());
+      program.runFrame(PMOVE_MSEC);
+    }
+    expect(visit.connection.state).toBe(CA.ACTIVE);
+    expect(visit.rules.pmove_JumpVelocity).toBe(275);
+    expect(visit.rules.pmove_AirControl).toBe(1);
+    expect(visit.rules.weapon_reload_rg).toBe(1250);
+    expect(visit.grappleMode).toBeNull();
+    expect(held()).toEqual(own);
+    expect(config.cvars.get('g_allowGrapple')).toBe('1');
+    expect(warnings).toEqual([]);
+
+    visit.shutdown('');
+    expect(held()).toEqual(own);
+    expect(ruleLines(config.text())).toEqual(ruleLines(saved));
+
+    // Then the tab hosts, its worker booted from the same store, as each match on the page is.
+    const wire = boundary();
+    const channel = new WorkerChannel({
+      cvars: config.cvars,
+      maps: { names: () => ['garage'], read: async (name) => mapData(name) },
+      boot: { map: mapData('garage'), botFiles: [], debugMode: true },
+      print,
+      now: () => wire.clock(),
+      worker: wire.worker
+    });
+    const home = new LocalGame({
+      cvars: config.cvars,
+      channel,
+      clientLoader: { load: async (name: string): Promise<ClientMap> => ({ name }) }
+    });
+    await enter(wire, home);
+    const systeminfo = home.configstring(CONFIGSTRING.SYSTEMINFO);
+    expect(infoValueForKey(systeminfo, 'pmove_JumpVelocity')).toBe('270');
+    expect(home.rules).toMatchObject(
+      Object.fromEntries(SYSTEMINFO_RULES.map((name) => [name, ID_RULES[name]]))
+    );
+    expect(home.grappleMode).not.toBeNull();
+    expect(held()).toEqual(own);
+    expect(ruleLines(config.text())).toEqual(ruleLines(saved));
+    expect(warnings).toEqual([]);
   });
 });
 

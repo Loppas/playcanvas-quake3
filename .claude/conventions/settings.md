@@ -13,8 +13,10 @@ side-by-side, and the status line shows the settings in force.
 
 **A setting takes effect at one of four times.**
 - **At once**, read where it is used: `g_speed` and `g_gravity` at every think, and every preset's
-  values. The rules record is re-read at the top of a frame when a cvar's modification count
-  moves, so a change reaches the next frame, as a `vmCvar_t` does.
+  values. The server's rules record is re-read at the top of a frame when a cvar's modification
+  count moves, so a change reaches the next frame, as a `vmCvar_t` does. A client predicts by the
+  rules its server sends (below), so on the tab's own server a change reaches prediction a few
+  frames later, once the systeminfo comes back.
 - **Latched until `map` or `map_restart`**: `g_gametype` and `sv_maxclients`, read only as the
   game module starts. A restart that finds one changed becomes a full map load, and the
   menu's APPLY is that restart.
@@ -28,6 +30,20 @@ side-by-side, and the status line shows the settings in force.
 A mod's ruleset changes all at once and never mid-match. The port's switches are separate cvars,
 so each switch that holds state has a written rule for a change mid-state: a slide ends on the
 next move, and a grenade in flight bounces by the rules in force when it bounces.
+
+**A server's systeminfo never sets the player's rules.** Quake 3's `CL_SystemInfoChanged` sets each
+key it carries as a cvar (id's `cl_parse.c:373`; ioquake3's, `:411–430`, refuses a key a server may
+not set and makes one the client never held read-only). Here the rules are the player's own
+settings, archived, which a preset sets and the tab's own server boots from, so a server elsewhere
+that set them would leave its rules in the player's file and in their next match. The client reads
+the rules, and the hook, the rewind and `sv_fps` beside them, into a record on its connection
+instead (`readSysteminfoRecord`, `src/sim/rules.ts`), rebuilt from each systeminfo the server sends.
+The port's servers send every one; a key a server leaves out reads as id's value, as a game without
+that rule runs, and a missing `sv_fps` as the port's 125. The other keys are set as ioquake3 sets
+them, Quake 3's own `pmove_msec` and `sv_cheats` among them, and client code reads a rule from the
+record, never from the store. The fidelity given up is the systeminfo held in the client's cvars: on
+a server elsewhere the store holds the player's setting, not the rule in force, so the console and
+the menu's rows show the player's, where Quake 3's shows the server's.
 
 **A new default bind never reaches an existing player.** A saved `q3config.cfg` starts with
 `unbindall`, as Quake 3's does, so a bind added to the defaults later is lost at the next load:

@@ -23,6 +23,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { keepSocketsHere } from './perf/perf-lib.mjs';
+
 const DEVICE = process.argv[2] === 'webgl2' ? 'webgl2' : 'webgpu';
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(tmpdir(), 'pcq-dlight-spike', DEVICE);
@@ -217,6 +219,7 @@ const browser = await chromium.launch({
   ]
 });
 const context = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+await keepSocketsHere(context);
 if (DEVICE === 'webgl2') {
   // No navigator.gpu, so createGraphicsDevice falls back to WebGL2 as on a browser without WebGPU.
   await context.addInitScript(() => {

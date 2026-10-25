@@ -348,6 +348,8 @@ interface Row {
   glyph?: string;
   /** For a bar fitted to what it shows, the margin it keeps round it. */
   fit?: number;
+  /** Whether it stands across where the status line does. */
+  withStatus?: true;
   /** A scrolled list's rows, each with the bar that lights it and a text for each column. */
   lines?: ListLine[];
 }
@@ -994,15 +996,17 @@ export class MenuScreen {
 
   /**
    * Fit the page's panel round what stands in it, `PADDING` all round, with a line at its foot for
-   * the status line as wide as the widest status the page's items give. At the page's first frame,
+   * the status line as wide as the widest status the page's items give. The status line, and the
+   * lines that stand with it, stand across in the middle of the rest. At the page's first frame,
    * move the panel and all it holds to the middle of the screen across, and of its band down.
    */
   private settle(page: MenuPage, placed: PagePlacement): void {
     const held = emptyExtent();
     const hold = (extent: Extent) => grow(held, extent);
     const holdRect = ({ x, y, width, height }: Rect) => hold({ left: x, top: y, right: x + width, bottom: y + height });
-    for (const row of this.rows) {
-      if (row.bar.parent === this.content && row.bar.enabled) hold(barExtent(row.bar));
+    const rows = this.rows.filter((row) => row.bar.parent === this.content);
+    for (const row of rows) {
+      if (row.bar.enabled && !row.withStatus) hold(barExtent(row.bar));
     }
     if (this.sections) hold(this.sections.held);
     if (placed.picture && this.picture?.group.parent === this.content) {
@@ -1015,9 +1019,15 @@ export class MenuScreen {
     if (placed.figure) holdRect(placed.figure);
     if (!(held.right >= held.left)) return;
 
+    const middle = (held.left + held.right) / 2;
+    for (const row of rows) {
+      if (!row.withStatus) continue;
+      const { y, z } = row.bar.getLocalPosition();
+      row.bar.setLocalPosition(middle, y, z);
+      if (row.bar.enabled) hold(barExtent(row.bar));
+    }
     const { size } = placed.status;
     const widest = Math.max(this.widestStatus(page, size), this.sections?.widest ?? 0);
-    const middle = (held.left + held.right) / 2;
     const left = Math.min(held.left, middle - widest / 2) - PADDING;
     const right = Math.max(held.right, middle + widest / 2) + PADDING;
     const top = held.top - PADDING;
@@ -1192,7 +1202,8 @@ export class MenuScreen {
       size: text.kind === 'cell' ? CHAR_SIZE : text.size,
       valueAlign: 'left',
       // Fitted by the face's capitals, which a menu with no font has none of.
-      ...(placed.fit !== undefined && this.font ? { fit: placed.fit } : {})
+      ...(placed.fit !== undefined && this.font ? { fit: placed.fit } : {}),
+      ...(placed.withStatus ? { withStatus: true } : {})
     };
     const valued = item.value !== undefined || item.slider !== undefined;
     switch (text.kind) {

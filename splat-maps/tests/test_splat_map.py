@@ -1,6 +1,7 @@
 """`splat_map.py`, the format's shared pieces, each held to the rule it follows."""
 
 import json
+import zipfile
 
 import numpy as np
 import pytest
@@ -74,6 +75,44 @@ def test_entities_round_trip_through_the_editor_layout():
 def test_entities_refuse_a_quote_inside_a_token():
     with pytest.raises(sm.FormatError):
         sm.format_entities([[("message", 'a "b"')]])
+
+
+@pytest.mark.parametrize("key, value, held", [
+    ("message", "Zo\xeb", "U+00EB LATIN SMALL LETTER E WITH DIAERESIS"),
+    ("message", "a\x7fb", "U+007F <control>"),
+    ("m\xe9ssage", "Zoe", "U+00E9 LATIN SMALL LETTER E WITH ACUTE"),
+])
+def test_entities_refuse_what_is_not_printable_ascii(key, value, held):
+    with pytest.raises(sm.FormatError) as raised:
+        sm.format_entities([[("classname", "worldspawn"), (key, value)]])
+    assert f"{key!a} holds {held}, which entity text cannot hold" in str(raised.value)
+
+
+def test_entities_hold_printable_ascii_tabs_and_line_breaks():
+    assert sm.unprintable(" ~\t\n\r") == []
+    assert sm.unprintable("Zo\xeb \x7f \xeb") == ["\x7f", "\xeb"]
+    # Named in ASCII, as an error goes to a console that may not show the characters.
+    assert sm.named(["\x7f", "\xeb"]) == ("U+007F <control>, "
+                                          "U+00EB LATIN SMALL LETTER E WITH DIAERESIS")
+
+
+@pytest.mark.parametrize("text, folded", [
+    ("J\xf6rg Example", "Joerg Example"),
+    ("Jo\u0308rg Example", "Joerg Example"),
+    ("\xc4rger, \xd6l, \xdcber, Stra\xdfe", "Aerger, Oel, Ueber, Strasse"),
+    ("Zo\xeb, Caf\xe9, Fran\xe7ois, \xc5ngstr\xf6m", "Zoe, Cafe, Francois, Angstroem"),
+    ("\xc6sir, \xf8, \u0153uvre, \u0142\xf3d\u017a, \u0111, \xf0, \xfe",
+     "Aesir, oe, oeuvre, lodz, d, d, th"),
+    ("St. Mary\u2019s \u2013 \u201cEast\u201d\u2026", "St. Mary's - 'East'..."),
+    ("Garage - High Detail Test", "Garage - High Detail Test"),
+])
+def test_the_fold_spells_a_letter_out_or_drops_its_accent(text, folded):
+    assert sm.to_ascii(text) == folded
+
+
+def test_the_fold_leaves_a_script_it_cannot_spell_for_its_caller_to_refuse():
+    assert sm.unprintable(sm.to_ascii("\u041f\u0451\u0442\u0440")) == ["\u041f", "\u0435",
+                                                                       "\u0440", "\u0442"]
 
 
 @pytest.mark.parametrize("data, message", [
@@ -406,3 +445,39 @@ def test_stem_of_strips_the_suffix_in_any_case():
 ])
 def test_stem_is_lowercase_digits_and_underscores_up_to_44(stem, ok):
     assert bool(sm.STEM_RE.match(stem)) is ok
+
+
+@pytest.mark.parametrize("record, drawn", [
+    (None, "room.sog"),
+    ({"_pcq_bake": "--voxel-size 0.25"}, "room.sog"),
+    ({"drawn": "room.drawn.sog"}, "room.drawn.sog"),
+], ids=["no bake", "a bake that filtered nothing", "a bake that filtered"])
+def test_the_drawn_splat_is_the_one_the_bake_record_names(tmp_path, record, drawn):
+    for name in ("room.sog", "room.drawn.sog"):
+        (tmp_path / name).write_bytes(b"")
+    if record is not None:
+        (tmp_path / "room.bake.json").write_text(json.dumps(record), encoding="utf-8")
+    assert sm.drawn_splat(str(tmp_path / "room.sog")) == str(tmp_path / drawn)
+
+
+@pytest.mark.parametrize("held", [None, b"Title: Another\n"], ids=["none", "another"])
+def test_a_licence_is_put_into_a_bundle_stored_unless_it_holds_one(tmp_path, held):
+    sog = tmp_path / "room.sog"
+    with zipfile.ZipFile(sog, "w") as z:
+        z.writestr("meta.json", "{}")
+        if held:
+            z.writestr("license.txt", held)
+    problems = sm.put_license(str(sog), b"Title: Test Room\n")
+    with zipfile.ZipFile(sog) as z:
+        assert z.getinfo("license.txt").compress_type == zipfile.ZIP_STORED
+        assert z.read("license.txt") == (held or b"Title: Test Room\n")
+    assert problems == ([] if held is None else
+                        ["license.txt in room.sog differs from the one it was given"])
+
+
+def test_a_drawn_splat_that_is_missing_is_refused(tmp_path):
+    (tmp_path / "room.sog").write_bytes(b"")
+    (tmp_path / "room.bake.json").write_text(json.dumps({"drawn": "room.drawn.sog"}),
+                                             encoding="utf-8")
+    with pytest.raises(sm.FormatError, match="room.drawn.sog, which is missing: bake again"):
+        sm.drawn_splat(str(tmp_path / "room.sog"))

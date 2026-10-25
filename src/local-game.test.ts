@@ -14,6 +14,7 @@ import { Cvars } from './settings/cvars';
 import { createFlatWorldTrace } from './sim/box-world';
 import { mapOf, spawnSpot } from './sim/map-test-fixtures';
 import { PMOVE_MSEC, PMOVE_MSEC_MAX, PMOVE_MSEC_MIN } from './sim/constants';
+import { ID_RULES } from './sim/rules';
 import { createUserCmd } from './sim/types';
 import { vec3 } from './sim/vec3';
 
@@ -76,6 +77,14 @@ function slowClientLoader() {
 
 const still = () => createUserCmd();
 const forward = () => ({ ...createUserCmd(), forwardmove: 127 });
+
+/**
+ * The frames it takes a change to the server's cvars to reach the client: the systeminfo is sent
+ * again at the server's next frame, and the snapshot after it brings the `cs`.
+ */
+function served(game: LocalGame, arrived: () => boolean): void {
+  for (let i = 0; i < 30 && !arrived(); i++) game.tick(still());
+}
 
 /** Where the match has the local player: the server's player state, not the client's copy. */
 const serverOrigin = (game: LocalGame) => game.game.level.clients[game.clientNum].ps.origin;
@@ -395,17 +404,41 @@ describe("LocalGame: the systeminfo's cvars", () => {
       log.mockClear();
 
       // A server that tries to set one of the client's own cvars, and one of its own.
-      game.host.setConfigstring(CONFIGSTRING.SYSTEMINFO, '\\name\\Grunt\\pmove_JumpVelocity\\300');
+      game.host.setConfigstring(CONFIGSTRING.SYSTEMINFO, '\\name\\Grunt\\pmove_msec\\16');
       for (let i = 0; i < 2; i++) game.tick(still());
 
       expect(cvars.get('name')).toBe(name);
-      expect(cvars.get('pmove_JumpVelocity')).toBe('300');
+      expect(cvars.get('pmove_msec')).toBe('16');
       expect(log.mock.calls.flat().join()).toContain(
         'WARNING: server is not allowed to set name=Grunt'
       );
     } finally {
       log.mockRestore();
     }
+  });
+
+  it('predicts by the rules the systeminfo carries, and by id\'s for a rule it leaves out', () => {
+    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const game = new LocalGame({ cvars, map: flatMap('garage', 0), random: () => 0 });
+    for (let i = 0; i < 5 && game.connection.state !== CA.ACTIVE; i++) game.tick(still());
+    cvars.set('pmove_WalkAccel', '15');
+    served(game, () => game.rules.pmove_WalkAccel === 15);
+    expect(game.rules.pmove_WalkAccel).toBe(15);
+
+    const systemInfo = `\\sv_serverid\\${game.host.serverId}\\pmove_JumpVelocity\\300`;
+    game.host.setConfigstring(CONFIGSTRING.SYSTEMINFO, systemInfo);
+    served(game, () => game.rules.pmove_JumpVelocity === 300);
+
+    expect(game.rules.pmove_JumpVelocity).toBe(300);
+    expect(game.rules.pmove_WalkAccel).toBe(ID_RULES.pmove_WalkAccel);
+    // No hook and no shot rewound, as in Quake 3, and the port's own frame rate: 8 ms at 125.
+    expect(game.grappleMode).toBeNull();
+    expect(game.unlagged).toBe(0);
+    expect(game.snapshotGap).toBe(8);
+    // The store is the player's and the server's game module's, whatever the systeminfo said.
+    expect(cvars.get('pmove_JumpVelocity')).toBe(String(ID_RULES.pmove_JumpVelocity));
+    expect(cvars.get('pmove_WalkAccel')).toBe('15');
+    expect(cvars.get('g_allowGrapple')).toBe('1');
   });
 });
 
@@ -732,14 +765,16 @@ describe('LocalGame: what the prediction reads', () => {
     expect(game.pmoveMsec).toBe(PMOVE_MSEC_MAX);
   });
 
-  it("reads g_allowGrapple's style for the client's prediction", () => {
+  it("reads g_allowGrapple's style for the prediction, as the systeminfo carries it", () => {
     const { game, cvars } = program();
 
     // CorkScrew's default is its own hook.
     expect(game.grappleMode).toBe('corkscrew');
     cvars.set('g_allowGrapple', '3');
+    served(game, () => game.grappleMode === 'q2winch');
     expect(game.grappleMode).toBe('q2winch');
     cvars.set('g_allowGrapple', '0');
+    served(game, () => game.grappleMode === null);
     expect(game.grappleMode).toBeNull();
   });
 });
@@ -755,10 +790,12 @@ describe('LocalGame: what the view draws others by', () => {
     const { game, cvars } = program();
     // The page's own game asks for every frame: 8 ms at 125.
     expect(game.snapshotGap).toBe(8);
-    // 50 ms rounded up to whole 8 ms frames.
+    // 50 ms rounded up to whole 8 ms frames: `snaps` is the client's own.
     cvars.set('snaps', '20');
     expect(game.snapshotGap).toBe(56);
+    // `sv_fps` is the server's, as its systeminfo carries it.
     cvars.set('sv_fps', '20');
+    served(game, () => game.snapshotGap === 50);
     expect(game.snapshotGap).toBe(50);
   });
 
@@ -767,19 +804,26 @@ describe('LocalGame: what the view draws others by', () => {
     // 250 a second is 4 ms frames, and snaps of 1000 are held to every one of them.
     cvars.set('snaps', '1000');
     cvars.set('sv_fps', '250');
+    served(game, () => game.snapshotGap === 4);
     expect(game.snapshotGap).toBe(4);
   });
 
   it('reads an sv_fps under 1 as 1, a snapshot a second, until the host corrects it', () => {
-    const { game, cvars } = program();
-    cvars.set('sv_fps', '0');
+    const { game } = program();
+    // The host corrects its own before it sends it, so only a systeminfo can say 0.
+    game.host.setConfigstring(
+      CONFIGSTRING.SYSTEMINFO,
+      `\\sv_serverid\\${game.host.serverId}\\sv_fps\\0`
+    );
+    served(game, () => game.snapshotGap === 1000);
     expect(game.snapshotGap).toBe(1000);
   });
 
-  it("reads xp_unlagged as the systeminfo sets it", () => {
+  it('reads xp_unlagged as the systeminfo carries it', () => {
     const { game, cvars } = program();
     expect(game.unlagged).toBe(1);
     cvars.set('xp_unlagged', '204');
+    served(game, () => game.unlagged === 204);
     expect(game.unlagged).toBe(204);
   });
 });

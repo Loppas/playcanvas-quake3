@@ -638,7 +638,7 @@ export const SETTINGS: SettingDefs = {
     latched: true,
     archive: false
   },
-  // The server's frame and the move's step, which a server's systeminfo sets too: Q3 registers
+  // The server's frame and the move's step, which a server's systeminfo carries: Q3 registers
   // neither archived (`sv_init.c:667`, `g_main.c:178`), and corrects each where it is read rather
   // than refusing it (`sv_main.c:1083–1085`, `g_active.c:790–797`).
   svFps: {
@@ -669,9 +669,16 @@ export const SETTINGS: SettingDefs = {
   // `sv_hostname`, with Q3's default, and archived as Q3's is (`sv_init.c:640`).
   hostname: { cvar: 'sv_hostname', default: 'noname', read: text, section: null },
   // Quake 3 has five slots, the first two not archived and the rest archived (`sv_init.c:675–678`).
-  // The port keeps two: the Internet's, as Q3's first, and the LAN's, a player's own to set. Both
-  // default to the master on this machine, and an empty slot names none.
-  master1: { cvar: 'sv_master1', default: 'localhost', read: text, section: null, archive: false },
+  // The port keeps two: the Internet's, as Q3's first, and the LAN's, a player's own to set. The
+  // Internet's names the port's hosted master, as Q3's names id's (`qcommon.h:260`), and the LAN's
+  // the master on this machine. An empty slot names none.
+  master1: {
+    cvar: 'sv_master1',
+    default: 'wss://pcq3-master.cheapskatecorner.com',
+    read: text,
+    section: null,
+    archive: false
+  },
   master2: { cvar: 'sv_master2', default: 'localhost', read: text, section: null },
   // `Cvar_Get("net_port", va("%i", PORT_SERVER), CVAR_LATCH)` (`net_ip.c:1447`): taken up when the
   // server next registers.

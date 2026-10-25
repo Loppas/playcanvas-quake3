@@ -56,6 +56,9 @@ const { chromium } = require('playwright');
 const { createServer } = await import(
   pathToFileURL(`${REPO}/node_modules/vite/dist/node/index.js`).href
 );
+const { keepSocketsHere } = await import(
+  pathToFileURL(`${REPO}/scripts/perf/perf-lib.mjs`).href
+);
 
 /** A port nobody else holds: 5173 may already be a dev server someone is using. */
 function freePort() {
@@ -90,6 +93,7 @@ const browser = await chromium.launch({
   args: ['--enable-unsafe-webgpu', '--autoplay-policy=no-user-gesture-required']
 });
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+await keepSocketsHere(context);
 const problems = [];
 const result = { port, samples: [] };
 let page;
@@ -251,6 +255,10 @@ Filter the console noise or it drowns the real error. The known-harmless set:
 - **Set `PCQ_FS_HOMEPATH` to a temp dir.** Otherwise the run rewrites the real `q3config.cfg`.
   (`PCQ_FS_BASEPATH`, from the environment or `.env.local`, is the install the server reads.)
 - **Take a free port.** 5173 may already be a dev server someone is using.
+- **Keep the page's sockets on this machine.** A match registers with the masters its
+  `sv_master` slots name, and `sv_master1` names the public one by default, so a check's tab
+  would be listed for anyone to see. `keepSocketsHere(context)` from `scripts/perf/perf-lib.mjs`
+  closes every WebSocket a page opens off this machine, or to 27950 and 27960 on it.
 - **A dedicated server on the same machine is reached at `[::1]`.** `connect localhost` is the
   page's own loopback, as Quake 3's is.
 - **Use Playwright, not the in-app Browser pane, for anything that must draw or load a map.** A
@@ -732,6 +740,11 @@ The rules that make it work:
   doubles is exact for each of the floats it can meet, so no test of it can fail; write none.
 - **Run `--check` first.** It verifies each `old` appears exactly once and exits, so a typo in a
   pattern costs seconds rather than the whole pass.
+- **Start from a green run.** The runner counts every failing run as caught, so over a suite
+  already red it reports every break caught. One pass did, over a test whose own assertion was
+  wrong. Run the scoped tests once, unbroken, before the first break.
+- **splat-maps' Python takes the same runner**, with `run_tests` starting `.venv/Scripts/python.exe
+  -m pytest -q -x <the touched test files>` from `splat-maps/`: seconds a break.
 - **Read and write with `newline=''` and explicit UTF-8.** Some sources are CRLF; a rewrite that
   normalises line endings sabotages the entire file and every test fails for the wrong reason.
 - **Restore in a `finally`.** A crashed run must not leave broken source behind.

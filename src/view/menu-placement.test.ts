@@ -208,7 +208,7 @@ describe("Setup's pages in q3_ui's placement", () => {
     expect(rows[0].text).toMatchObject({ kind: 'row', x: 360 });
   });
 
-  it("stands GAME DATA in CD Key's place: its rows at x=256 from 172 inside cut_frame, the pending line at 352", async () => {
+  it("stands GAME DATA in CD Key's place: its rows at x=256 from 172 inside cut_frame, the pending line at 352 with the status line", async () => {
     const menu = new Menu();
     const page = await gameDataPage(menu, {
       source: { kind: 'cache', paks: 3, cache: { version: 'v', playerModels: [], paks: [], size: 1 } },
@@ -226,6 +226,7 @@ describe("Setup's pages in q3_ui's placement", () => {
     const pending = item({ page, placed }, PENDING);
     expect(pending.bar.y).toBe(352);
     expect(pending.text).toMatchObject({ kind: 'line', x: 320, align: 'centre' });
+    expect(pending.withStatus).toBe(true);
     expect(item({ page, placed }, 'BACK').bar).toEqual(BACK_BUTTON);
     expect(placed.frame).toEqual(CUT_FRAME);
     expect(placed.title).toMatchObject({ x: 320, y: 34 });
@@ -561,13 +562,14 @@ describe("ARENA SERVERS and SPECIFY SERVER in q3_ui's placement", () => {
     expect(item(servers, LIST_ARROWS.down).bar).toEqual({ x: 534, y: 340, width: 28, height: 28 });
   });
 
-  it("centres the count line on the page at q3_ui's 376, and keeps no detail", () => {
+  it("centres the count line with the status line at q3_ui's 376, and keeps no detail", () => {
     const servers = browser();
     expect(servers.placed.detail).toBeNull();
     const at = servers.page.items.findIndex((each) => each.place === 'count');
     const count = servers.placed.items[at];
     expect(count.bar).toEqual({ x: 72, y: 376, width: 496, height: 16 });
     expect(count.text).toMatchObject({ x: 320, align: 'centre' });
+    expect(count.withStatus).toBe(true);
   });
 
   it('stands SPECIFY, REFRESH and CREATE across the foot between BACK and FIGHT', () => {
