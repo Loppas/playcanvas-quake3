@@ -69,7 +69,6 @@ import { BOT_LIST, BOTS_FILE, MAX_BOTS, MAX_BOTS_TEXT } from './sim/bots';
 import { PlayerController, cameraPose, type CameraPose } from './player-controller';
 import { deviceTypes } from './render/backend';
 import { BspWorld, type BspWorldOptions } from './render/bsp-world';
-import { holdFramesWithoutArea } from './render/canvas-area';
 import { DebugPlayer } from './render/debug-player';
 import { GibEffects } from './render/gib-effects';
 import { HudIcons } from './render/hud-icons';
@@ -415,7 +414,6 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
 
   const resize = () => app.resizeCanvas();
   window.addEventListener('resize', resize);
-  holdFramesWithoutArea(app);
 
   /** What the eye clears to; a BSP map's world clears to black, as `r_fastsky 1` does. */
   const clearColor = new Color(0.05, 0.05, 0.06);

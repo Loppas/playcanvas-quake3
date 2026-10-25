@@ -8,8 +8,6 @@ import {
   type WebglGraphicsDevice
 } from 'playcanvas';
 
-import { canvasHasArea } from './canvas-area';
-
 /**
  * The load's last step, as `CL_InitCGame` ends in `RE_EndRegistration` (`cl_cgame.c:761`), whose
  * `RB_ShowImages` draws every image once "to make sure they are resident" (`tr_init.c:1315–1320`):
@@ -52,13 +50,9 @@ export const WARM_TIMES: readonly number[] = [0, 0.1234];
  * Draw a frame of everything `warmed` shows at each of {@link WARM_TIMES}, then one for each frame
  * of the longest flipbook among them, then put it all away. The frames are drawn at once, not at
  * the page's next ones, so nothing else runs between the showing and the hiding. Every camera draws
- * them with culling off, so nothing shown is missed for being out of its view. A canvas with no
- * area draws none, as a frame drawn there is lost (`canvas-area.ts`).
+ * them with culling off, so nothing shown is missed for being out of its view.
  */
 export function warmUp(app: AppBase, warmed: readonly Warmed[]): void {
-  const render = () => {
-    if (canvasHasArea(app)) app.render();
-  };
   const culling = new Map<CameraComponent, boolean>();
   try {
     for (const seconds of WARM_TIMES) {
@@ -69,13 +63,13 @@ export function warmUp(app: AppBase, warmed: readonly Warmed[]): void {
         culling.set(camera, camera.frustumCulling);
         camera.frustumCulling = false;
       }
-      render();
+      app.render();
     }
     let frames = 0;
     for (const draws of warmed) frames = Math.max(frames, draws.frames?.() ?? 0);
     for (let k = 0; k < frames; k++) {
       for (const draws of warmed) draws.frame?.(k);
-      render();
+      app.render();
     }
   } finally {
     for (const [camera, culled] of culling) camera.frustumCulling = culled;

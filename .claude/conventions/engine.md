@@ -80,8 +80,10 @@ frame. A check of what a player sees runs on the release build.
 again.** The browser refuses a frame's whole submit when any pass in it is invalid, as each pass
 to a canvas with no area is: no texture can be made to draw it into. A splat's copy into its work
 buffer, made only at its first sort, was lost there, and a map loaded on a 0×0 canvas drew black
-for good. The release build ignores the device's uncaptured errors, so nothing notices. No
-frame is drawn while the canvas has no area, the warm-up's included (`render/canvas-area.ts`).
+for good. The release build ignores the device's uncaptured errors, so nothing notices. Since
+PlayCanvas 2.23.2 the device keeps its last size while the canvas has none, so every frame has a
+texture to draw into, and the port draws them all (`render/canvas-area.test.ts` holds the engine
+to it).
 
 **A browser's GPU defect is found by drawing it, not by the browser's name.** Firefox 148's WebGPU
 loses a draw's `firstInstance` in a shader's helper, so PlayCanvas's mesh instance storage drew

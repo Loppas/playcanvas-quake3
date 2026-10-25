@@ -142,13 +142,11 @@ class IconView {
       if (this.shown) this.shown.staged.entity.enabled = false;
       this.shown = subject;
     }
-    const { width, height } = this.app.graphicsDevice;
-    // A canvas with no area has no box to draw in, and a rect over it is NaN, which WebGPU
-    // refuses at every frame's viewport.
-    if (!subject || !icon || !(width > 0 && height > 0)) {
+    if (!subject || !icon) {
       this.camera.enabled = false;
       return;
     }
+    const { width, height } = this.app.graphicsDevice;
     subject.staged.entity.enabled = true;
     this.camera.enabled = true;
     // The camera's viewport is a fraction of the screen, y up from the bottom. A box on the

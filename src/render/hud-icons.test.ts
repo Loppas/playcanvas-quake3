@@ -287,22 +287,6 @@ describe('HudIcons', () => {
     expect(past).toBeGreaterThan(0);
   });
 
-  it('draws no view on a canvas with no area, and draws each again once it has one', async () => {
-    await icons.setPlayerModel('test');
-    const bar = statusBar({ armor: 50 })!;
-    for (const [width, height] of [[0, 0], [0, 1080], [1920, 0]]) {
-      app.graphicsDevice.resizeCanvas(width, height);
-      icons.update(bar, 5000);
-      expect(drawing(), `${width}x${height}`).toEqual([]);
-      for (const view of VIEWS) {
-        expect(cameraOf(view).camera!.rect.toArray().every(Number.isFinite), view).toBe(true);
-      }
-
-      app.graphicsDevice.resizeCanvas(1920, 1080);
-      icons.update(bar, 5000);
-      expect(drawing()).toEqual(VIEWS);
-    }
-  });
 
   it("spins the held weapon's ammo box and the armor where CG_Draw3DModel sets them", () => {
     const bar = statusBar({ weapon: WP.ROCKET_LAUNCHER, armor: 50 })!;

@@ -21,7 +21,7 @@ export const EFFECTS_LAYER_NAME = 'world-effects';
  * surface, so an engine upgrade has to re-check it and move this forward. A test compares it
  * with the installed engine, so an upgrade cannot slip past unnoticed.
  */
-export const SPLAT_DEPTH_VERIFIED_ENGINE = '2.23.0';
+export const SPLAT_DEPTH_VERIFIED_ENGINE = '2.23.3';
 
 /** Splat materials already reported without a mesh instance, so each is reported once. */
 const reported = new WeakSet<Material>();
