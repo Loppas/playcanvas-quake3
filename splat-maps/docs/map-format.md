@@ -118,7 +118,7 @@ should reproduce, and then what the port does.
 
 | Path | Required | Written by | Read by (port) | If missing |
 |---|---|---|---|---|
-| `maps/<n>.sog` | **yes** | `splat-maps polish`; renamed into place by `package_map` | PlayCanvas's gsplat asset, through `loadSplat` (`src/game-map.ts`), from the mount: `SogBundleParser` takes `file.contents` (`sog-bundle.js:72–73`) | It fails the `map` command's existence check, as a missing BSP does: `Can't find map`, and the current map keeps running (`sv_ccmds.c:165–171`) |
+| `maps/<n>.sog` | **yes** | `splat-maps polish`, or the bake (`bake_map.py`) when it filters the polished splat into `<n>.drawn.sog`; renamed into place by `package_map` | PlayCanvas's gsplat asset, through `loadSplat` (`src/game-map.ts`), from the mount: `SogBundleParser` takes `file.contents` (`sog-bundle.js:72–73`) | It fails the `map` command's existence check, as a missing BSP does: `Can't find map`, and the current map keeps running (`sv_ccmds.c:165–171`) |
 | `maps/<n>.voxel.json`, `maps/<n>.voxel.bin` | **yes** | the bake (`bake_map.py`) | `readOctree` (`src/formats/splat-map.ts`) → `SparseVoxelOctree.fromBuffers` (`src/sim/voxel-svo.ts`) → `SvoVoxelGrid` (`src/svo-voxel-grid.ts`) → `createVoxelTrace` (`src/sim/voxel-trace.ts`), from the mount | Q3: `ERR_DROP "Couldn't load"` (`cm_load.c:618`). The port stops the load with the same words |
 | `maps/<n>.collision.glb` | no | the bake (`bake_map.py`) | `loadCollisionOverlay` (`src/collision-overlay.ts`), from the mount | No Q3 equivalent. The port warns and loads without the overlay |
 | `maps/<n>.ent` | **yes** | a person: `viewpos` readings through `write_ent.py`, or an editor's `.map` through `map_to_ent.py`; the `_pcq_*` keys by `package_map` (§7) | `readEntityText` (`src/formats/entity-text.ts`), then the game's spawn loop through an entity-token trap | Q3: `G_Error "SpawnEntities: no entities"` (`g_spawn.c:623–642`). A file without a spawn point fails later, at the first spawn: `Couldn't find a spawn point` (`g_client.c:238–249`) |
@@ -155,6 +155,7 @@ flowchart LR
   end
   LINT["map_lint.py<br/>re-measures the pk3"]
   POL --> SOG --> GS
+  BAKE -.->|"or, filtered"| SOG
   BAKE --> VOX --> OCT
   BAKE --> GLB --> OVL
   HAND --> ENT --> ER
@@ -174,6 +175,11 @@ Two dependencies are not drawn. The levelshot step reads its viewpoint from the 
   case, but Unix file systems do not, which is why id's shader manual asks for lowercase. The
   longest path, `maps/<n>.collision.glb`, must fit Q3's `MAX_QPATH` of 64 bytes including its NUL
   (`q_shared.h:246`). The stem is therefore at most **44** characters.
+- **Start Server shows 15 of them.** q3_ui cuts a map's name to `MAX_NAMELENGTH`, 16 bytes with
+  its NUL (`ui_startserver.c:54`), and builds the levelshot's path from what it keeps
+  (`:176–179`), as the port does (`shownMapName`, `src/formats/arena-list.ts`). A longer stem
+  still plays, since the map is launched by its full name (`:794–795`), but it is listed cut and
+  with no levelshot. So keep a stem to **15**, and the lint warns past it (L4).
 - **Every per-map file is named by the stem**, the arena file included. Q3 lets an arena file take
   any name, but q3map2's packager looks for `scripts/<map>.arena` (`autopk3.cpp:628–653`).
 - **The pk3 is `map-<n>.pk3`**, the prefix id's editor manual gives map releases ([Q3Radiant
@@ -189,8 +195,9 @@ Two dependencies are not drawn. The levelshot step reads its viewpoint from the 
 
 The file holds exactly what a BSP's lump 0 holds. q3map2's `-exportents` writes this file from a
 BSP, and `-onlyents` splices it back into one (`exportents.cpp:49–73`; `bsp.cpp:570–603`,
-`:889–890`). It is plain ASCII, and LF or CRLF line endings are both fine, since the tokenizer
-treats both as whitespace.
+`:889–890`). It is printable ASCII (L12), and text from elsewhere, a licence's credit, is folded
+into it (§7). LF or CRLF line endings are both fine, since the tokenizer treats both as
+whitespace.
 
 ### 3.1 How it is read
 
@@ -604,11 +611,12 @@ them (§3.1).
 | Key | Holds | Written from | `garage_rats` |
 |---|---|---|---|
 | `_pcq_format` | This layout's version, an integer | `package_map` | `1` |
-| `_pcq_source` | The source capture: title, creator, link | the source's `license.txt`, or `splat-maps polish --license` for a capture with none, through the polish record `<n>.polish.json` | `Garage - High Detail Test by Ethan, https://superspl.at/scene/8f4d8e05` |
+| `_pcq_source` | The source capture: title, creator, link, folded into ASCII | the source's `license.txt`, or `splat-maps polish --license` for a capture with none, through the polish record `<n>.polish.json` | `Garage - High Detail Test by Ethan, https://superspl.at/scene/8f4d8e05` |
 | `_pcq_license` | The source's licence, as an SPDX identifier | as above | `CC-BY-4.0` |
 | `_pcq_polish` | `sog_inspect`'s arguments: metric height, player height, up hint | the polish record | `--metric-height 3.0 --player-height 0.1` |
 | `_pcq_scale` | Metres of the finished map per unit of the polish's input: the `-s` factor, metric correction included | the polish record, from the `-s` it applied | `17.49962417` |
 | `_pcq_bake` | The bake's splat-transform flags, sized as §6.1 sizes them, with the seed in the octree frame | the bake record `<n>.bake.json` | `--voxel-size 0.25 --voxel-external-fill 0.875 --voxel-carve 0.75,0.125 --seed-pos 0.125,-1.5,0.125 --collision-mesh smooth` |
+| `_pcq_filter` | The splat-transform actions the bake ran on the polished splat to make the one the map draws, in order, with the seed in the octree frame, such as `--seed-pos 8.25,-2.40625,4.25 --filter-cluster 0.25,0.5,0.1 --filter-box -11,-20,-8.5,12.5,1,7.5`. Only on a map whose bake filtered it | the bake record | absent: drawn as polished |
 | `_pcq_splat_transform` | The splat-transform version the polish and the bake ran | both records; the lint refuses a mismatch | `3.1.6` |
 | `_pcq_pipeline` | The commit of this repository, playcanvas-quake3, that built the map | `package_map` | `16cf643` |
 
@@ -619,19 +627,31 @@ The rules:
 - **No absolute paths** in any value. `report.json`'s `input` is one, and it stays out.
 - **They stay within §3.1's limits.** Worldspawn's pairs are counted against the 64 pairs and 4096
   bytes, and each value is at most 1023 bytes.
+- **They are ASCII, as all entity text is (§3).** The polish folds a credit spelt past ASCII as it
+  builds `_pcq_source` (`to_ascii`, `splat_map.py`):
+  - a letter that dropping its mark would misspell is spelt out: ä, ö and ü are ae, oe and ue, ß
+    is ss, ø is oe;
+  - every other letter loses its marks, so é is e;
+  - typographic quotes and dashes become `'` and `-`.
+
+  So Jörg Example is credited as Joerg Example. The polish refuses what no fold reaches, such as
+  another script.
 
 **The readme** carries the same facts for people, in the sections of OpenArena's template
 ([Readme model][oa-readme]):
 - title, map name, pk3 name and author;
 - gametypes;
 - botplay: none, since there is no `.aas`;
-- how it was built: capture, pipeline commit, splat-transform version, polish and bake arguments;
+- how it was built: capture, pipeline commit, splat-transform version, polish and bake arguments,
+  and the filters;
 - credits;
 - licence.
 
 The credits give the attribution CC BY 4.0 asks for: the creator, the title, the source
 link, the licence and its link, and a statement that the capture was modified (polished,
-rescaled and cleaned).
+rescaled and cleaned). They spell the creator and the title as the licence does, since a readme
+is UTF-8 and no engine reads it. The lint folds the readme as the polish folds the credit before
+looking for it there (L29).
 
 ---
 
@@ -696,7 +716,7 @@ port's reader lays out its words (`src/sim/voxel-svo.ts`).
 | L2 | `maps/<n>.sog` stored | E |
 | L3 | Every path lowercase, with forward slashes. Nothing outside §2.1's tree | E / W |
 | **Names** | | |
-| L4 | The stem is the one `maps/<n>.sog`'s, and matches `[a-z0-9_]{1,44}`. The pk3 is `map-<n>.pk3`, or `map-<n>_<tag>.pk3` for a later release (§9). Every per-map file uses the stem | E |
+| L4 | The stem is the one `maps/<n>.sog`'s, and matches `[a-z0-9_]{1,44}`. The pk3 is `map-<n>.pk3`, or `map-<n>_<tag>.pk3` for a later release (§9). Every per-map file uses the stem. **W** when the stem is over the 15 characters Start Server shows (§2.3) | E / W |
 | L5 | The required files are present: `.sog`, `.voxel.json`, `.voxel.bin`, `.ent`, `<n>.txt` | E |
 | **The splat and the octree** | | |
 | L6 | The `.sog` opens as a zip, its `meta.json` has `version` 2, and `count` > 0 | E |
@@ -713,7 +733,7 @@ port's reader lays out its words (`src/sim/voxel-svo.ts`).
 | L16 | Every `target` names a `targetname` that exists | E |
 | L17 | Classnames are exact matches for Q3's spawn table or item list (`g_spawn.c:184–258`; `bg_misc.c`) | W |
 | L18 | `misc_model` and `light` are present | W |
-| L19 | Every `_pcq_*` key of §7 is present, `_pcq_format` is known, no value holds an absolute path, and `_pcq_splat_transform` matches both records | E |
+| L19 | Every `_pcq_*` key of §7 but `_pcq_filter` is present, `_pcq_format` is known, no value holds an absolute path, and `_pcq_splat_transform` matches both records | E |
 | **Placement** | | |
 | L20 | For every spawn spot, the player box `(-15 -15 -24)–(15 15 32)` (`g_client.c:27–28`), raised 9 units above the origin, touches no solid voxel. So it is inside `gridBounds`, since everything outside it is solid | E |
 | L21 | For every spawn spot, the drop `h` from the spawned box's feet (origin z − 15) to the first solid below, at the map's gravity `g` (worldspawn `gravity`, default 800). Q3 grades a landing by `0.0002·g·h` (`bg_pmove.c:954–955`). **W** when that is over 7, which makes a landing thud and view dip (`bg_pmove.c:991–992`; `cg_event.c:589–594`): a drop over 43 units at 800. **E** when it is over 40, a landing that hurts (`g_active.c:556–567`): a drop over 250 units at 800 | E / W |
@@ -725,7 +745,7 @@ port's reader lays out its words (`src/sim/voxel-svo.ts`).
 | L26 | `type` tokens are outside `ffa tourney single team ctf clanarena` | W |
 | L27 | `longname` differs from worldspawn's `message` | W |
 | L28 | The levelshot matches §5 byte for byte in its header and is 49,170 bytes | E, if the file is present |
-| L29 | The readme names the source, its creator, its licence and the licence's link | E |
+| L29 | The readme names the source, its creator, its licence and the licence's link, read folded into ASCII as `_pcq_source` is (§7) | E |
 
 ---
 
@@ -800,11 +820,13 @@ for the client's `PlayerView` (`GameMap`, `src/game-map.ts`) and for the host
 Filling in the format's detail took these choices.
 
 1. **The pk3 is `map-<n>.pk3`**, id's prefix for map releases (§2.3).
-2. **The stem is `[a-z0-9_]`, at most 44 characters**, from `MAX_QPATH` (§2.3).
+2. **The stem is `[a-z0-9_]`, at most 44 characters**, from `MAX_QPATH`, and the lint warns of
+   one over the 15 Start Server shows (§2.3).
 3. **The readme is `<n>.txt` at the root**, and the lint requires it (§2.3, §10 L29).
 4. **The `_pcq_*` keys.** Three go beyond the source, its licence, the polish and bake arguments
    and the splat-transform version: `_pcq_format`, `_pcq_scale` and `_pcq_pipeline`.
-   `package_map` writes all the keys, and a hand-written `.ent` leaves them out (§7).
+   `package_map` writes all the keys, and a hand-written `.ent` leaves them out (§7). A credit
+   spelt past ASCII is folded into `_pcq_source`, and the readme spells it as the licence does.
 5. **One `info_player_intermission` is required**, for the levelshot (§3.2, L15).
 6. **Brush classnames and `*N` models are refused** (§3.3, L13).
 7. **The levelshot carries no gamma table**, and it is rendered at 512 × 384 and averaged as 4 × 3

@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/Loppas/playcanvas-quake3/compare/splat-maps-v0.2.0...splat-maps-v0.3.0) (2026-10-25)
+
+
+### Features
+
+* **splat-maps:** let the bake crop, de-spike and decimate the drawn splat ([#92](https://github.com/Loppas/playcanvas-quake3/issues/92)) ([2402f25](https://github.com/Loppas/playcanvas-quake3/commit/2402f25cfc5215771b644f60a0071d8f5b51b6e1))
+
+
+### Bug Fixes
+
+* **splat-maps:** seal an outdoor bake's box, so the box bounds the map ([#85](https://github.com/Loppas/playcanvas-quake3/issues/85)) ([c723a6f](https://github.com/Loppas/playcanvas-quake3/commit/c723a6f8e4b4644f5f52bbf26ba0bdae589f0ed1))
+* **splat-maps:** warn of a stem Start Server cuts, and fold a credit into ASCII ([#96](https://github.com/Loppas/playcanvas-quake3/issues/96)) ([3908041](https://github.com/Loppas/playcanvas-quake3/commit/3908041ee4c629ea1aadb08d2cc5381eb6608845)), closes [#88](https://github.com/Loppas/playcanvas-quake3/issues/88) [#89](https://github.com/Loppas/playcanvas-quake3/issues/89)
+
 ## [0.2.0](https://github.com/Loppas/playcanvas-quake3/compare/splat-maps-v0.1.2...splat-maps-v0.2.0) (2026-10-19)
 
 

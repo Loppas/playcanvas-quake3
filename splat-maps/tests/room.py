@@ -201,7 +201,7 @@ def write_room(folder, stem="room"):
     (folder / f"{stem}.voxel.json").write_text(json.dumps(header, indent=2), encoding="utf-8")
     (folder / f"{stem}.voxel.bin").write_bytes(raw)
     (folder / f"{stem}.ent").write_bytes(ENT.encode("ascii"))
-    (folder / f"{stem}.arena").write_bytes(ARENA.encode("ascii"))
+    (folder / f"{stem}.arena").write_bytes(ARENA.replace('"room"', f'"{stem}"').encode("ascii"))
     (folder / f"{stem}.tga").write_bytes(tga_bytes())
     (folder / f"{stem}.polish.json").write_text(json.dumps(POLISH, indent=2), encoding="utf-8")
     (folder / f"{stem}.bake.json").write_text(json.dumps(BAKE, indent=2), encoding="utf-8")

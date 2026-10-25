@@ -8,11 +8,13 @@ below (§3.1 and so on) are its own. Citations are ioquake3 at 5883936 (`file:li
 What is here:
   - Q3's constants the format leans on, each with its source;
   - the tokenizer, entity text and arena block, read by Q3's own rules;
+  - the characters entity text can hold, and a fold of text from elsewhere into them;
   - the four frames and the conversions between them;
   - the bake's sizes, chosen in Quake units and rounded as splat-transform rounds them;
   - a reader for the collision octree, answering in the sim's own voxels as the port does;
   - the splat-transform these scripts are pinned to: found, its version checked, and installed
-    with npm when it is missing.
+    with npm when it is missing;
+  - the splat a map draws, and the licence its bundle keeps.
 
 Requires numpy (present in the `gsplat` conda env).
 """
@@ -23,6 +25,8 @@ import os
 import re
 import shutil
 import subprocess
+import unicodedata
+import zipfile
 
 import numpy as np
 
@@ -68,6 +72,11 @@ MAX_SPAWN_VARS_CHARS = 4096
 #: The stem: lowercase letters, digits and underscores, at most 44 characters, so that the
 #: longest path, `maps/<n>.collision.glb`, fits `MAX_QPATH` with its NUL (§2.3).
 STEM_RE = re.compile(r"^[a-z0-9_]{1,44}$")
+
+#: Start Server keeps this much of a map's name, and looks its levelshot up by what it keeps
+#: (`MAX_NAMELENGTH`, q3_ui/ui_startserver.c:54, :176-179): a longer stem plays, but shows cut
+#: and with no picture (§2.3).
+MENU_NAME_LENGTH = 15
 
 #: The splat-transform version these scripts' frame calibration and bake sizing were measured on
 #: (`docs/conventions.md`, "Current answer"). Anything else is refused, so moving the pin means
@@ -316,9 +325,48 @@ def format_entities(entities, notes=None):
         for k, v in pairs:
             if '"' in k or '"' in v:
                 raise FormatError(f'a quote cannot be written inside a token: "{k}" "{v}"')
+            stray = unprintable(k + v)
+            if stray:
+                raise FormatError(f"{k!a} holds {named(stray)}, which entity text cannot hold: "
+                                  "printable ASCII alone (L12)")
             lines.append(f'"{k}" "{v}"')
         lines.append("}")
     return "\n".join(lines) + "\n"
+
+
+def unprintable(text):
+    """The characters of `text` that entity text cannot hold, each once, in order: all but
+    printable ASCII, tabs and line breaks (§3, L12)."""
+    return sorted({c for c in text if not (" " <= c <= "~" or c in "\t\n\r")})
+
+
+def named(chars):
+    """`chars` named in ASCII, for a message on a console that may not show them."""
+    return ", ".join(
+        f"U+{ord(c):04X} "
+        f"{unicodedata.name(c, '<control>' if unicodedata.category(c) == 'Cc' else '<unnamed>')}"
+        for c in chars)
+
+
+#: The letters the fold spells out: those dropping a mark would misspell (ä is ae in German),
+#: and those NFKD splits no mark from (ł, ø, æ). Then the typographic quotes and dashes a title
+#: may hold; a `"` cannot ride in a token, so a double quote becomes a single one.
+SPELT_OUT = str.maketrans({
+    "ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss", "ẞ": "SS",
+    "æ": "ae", "Æ": "Ae", "œ": "oe", "Œ": "Oe", "ø": "oe", "Ø": "Oe", "ł": "l", "Ł": "L",
+    "đ": "d", "Đ": "D", "ð": "d", "Ð": "D", "þ": "th", "Þ": "Th", "ı": "i",
+    **dict.fromkeys("\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f", "'"),
+    **dict.fromkeys("\u2010\u2011\u2012\u2013\u2014\u2015\u2212", "-"),
+})
+
+
+def to_ascii(text):
+    """`text` from outside the format, a licence's say, folded into ASCII for entity text: a
+    letter of `SPELT_OUT` spelt out, and every other letter's marks dropped once NFKD has split
+    them off (é is e, and ﬁ is fi). What no fold reaches, such as another script, is left for the
+    caller to refuse (`unprintable`)."""
+    split = unicodedata.normalize("NFKD", unicodedata.normalize("NFC", text).translate(SPELT_OUT))
+    return "".join(c for c in split if not unicodedata.combining(c))
 
 
 def spawn_spots(entities):
@@ -847,3 +895,48 @@ def stem_of(path, suffix):
     if not base.lower().endswith(suffix):
         raise FormatError(f"{base} does not end in {suffix}")
     return base[:-len(suffix)]
+
+
+# ------------------------------------------------------------------------------ the drawn splat
+
+#: The splat the bake filters out of the polished `<stem>.sog`, beside it.
+DRAWN_SUFFIX = ".drawn.sog"
+
+
+def drawn_splat(sog):
+    """The splat the map at `sog` draws: the one the bake record beside it names, which the bake
+    filtered from `sog` and baked its collision from, or else `sog` itself. A FormatError if the
+    record names a file that is not there."""
+    here = os.path.dirname(os.path.abspath(sog))
+    record = os.path.join(here, stem_of(sog, ".sog") + ".bake.json")
+    drawn = None
+    if os.path.exists(record):
+        with open(record, encoding="utf-8") as fh:
+            drawn = json.load(fh).get("drawn")
+    if not drawn:
+        return sog
+    path = os.path.join(here, drawn)
+    if not os.path.exists(path):
+        raise FormatError(f"the bake record names the drawn splat {drawn}, which is missing: "
+                          "bake again")
+    return path
+
+
+def put_license(sog, lic_bytes):
+    """`lic_bytes` into the SOG bundle `sog` as its `license.txt`, stored, as superspl.at's
+    bundles hold it, unless it holds one already: `splat-transform -w` drops a bundle's. Returns
+    what reading it back finds wrong."""
+    with zipfile.ZipFile(sog) as z:
+        has = "license.txt" in z.namelist()
+    if not has:
+        with zipfile.ZipFile(sog, "a", compression=zipfile.ZIP_STORED) as z:
+            z.writestr("license.txt", lic_bytes)
+    problems = []
+    with zipfile.ZipFile(sog) as z:
+        bad = z.testzip()
+        if bad:
+            problems.append(f"{os.path.basename(sog)} fails its CRC check at {bad}")
+        if z.read("license.txt") != lic_bytes:
+            problems.append(f"license.txt in {os.path.basename(sog)} differs from the one it "
+                            "was given")
+    return problems

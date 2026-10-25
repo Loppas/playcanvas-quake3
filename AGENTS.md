@@ -120,8 +120,9 @@ Work is planned in private notes and tracked in public, on the Project linked to
   that does the work closes it. An issue need not belong to a milestone; the ticket for its work
   then links to it and carries its labels.
 - **On the Project**, a ticket is In Progress while it is worked on, and its pull request is In
-  Review while it is open; the merge moves both to Done. A stage's issue is closed once its last
-  ticket has merged and its accept holds.
+  Review while it is open; the merge moves both to Done. The Project takes in new issues by
+  itself but not pull requests, so add each one when it opens. A stage's issue is closed once
+  its last ticket has merged and its accept holds.
 - **Every issue and pull request body is checked before it goes out**, against
   [what does not belong in a commit](#what-does-not-belong-in-a-commit).
 

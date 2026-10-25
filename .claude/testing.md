@@ -740,6 +740,11 @@ The rules that make it work:
   doubles is exact for each of the floats it can meet, so no test of it can fail; write none.
 - **Run `--check` first.** It verifies each `old` appears exactly once and exits, so a typo in a
   pattern costs seconds rather than the whole pass.
+- **Start from a green run.** The runner counts every failing run as caught, so over a suite
+  already red it reports every break caught. One pass did, over a test whose own assertion was
+  wrong. Run the scoped tests once, unbroken, before the first break.
+- **splat-maps' Python takes the same runner**, with `run_tests` starting `.venv/Scripts/python.exe
+  -m pytest -q -x <the touched test files>` from `splat-maps/`: seconds a break.
 - **Read and write with `newline=''` and explicit UTF-8.** Some sources are CRLF; a rewrite that
   normalises line endings sabotages the entire file and every test fails for the wrong reason.
 - **Restore in a `finally`.** A crashed run must not leave broken source behind.
