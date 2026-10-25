@@ -34,11 +34,12 @@ share: `{"name", "eye": [x, y, z], "angles": [pitch, yaw, 0]}`.
   first findings.
 - Read the capture's `license.txt`. A test stem from an NC or ND capture stays local
   ([lessons.md](reference/lessons.md)).
-- Set the expectation, with numbers. On a 2.5M-splat map a survey pose costs about 14 s, two
-  panoramas. A 96-unit spacing made 72 poses there, and the survey took 23 minutes. A try
-  costs about a minute and a quarter for seven views. The whole run takes a few hours. It needs the
-  user three times: to pick fixes (step 7), to take or decline a frame-rate comparison (step 9),
-  and to judge the test map (step 10).
+- Set the expectation, with numbers. These were measured on a high-end desktop graphics card, and
+  slower hardware takes longer, most of it in splat-transform's renders on the GPU. On a
+  2.5M-splat map a survey pose costs about 14 s, two panoramas. A 96-unit spacing made 72 poses
+  there, and the survey took 23 minutes. A try costs about a minute and a quarter for seven views.
+  The whole run takes a few hours. It needs the user three times: to pick fixes (step 7), to take
+  or decline a frame-rate comparison (step 9), and to judge the test map (step 10).
 - Agree the budget: the survey's spacing, and so its poses, and the hours.
 
 **Done when** the user has agreed the map and the budget, and has named what they already see,
@@ -69,9 +70,13 @@ the port's.
      standing room above it and a voxel more;
    - each pose is the standing eye over a rest.
 
-   It prints the poses: at about 14 s each, widen the spacing until they fit the agreed hours. On
-   a magnified interior the open space can run outside the walls ([lessons.md](reference/lessons.md)).
-   Look for that in `reach.png`, and the user decides whether those poses stay.
+   It prints the poses: at about 14 s each, widen the spacing until they fit the agreed hours.
+   `survey.py` prints this machine's own rate after its first pose. If that overruns the hours,
+   stop it and widen the spacing.
+
+   On a magnified interior the open space can run outside the walls
+   ([lessons.md](reference/lessons.md)). Look for that in `reach.png`, and the user decides
+   whether those poses stay.
 3. `survey.py <work>` renders each pose's panorama, with and without everything the census marks.
    It ranks the poses by how much changed, and writes `survey/views.json`, a view from each top pose
    facing its change, pitched at most 30 degrees.
