@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.2](https://github.com/Loppas/playcanvas-quake3/compare/v0.4.1...v0.4.2) (2026-10-25)
+
+
+### Bug Fixes
+
+* **menus:** centre the server browser's count line with its status line ([#95](https://github.com/Loppas/playcanvas-quake3/issues/95)) ([0d10ddc](https://github.com/Loppas/playcanvas-quake3/commit/0d10ddcd94dad96e2c7e0a8bd32b4db07d51435c)), closes [#77](https://github.com/Loppas/playcanvas-quake3/issues/77)
+* **splat-maps:** seal an outdoor bake's box, so the box bounds the map ([#85](https://github.com/Loppas/playcanvas-quake3/issues/85)) ([c723a6f](https://github.com/Loppas/playcanvas-quake3/commit/c723a6f8e4b4644f5f52bbf26ba0bdae589f0ed1))
+
 ## [0.4.1](https://github.com/Loppas/playcanvas-quake3/compare/v0.4.0...v0.4.1) (2026-10-23)
 
 
