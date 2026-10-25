@@ -16,6 +16,9 @@ game's: 1 m is 32 units.
 | `cluster` | `--seed-pos` the bake's seed, `--filter-cluster <voxel>,0.5,0.1` | 8.8k (0.35%), 30% of the drawn area |
 | `floaters` | `--filter-floaters 0.05,0.5,0.1` | 114k (4.5%), 14% of the drawn area |
 
+The bake runs `cluster` and `box` itself, at these sizes, with `--cluster` and `--crop`
+([maps.md](../../../../splat-maps/docs/maps.md), step 3).
+
 The delivered `vegetables_mice` ran the cluster filter, then the floater filter, then the box. It
 kept 1,930,592 splats, and its pk3 is a quarter smaller. `build_splat.py` with `box`, `cluster`
 and the floater filter tried `--after cluster` makes the same splat, position for position.
@@ -64,5 +67,6 @@ and the floater filter tried `--after cluster` makes the same splat, position fo
   ([conventions](../../../../splat-maps/docs/conventions.md), "Bake the file that ships"). Fog dense
   enough to bake solid comes out as open space once it is gone: `vegetables_mice`'s rebake opened
   159 voxels.
-- **The record.** Neither `_pcq_polish` nor the readme records a filter step. So say which filters
-  built a map wherever it is described.
+- **The record.** A bake that filters records its actions as `_pcq_filter`, and the readme names
+  them. A filter tried outside the bake, as `build_splat.py` tries one, is recorded nowhere, so say
+  which filters built a test map wherever it is described.
