@@ -85,6 +85,11 @@ export interface PlacedItem {
    * `bar` is where it stands until then.
    */
   readonly fit?: number;
+  /**
+   * For a line q3_ui centres on 320 with the status line, that it stands across where the status
+   * line does; `bar` is where it stands with no panel.
+   */
+  readonly withStatus?: true;
 }
 
 /** A point on the 640×480 screen, and the size of the text there. */
@@ -379,8 +384,8 @@ const SERVER_OPTIONS_PLACES: ReadonlyMap<string, PlacedItem> = new Map([
 
 /**
  * GAME DATA's rows, at x=256 from 172 where CD Key's field stands, each hit box a character inside
- * `cut_frame`, and the line saying a change waits, centred at (320,352) as the status line is
- * centred (`ui_cdkey.c:198–231`).
+ * `cut_frame`, and the line saying a change waits at 352, centred with the status line as q3_ui
+ * centres both on 320 (`ui_cdkey.c:198–231`).
  */
 const GAME_DATA_LEFT = CUT_FRAME.x + CHAR_WIDTH;
 const GAME_DATA_ROWS: Rows = {
@@ -393,11 +398,14 @@ const GAME_DATA_ROWS: Rows = {
 const GAME_DATA_PLACES: ReadonlyMap<string, PlacedItem> = new Map([
   [
     'pending',
-    centred(
-      { x: GAME_DATA_LEFT, y: 352, width: 2 * (STATUS.x - GAME_DATA_LEFT), height: ROW_HEIGHT },
-      CHAR_SIZE,
-      ROW_MARGIN
-    )
+    {
+      ...centred(
+        { x: GAME_DATA_LEFT, y: 352, width: 2 * (STATUS.x - GAME_DATA_LEFT), height: ROW_HEIGHT },
+        CHAR_SIZE,
+        ROW_MARGIN
+      ),
+      withStatus: true
+    }
   ]
 ]);
 
@@ -416,8 +424,8 @@ const SERVER_OPTIONS_STATUS: TextPlace = { x: 320, y: 440 + ROW_HEIGHT / 2, size
  *   with PunkBuster, which the port hasn't, and the list ends with the ping.
  * - Its arrows beside it, top and bottom, a button's margin clear of it, as q3_ui's art stands
  *   right of its list; each bar from its art's left, as the corner's are.
- * - The count line under the list at q3_ui's 376, centred on the page as the status line under it
- *   is.
+ * - The count line under the list at q3_ui's 376, centred with the status line under it, as q3_ui
+ *   centres both on 320.
  * - SPECIFY, REFRESH and CREATE across the foot between the corners, each over q3_ui's art.
  */
 const SERVERS_X = 72;
@@ -487,16 +495,19 @@ const ARENA_SERVERS_PLACES: ReadonlyMap<string, PlacedItem> = new Map([
   ],
   [
     'count',
-    centred(
-      {
-        x: SERVERS_X,
-        y: SERVERS_LIST_BOTTOM + 8,
-        width: 2 * (STATUS.x - SERVERS_X),
-        height: ROW_HEIGHT
-      },
-      CHAR_SIZE,
-      ROW_MARGIN
-    )
+    {
+      ...centred(
+        {
+          x: SERVERS_X,
+          y: SERVERS_LIST_BOTTOM + 8,
+          width: 2 * (STATUS.x - SERVERS_X),
+          height: ROW_HEIGHT
+        },
+        CHAR_SIZE,
+        ROW_MARGIN
+      ),
+      withStatus: true
+    }
   ],
   ['specify', footButton(128)],
   ['refresh', footButton(256)],

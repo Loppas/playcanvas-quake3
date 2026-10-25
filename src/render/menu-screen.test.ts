@@ -1279,6 +1279,46 @@ describe("MenuScreen's fitted bars in q3_ui's placement", () => {
     expect(edges(bar('ADD TO FAVORITES'), true)[1]).toBeGreaterThan(bottom);
   });
 
+  it('stands the count line where the status line stands, in the middle of the screen across', () => {
+    browser();
+    const count = `menu-item-${menu.page!.items.findIndex((each) => each.place === 'count')}`;
+    // What the panel holds runs further right of q3_ui's 320 than left of it, so it moves left.
+    expect(onScreen(count)[0]).toBe(320);
+    expect(onScreen('menu-box-status')[0]).toBe(320);
+  });
+
+  it('stands a line q3_ui centres with the status line in the middle of the rest across, and fits the panel round it', () => {
+    menu.open(
+      {
+        id: 'arenaservers',
+        items: [
+          { label: 'Scanning For Servers.', place: 'count', inactive: true },
+          { label: 'BACK', role: 'back' }
+        ]
+      },
+      'q3ui'
+    );
+    screen.update();
+    // The rest is the levelshot's room, 128 across from 72: its middle is 136.
+    expect(onBox('menu-item-0')[0]).toBe(136);
+    expect(onBox('menu-box-status')[0]).toBe(136);
+    // The count line, 21 × 14 and 3 round, is wider than the levelshot, and the panel holds it.
+    const [left, , right] = panel();
+    expect([left, right]).toEqual([320 - 150 - 14, 320 + 150 + 14]);
+  });
+
+  it('keeps no room in the panel for a line that stands with the status line while it is hidden', () => {
+    const items = [
+      { label: 'Scanning For Servers.', place: 'count', inactive: true, hidden: true },
+      { label: 'BACK', role: 'back' as const }
+    ];
+    menu.open({ id: 'arenaservers', items }, 'q3ui');
+    screen.update();
+    // The panel holds the levelshot's room alone, 128 across.
+    const [left, , right] = panel();
+    expect([left, right]).toEqual([320 - 64 - 14, 320 + 64 + 14]);
+  });
+
   /**
    * Server Options as CREATE opens it, the game type moved on `gametype` from Free For All, for a
    * player of the name given.
