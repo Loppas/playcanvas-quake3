@@ -24,6 +24,10 @@ updates:
       uv:
         patterns: ['*']
         update-types: [minor, patch]
+    # Held at what gsplat's environment runs (gsplat-requirements.txt), security updates included.
+    ignore:
+      - dependency-name: 'numpy'
+      - dependency-name: 'tyro'
 
   - package-ecosystem: github-actions
     directory: /
