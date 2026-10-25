@@ -4,6 +4,8 @@ name: release
 # merging one cuts its tag and GitHub release. The app's release deploys Pages, attaches the
 # Windows shell and deploys the hosted master where it changed, through this workflow's own jobs,
 # since a release made with GITHUB_TOKEN starts no other workflow.
+# A commit counts towards the app's release unless every file it changes is under `splat-maps/`,
+# the other package, or `.claude/`, the agents' rules and skills (the config's `exclude-paths`).
 # The action's `release_created` and `tag_name` are the root package's alone, so a splat-maps
 # release runs none of them. A manual run is the dry run: it builds Pages and the shell from the
 # ref it is given, compares its master with the last release's, and releases and deploys nothing.

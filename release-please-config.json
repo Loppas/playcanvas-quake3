@@ -7,7 +7,7 @@
     ".": {
       "release-type": "node",
       "bump-minor-pre-major": true,
-      "exclude-paths": ["splat-maps"]
+      "exclude-paths": ["splat-maps", ".claude"]
     },
     "splat-maps": {
       "release-type": "python",
