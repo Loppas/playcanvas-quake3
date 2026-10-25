@@ -137,6 +137,43 @@ def test_outdoors_the_verify_may_sit_a_little_further_off(tmp_path, outdoor):
     assert len(written["errors"]) == (0 if outdoor else 3)
 
 
+def record_credit(tmp_path, title, author):
+    """The polish's last step on a capture whose licence gives `title` and `author`, its verify
+    clean: whether it exited, and its record."""
+    licence = LICENCE.replace(b"Test Room", title.encode()).replace(b"A Capturer (a note)",
+                                                                    author.encode())
+    src = write_capture(tmp_path / "room.sog", licence)
+    out = tmp_path / "map.sog"
+    shutil.copy(src, out)
+    measure = {"splat_transform_args": ["-s", "1.00000000"], "outdoor": False, "splats": 40_000,
+               "clear_height_units": 2.5, "scale_m_per_unit": 1.0}
+    verify = {"tilt_from_hint_deg": 0.0, "yaw_deg": 0.0, "floor_y_units": 0.0,
+              "clear_height_units": 2.5, "footprint_units": [4.0, 5.0]}
+    try:
+        polish_stage.record_polish(str(src), str(out), measure, verify, ["--metric-height", "2.5"],
+                                   None)
+        exited = False
+    except SystemExit:
+        exited = True
+    return exited, json.loads(out.with_name("map.polish.json").read_text(encoding="utf-8"))
+
+
+def test_the_polish_folds_a_credit_spelt_past_ascii_and_keeps_the_licence_as_spelt(tmp_path):
+    exited, record = record_credit(tmp_path, "Caf\xe9 Room",
+                                   "J\xf6rg Example (https://example.com/user/1)")
+    assert (exited, record["errors"]) == (False, [])
+    assert record["_pcq_source"] == "Cafe Room by Joerg Example, https://example.com/room"
+    assert record["license"]["title"] == "Caf\xe9 Room"
+    assert record["license"]["author"] == "J\xf6rg Example (https://example.com/user/1)"
+
+
+def test_the_polish_refuses_a_credit_no_fold_brings_into_ascii(tmp_path):
+    exited, record = record_credit(tmp_path, "Test Room", "\u041f\u0451\u0442\u0440")
+    assert exited
+    assert len(record["errors"]) == 1
+    assert record["errors"][0].startswith("_pcq_source holds U+041F CYRILLIC CAPITAL LETTER PE, ")
+
+
 def test_a_verify_off_the_mark_fails_the_polish(tmp_path, runs):
     # 3 m asks for a scale of 1.2, which the copy never gets.
     code, text, record = polish(tmp_path, "3.0")

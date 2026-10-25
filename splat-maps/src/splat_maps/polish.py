@@ -82,6 +82,13 @@ def read_license(text):
 NEEDED = ("title", "author", "source", "license url")
 
 
+def source_credit(lic):
+    """`_pcq_source` from a licence's fields: its title, creator and link, folded into ASCII for
+    the entity text (`map-format.md` §7). The readme credits the source as the licence spells it."""
+    author = re.sub(r"\s*\(.*\)$", "", lic.get("author", "")).strip()
+    return sm.to_ascii(f"{lic.get('title', '')} by {author}, {lic.get('source', '')}")
+
+
 def given_license(value):
     """`--license`'s bytes, as a `license.txt` holds them: the file it names, or else its
     `Key: value` fields, one per line in the order given."""
@@ -188,8 +195,11 @@ def record_polish(src, out, measure, verify, inspect_args, given):
         elif len(lic["source"].split()) != 1:
             errors.append(f"the Source {lic['source']!r} is not a single link (L29)")
     if lic:
-        author = re.sub(r"\s*\(.*\)$", "", lic.get("author", "")).strip()
-        record["_pcq_source"] = f"{lic.get('title', '')} by {author}, {lic.get('source', '')}"
+        record["_pcq_source"] = source_credit(lic)
+        stray = sm.unprintable(record["_pcq_source"])
+        if stray:
+            errors.append(f"_pcq_source holds {sm.named(stray)}, which entity text cannot hold "
+                          "and no fold brings into ASCII (map-format.md section 7)")
         record["_pcq_license"] = spdx(lic.get("license url"))
         if not record["_pcq_license"]:
             errors.append(f"cannot name the licence {lic.get('license')!r} "

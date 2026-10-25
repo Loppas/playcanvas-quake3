@@ -120,7 +120,10 @@ def main(argv=None, prog=None):
                         "that did not build this")
     kept = [(k, v) for k, v in world.pairs if not k.lower().startswith("_pcq_")]
     world.pairs = kept + pcq
-    ent_text = sm.format_entities(entities).encode("ascii")
+    try:
+        ent_text = sm.format_entities(entities).encode("ascii")
+    except sm.FormatError as e:
+        sys.exit(f"ERROR: {stem}.ent, with the _pcq_* keys: {e}")
     try:
         sm.parse_entities(ent_text)  # the limits, re-checked with the keys in
     except sm.FormatError as e:
@@ -188,8 +191,6 @@ def main(argv=None, prog=None):
     }
     with open(os.path.join(HERE, "templates", "readme.txt"), encoding="utf-8") as fh:
         readme = fh.read().format(**fields)
-    if not readme.isascii():
-        warnings.append("the readme has non-ASCII text")
     readme_bytes = readme.replace("\n", "\r\n").encode("utf-8")
 
     # The pk3, in section 2.1's order.

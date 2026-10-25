@@ -143,6 +143,29 @@ def test_all_names_the_map_keeps_every_frame_and_replaces_a_delivered_one_when_t
     assert stages[-1][1][-1] == "--replace"
 
 
+@pytest.mark.parametrize("stem, warned", [("the_yard_at_15c", False),
+                                          ("the_yard_out_back", True)])
+def test_all_warns_of_a_stem_start_server_cuts_before_the_first_stage_and_runs_on(
+        tmp_path, stages, capsys, stem, warned):
+    run_all.main([str(tmp_path / "yard.mov"), stem, "7.3", "--license", FIELDS,
+                  "--author", "A Mapper", BOX, "--data", str(tmp_path / "data"),
+                  "--port", str(tmp_path / "port")], prog="splat-maps all")
+    before = capsys.readouterr().out.split("all 1/12")[0]
+    assert ("WARNING" in before) is warned
+    if warned:
+        assert f"WARNING: '{stem}' is {len(stem)} characters" in before
+    assert stages[-1][0] == "deliver"
+
+
+def test_all_folds_the_licences_title_into_the_maps_long_name(tmp_path, stages):
+    run_all.main([str(tmp_path / "yard.mov"), "yard", "7.3",
+                  "--license", FIELDS.replace("The Yard", "The Caf\xe9 Yard"), "--author",
+                  "A Mapper", BOX, "--data", str(tmp_path / "data"),
+                  "--port", str(tmp_path / "port")], prog="splat-maps all")
+    entities = dict(stages)["entities"]
+    assert entities[entities.index("--message") + 1] == "The Cafe Yard"
+
+
 def test_a_room_keeps_its_ceiling_and_its_bakes_their_fill(tmp_path, stages):
     run(tmp_path)
     called = [argv for name, argv in stages if name in ("polish", "bake")]
@@ -181,7 +204,12 @@ def test_all_needs_a_box(tmp_path, stages, capsys):
     (lambda argv, tmp: (tmp / "port" / "package.json").unlink(), "does not look like the port"),
     (lambda argv, tmp: argv.__setitem__(7, "--box=0,0,0,640,640"), "is not x0,y0,z0,x1,y1,z1"),
     (lambda argv, tmp: argv.append("--decimate=0%"), "--decimate '0%' is neither"),
-], ids=["stem", "dataset", "licence", "port", "box", "decimate"])
+    (lambda argv, tmp: argv.__setitem__(4, FIELDS.replace("A Capturer",
+                                                          "\u041f\u0451\u0442\u0440")),
+     "--license's Title, Author or Source holds U.041F CYRILLIC CAPITAL LETTER PE, "),
+    (lambda argv, tmp: argv.extend(["--message", "Zo\xeb's Yard"]),
+     "--message holds U.00EB LATIN SMALL LETTER E WITH DIAERESIS, "),
+], ids=["stem", "dataset", "licence", "port", "box", "decimate", "credit", "message"])
 def test_all_refuses_before_the_first_stage(tmp_path, stages, change, error):
     argv = [str(tmp_path / "yard.mov"), "yard", "7.3", "--license", FIELDS, "--author",
             "A Mapper", BOX, "--data", str(tmp_path / "data"), "--port", str(tmp_path / "port")]

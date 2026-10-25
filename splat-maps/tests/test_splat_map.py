@@ -77,6 +77,44 @@ def test_entities_refuse_a_quote_inside_a_token():
         sm.format_entities([[("message", 'a "b"')]])
 
 
+@pytest.mark.parametrize("key, value, held", [
+    ("message", "Zo\xeb", "U+00EB LATIN SMALL LETTER E WITH DIAERESIS"),
+    ("message", "a\x7fb", "U+007F <control>"),
+    ("m\xe9ssage", "Zoe", "U+00E9 LATIN SMALL LETTER E WITH ACUTE"),
+])
+def test_entities_refuse_what_is_not_printable_ascii(key, value, held):
+    with pytest.raises(sm.FormatError) as raised:
+        sm.format_entities([[("classname", "worldspawn"), (key, value)]])
+    assert f"{key!a} holds {held}, which entity text cannot hold" in str(raised.value)
+
+
+def test_entities_hold_printable_ascii_tabs_and_line_breaks():
+    assert sm.unprintable(" ~\t\n\r") == []
+    assert sm.unprintable("Zo\xeb \x7f \xeb") == ["\x7f", "\xeb"]
+    # Named in ASCII, as an error goes to a console that may not show the characters.
+    assert sm.named(["\x7f", "\xeb"]) == ("U+007F <control>, "
+                                          "U+00EB LATIN SMALL LETTER E WITH DIAERESIS")
+
+
+@pytest.mark.parametrize("text, folded", [
+    ("J\xf6rg Example", "Joerg Example"),
+    ("Jo\u0308rg Example", "Joerg Example"),
+    ("\xc4rger, \xd6l, \xdcber, Stra\xdfe", "Aerger, Oel, Ueber, Strasse"),
+    ("Zo\xeb, Caf\xe9, Fran\xe7ois, \xc5ngstr\xf6m", "Zoe, Cafe, Francois, Angstroem"),
+    ("\xc6sir, \xf8, \u0153uvre, \u0142\xf3d\u017a, \u0111, \xf0, \xfe",
+     "Aesir, oe, oeuvre, lodz, d, d, th"),
+    ("St. Mary\u2019s \u2013 \u201cEast\u201d\u2026", "St. Mary's - 'East'..."),
+    ("Garage - High Detail Test", "Garage - High Detail Test"),
+])
+def test_the_fold_spells_a_letter_out_or_drops_its_accent(text, folded):
+    assert sm.to_ascii(text) == folded
+
+
+def test_the_fold_leaves_a_script_it_cannot_spell_for_its_caller_to_refuse():
+    assert sm.unprintable(sm.to_ascii("\u041f\u0451\u0442\u0440")) == ["\u041f", "\u0435",
+                                                                       "\u0440", "\u0442"]
+
+
 @pytest.mark.parametrize("data, message", [
     (b'"classname" "worldspawn"', "found classname when expecting {"),
     (b'{ "classname" "worldspawn"', "EOF without closing brace"),

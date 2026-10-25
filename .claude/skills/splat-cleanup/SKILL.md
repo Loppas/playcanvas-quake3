@@ -148,8 +148,8 @@ none is marked for the residual.
 
 ## 8. Build a test stem
 
-1. Name it, at most 15 characters ([lessons.md](reference/lessons.md)), in its own folder,
-   `splat-maps/data/<project>/cleanup/<test>/`.
+1. Name it, at most 15 characters ([maps.md](../../../splat-maps/docs/maps.md) step 0), in its
+   own folder, `splat-maps/data/<project>/cleanup/<test>/`.
 2. Build its splat with the chosen removals: `build_splat.py <work> <folder>/<test>.sog <removal> …`.
 3. Copy the original's `<stem>.ent` and `<stem>.polish.json` as `<test>.*`. Mark the
    worldspawn's `message`, as "(Cleaned)".
