@@ -21,6 +21,8 @@ import { GameConfig } from './settings/game-config';
 import { homeFolders, searchFolders } from './settings/home-folder';
 import { vidRestart } from './settings/vid-restart';
 import { inShell, shellLaunch } from './shell';
+import { ConsoleBuffer } from './view/console-buffer';
+import { consolePrint } from './view/console-print';
 import { setRendererStyle } from './view/overbright';
 import { readModel } from './view/player-model';
 
@@ -52,11 +54,22 @@ const [saved, savedFavorites, launch] = await Promise.all([
       })
     : undefined
 ]);
-const config = new GameConfig({ config: saved, search: window.location.search, shell });
+// The console's text, made before anything prints, so what the boot prints is kept. `cl_noprint`
+// is read once the settings are: until `CL_Init` registers it, Quake 3 prints everything.
+const consoleBuffer = new ConsoleBuffer();
+let noPrint = () => false;
+const print = consolePrint(consoleBuffer, () => noPrint());
+const config = new GameConfig({
+  config: saved,
+  search: window.location.search,
+  shell,
+  warn: (message) => print(`${message}\n`)
+});
 const keeper = keepFile(config, stores, saved);
 // The home folder the other cfgs are read from, kept where the config is.
 const home = searchFolders(homeFolders(import.meta.env.DEV, shell));
 const settings = config.cvars.settings;
+noPrint = () => settings.noPrint;
 if (import.meta.env.DEV) {
   // Dev-only, like `pcqAssets`: `pcqConfig.command(['cg_fov', '100'])` runs a console command.
   (window as unknown as { pcqConfig: unknown }).pcqConfig = config;
@@ -159,6 +172,8 @@ try {
     assets,
     paks: playerPaks,
     config,
+    print,
+    consoleText: consoleBuffer,
     home,
     favorites: { saved: savedFavorites, stores: favoriteStores },
     host,

@@ -20,10 +20,11 @@ import { GT, SCORE_NOT_PRESENT, TEAM } from '../sim/constants';
 import { ITEMS } from '../sim/items';
 import type { HudInput, HudSettings } from '../view/hud';
 import { createCenterPrint } from '../view/center-print';
+import { ConsoleBuffer } from '../view/console-buffer';
 import { createRewardState } from '../view/rewards';
 import { screenRect, type HudAnchor, type HudRect } from '../view/hud-layout';
 import { Lagometer } from '../view/lagometer';
-import { NotifyLines, type NotifyRow } from '../view/notify-lines';
+import { notifyRows, type NotifyRow } from '../view/notify-lines';
 import { createTestApp } from './engine-test-fixtures';
 import { HUD_CAMERA_PRIORITY, HudScreen } from './hud-screen';
 import type { GammaVertexColorMaterial } from './md3-mesh';
@@ -165,9 +166,9 @@ interface Quad {
 
 /** The notify lines of a print, a second in. */
 function printed(text: string): NotifyRow[] {
-  const lines = new NotifyLines(() => {});
-  lines.print(text, 1000);
-  return lines.rows(1000, false);
+  const buffer = new ConsoleBuffer();
+  buffer.print(text, 1000);
+  return notifyRows(buffer, { notifyLines: 3, notifyTime: 3, conXOffset: 0 }, 1000, false);
 }
 
 describe('HudScreen', () => {

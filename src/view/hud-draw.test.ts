@@ -13,6 +13,7 @@ import {
 } from '../sim/weapons/constants';
 import { centerPrint, createCenterPrint, USE_ITEM_CHAR_WIDTH, USE_ITEM_Y } from './center-print';
 import type { ClientInfo } from './client-info';
+import { ConsoleBuffer } from './console-buffer';
 import { createHudState, hudFrame, type HudInput, type HudSettings } from './hud';
 import {
   CHARSET_SHADER,
@@ -26,7 +27,7 @@ import {
 } from './hud-draw';
 import type { HudAnchor } from './hud-layout';
 import { Lagometer } from './lagometer';
-import { NotifyLines } from './notify-lines';
+import { notifyRows } from './notify-lines';
 import { REWARD_TIME, createRewardState, pushReward } from './rewards';
 
 /** One picture written: its shader, rectangle on Q3's grid, anchor, texture corners and colour. */
@@ -774,9 +775,9 @@ describe('drawHud', () => {
 describe('drawNotify', () => {
   /** The notify lines of a print, a second in. */
   function printed(text: string) {
-    const lines = new NotifyLines(() => {});
-    lines.print(text, 1000);
-    return lines.rows(1000, false);
+    const buffer = new ConsoleBuffer();
+    buffer.print(text, 1000);
+    return notifyRows(buffer, { notifyLines: 3, notifyTime: 3, conXOffset: 0 }, 1000, false);
   }
 
   /** The notify lines written at a scale. */

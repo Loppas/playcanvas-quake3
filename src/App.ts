@@ -137,12 +137,14 @@ import type { Vec3 } from './sim/vec3';
 import type { WeaponId } from './sim/weapons/constants';
 import { brushModelsAtRest, type BrushModelPose } from './view/brush-models';
 import type { FirstPersonView } from './view/camera-feel';
+import type { ConsoleText } from './view/console-print';
 import { damageBlob } from './view/damage-feedback';
 import { SceneLights, type DynamicLight } from './view/dynamic-lights';
 import { setSunDirection } from './view/entity-light';
 import { sceneStyle } from './view/overbright';
 import { Explosions } from './view/explosions';
 import { horizontalFov, verticalFov } from './view/fov';
+import { SMALLCHAR_WIDTH } from './view/hud-text';
 import { LocalEntities } from './view/local-entities';
 import { flagTrails } from './view/flag-trail';
 import { readFlagStatus } from './view/flag-status';
@@ -155,7 +157,7 @@ import { Marks } from './view/marks';
 import { errorPage, inGamePage, mainPage, setupPage } from './view/menu-pages';
 import { serversMenu } from './view/menu-servers';
 import { startServerPage } from './view/menu-start-server';
-import { NotifyLines } from './view/notify-lines';
+import { notifyRows } from './view/notify-lines';
 import { colorFromString } from './view/player-color';
 import {
   fragmentBounceMark,
@@ -270,6 +272,10 @@ export interface SetupOptions {
    * and the sound read the settings live, as cgame reads its cvars each frame.
    */
   config: GameConfig;
+  /** `Com_Printf`: into the console's text, and to the devtools. */
+  print: (text: string) => void;
+  /** The console's text, which `print` writes, and whose last lines are the notify lines. */
+  consoleText: ConsoleText;
   /** The home folder, where `exec` looks for a cfg before the port's own. */
   home: HomeFolder;
   /** `favorites.txt` as it was read at start, and where it is kept. */
@@ -332,8 +338,10 @@ export interface MenuHost {
  * @returns once the game has started
  */
 export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
-  const { canvas, assets, paks, config, host, loading } = setup;
+  const { canvas, assets, paks, config, host, loading, print, consoleText } = setup;
   const settings = config.cvars.settings;
+  // `Com_Printf` for a line handed over without its newline, as warnings and parsers hand theirs.
+  const warn = (message: string) => print(`${message}\n`);
   // The port's own map pk3s, the bottom of the search path. Only their directories are read, and
   // alongside everything else. None to mount leaves the map without its entities, which says so.
   const mapPaks = mountMapPaks().catch((err: unknown) => {
@@ -646,11 +654,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
 
   // q3_ui's `UI_LoadArenas`, which reads every arena at the start, says how many, and numbers them
   // in the order Start Server lists them. The game module's own read is for bots and Single Player.
-  const parsed = loadArenas(
-    await readInfoFiles(fs, ARENAS_FILE, '.arena', MENU_ARENA_LIST),
-    (text) => console.log(text)
-  );
-  const arenas = menuArenas(parsed, (text) => console.log(text));
+  const parsed = loadArenas(await readInfoFiles(fs, ARENAS_FILE, '.arena', MENU_ARENA_LIST), warn);
+  const arenas = menuArenas(parsed, warn);
   // The bot files, which the game module loads its bots from at every map start. Q3's game module
   // reads them there itself; the port's reads nothing, so they are read once, here.
   const botFiles = await readInfoFiles(fs, BOTS_FILE, '.bot', BOT_LIST);
@@ -779,10 +784,6 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     (controller?.trace ?? worldTrace)(start, mins, maxs, end, passEntityNum, contentmask);
   const clientWorldContents: PointContentsFn = (point, passEntityNum) =>
     (controller?.pointContents ?? worldContents)(point, passEntityNum);
-  // The console, as far as the port has one: everything printed goes to the browser's console,
-  // and its last few lines show over the top of the game, each on the real clock.
-  const notify = new NotifyLines();
-  const print = (text: string) => notify.print(text, performance.now());
   // The browser's own peer connections and WebSockets, for the page's client and its host alike.
   const createPeerConnection: PeerConnectionFactory = (iceServers) =>
     new RTCPeerConnection({ iceServers });
@@ -869,7 +870,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     config: (argv) => config.command(argv),
     forward: (line) => forward(line),
     readCfg: (path) => readCfg(path, setup.home),
-    print
+    print,
+    warn
   });
   /**
    * The host's commands with no server running in this page, as Q3 answers them with
@@ -915,7 +917,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     });
   // The player's keys and mouse, through the binds. A bound command that is neither a
   // button nor a weapon's runs as the console would run it, C's toggle among them.
-  const input = new ClientInput(config.binds, { command: (argv) => commands.execute(argv) });
+  const input = new ClientInput(config.binds, { command: (argv) => commands.execute(argv), warn });
   // The server's map is the entity text and the collision, and the server's own to read: the
   // page reads the files and hands them to the worker that hosts the match. The world
   // the client draws and predicts in is the client's own load, from the gamestate it is sent.
@@ -1002,7 +1004,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       }
       entering = screen;
       // `CL_InitCGame`'s clearing: nothing the last gamestate printed shows under this one.
-      notify.clear();
+      consoleText.clearNotify();
       return { name, trace: world.trace };
     }
   };
@@ -1077,7 +1079,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     } else {
       bootMatch = { playing, gamestate: loads.gamestate };
     }
-    notify.clear();
+    consoleText.clearNotify();
   };
   /** The shader scripts the boot parsed, in Q3's order; none where the boot failed. */
   const shaderScripts = async (): Promise<Map<string, ShaderScript>> =>
@@ -1136,7 +1138,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       loadingMap = false;
     }
     screen?.close();
-    notify.clear();
+    consoleText.clearNotify();
   };
   /**
    * The match on a map, wired to the page: its console, and the bodies of who joins.
@@ -1195,7 +1197,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   /** A match wired to the page: the page's client, its console, and the bodies of who joins. */
   const wire = (playing: PlayerController) => {
     cls.attach(playing.game.channel.net, playing.game.connection);
-    playing.console = { print, clearNotify: () => notify.clear() };
+    playing.console = { print, clearNotify: () => consoleText.clearNotify() };
     // Q3 takes a player's gender from the model their clientinfo loaded, so it is read off the
     // body built for them: the player's own, or the one drawing their entity. Male until one is
     // built.
@@ -1431,7 +1433,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     closeConnectScreen();
     if (controller || mapPreview) leave(finalMessage);
     // `Con_Close` and `Key_SetCatcher( 0 )`.
-    notify.clear();
+    consoleText.clearNotify();
     menu.forceOff();
     connectScreen = setup.connectScreen(server);
   };
@@ -1498,7 +1500,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     current().game.consoleCommand(commandLine(argv));
   /** `trap_Cmd_ExecuteText`: a console command from a page, run as a bind's would run. */
   const runCommand = (argv: readonly string[]) => {
-    if (!commands.execute(argv)) console.warn(`Unknown command "${argv[0]}"`);
+    if (!commands.execute(argv)) warn(`Unknown command "${argv[0]}"`);
   };
   // The presets both Server Options pages offer, looked for again each time the in-game menu opens
   // or Server Options is built, so a cfg put in the home folder's `presets` meanwhile is offered.
@@ -1650,7 +1652,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     // `pcqConsole('disconnect')` runs a console line, as a script can't type one.
     (window as unknown as { pcqConsole: unknown }).pcqConsole = (line: string) => {
       for (const argv of configCommands(line)) {
-        if (!commands.execute(argv)) console.warn(`Unknown command "${argv[0]}"`);
+        if (!commands.execute(argv)) warn(`Unknown command "${argv[0]}"`);
       }
     };
     (window as unknown as { pcqMenu: unknown }).pcqMenu = {
@@ -1773,7 +1775,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     if (viewmodel) viewmodel.visible = false;
     scoreboardScreen.update(null);
     Object.assign(scoreboardState, createScoreboardState());
-    notify.clear();
+    consoleText.clearNotify();
     hyperspace.show(null);
   };
   /** A frame of the match, while one runs. */
@@ -2154,7 +2156,9 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     );
     // `Con_DrawNotify`, the client's own, drawn over cgame's 2D. A menu hides the lines, but not
     // at the intermission.
-    const notifyRows = notify.rows(
+    const notify = notifyRows(
+      consoleText,
+      settings,
       performance.now(),
       menu.isOpen && player.pmType !== PM_INTERMISSION
     );
@@ -2208,7 +2212,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
         localServer: !controller.game.remote,
         lagometer: controller.lagometer
       },
-      notifyRows
+      notify
     );
     // The announcer's voices: what the snapshots said and its queue let out, and the two the HUD
     // says as it draws — the countdown's second, and a reward as its medals come up.
@@ -2315,6 +2319,11 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   let lastFrame = performance.now();
   app.on('update', (dt: number) => {
     lastFrame = performance.now();
+    // `Con_CheckResize`, every frame (`cl_console.c:284–346`): the console as wide as the canvas,
+    // less two characters. A hidden canvas is 0 wide, where Q3's window never is, and a width under
+    // one character would blank the console, so it keeps its width then.
+    const columns = Math.floor(app.graphicsDevice.width / SMALLCHAR_WIDTH) - 2;
+    if (columns >= 1) consoleText.resize(columns);
     // `Com_Frame`'s `Cbuf_Execute`: a `wait` counts this frame.
     commands.frame();
     gameBoard = null;
