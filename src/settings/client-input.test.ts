@@ -257,13 +257,13 @@ describe('ClientInput: commands', () => {
 
   it("prints a command nothing takes, and a press nothing takes but not its release", () => {
     const { input, printed } = setup([
-      [key('x'), 'vstr go'],
+      [key('x'), 'nosuch go'],
       [key('y'), '+nosuch']
     ]);
     input.keyDown(key('x'));
     input.keyDown(key('y'));
     input.keyUp(key('y'));
-    expect(printed).toEqual(['Unknown command "vstr^7"\n', 'Unknown command "+nosuch^7"\n']);
+    expect(printed).toEqual(['Unknown command "nosuch^7"\n', 'Unknown command "+nosuch^7"\n']);
   });
 
   it('leaves Escape to the menu, whatever it is bound to', () => {

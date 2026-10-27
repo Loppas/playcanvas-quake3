@@ -225,3 +225,22 @@ describe('ConsoleBuffer', () => {
     expect(runConsole(consoleCorpus(seed, 4000))).toEqual(TWIN[seed]);
   });
 });
+
+// `Con_Clear_f` (`cl_console.c:165–173`) fills the cells and calls `Con_Bottom`, and nothing more.
+describe('ConsoleBuffer.clear', () => {
+  it('blanks every cell and puts the view at the bottom, the line, the place on it and the times kept', () => {
+    const buffer = sized(10);
+    buffer.print('one\ntwo\nabc', 1000);
+    buffer.pageUp();
+    const before = { current: buffer.current, time: buffer.lineTime(buffer.current - 1) };
+    buffer.clear();
+    expect(lines(buffer)).toEqual({ current: before.current, display: before.current });
+    for (let n = 0; n < buffer.totalLines; n++) {
+      expect(buffer.line(n).every((cell) => cell === (7 << 8) + 32)).toBe(true);
+    }
+    expect(buffer.lineTime(buffer.current - 1)).toBe(before.time);
+    // The next print goes on from where the last left off on its line.
+    buffer.print('d', 2000);
+    expect(last(buffer, 1)).toEqual([{ text: '   d', colors: '7777', time: 2000 }]);
+  });
+});

@@ -173,8 +173,8 @@ export interface Settings {
   /**
    * `dedicated`: how a server is advertised — 0 and 1 on the LAN's list only, 2 heartbeating to the
    * Internet's master too. A page's listen server takes it as the menu sets it; the Node entry's
-   * server loads 1 at its start, and a `set dedicated 0` there shuts it down at the next frame, as
-   * Q3's latch does (`common.c:3198–3206`).
+   * server loads 1 at its start, and holds it write protected once its command line has run, as
+   * ioq3ded registers it `CVAR_INIT` (`common.c:2737`).
    */
   dedicated: number;
   /** `sv_hostname`: the server's name, as its serverinfo carries it and the browser lists it. */

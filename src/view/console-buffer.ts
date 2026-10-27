@@ -187,6 +187,12 @@ export class ConsoleBuffer {
     this.times.fill(0);
   }
 
+  /** `Con_Clear_f` (`:165–173`): every cell blank, and the view back at the bottom. */
+  clear(): void {
+    this.text.fill(BLANK);
+    this.bottom();
+  }
+
   /** `Con_PageUp` (`:830–835`): the view back two lines, as far as the oldest the ring holds. */
   pageUp(): void {
     this.displayLine -= 2;

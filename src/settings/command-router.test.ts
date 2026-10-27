@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { configCommands } from '../formats/q3config';
 import {
   CommandRouter,
-  MAX_EXEC_DEPTH,
+  MAX_INSERT_DEPTH,
   defaultExtension,
   type CommandRouterOptions
 } from './command-router';
@@ -32,6 +32,7 @@ function setup(
       if (taken) log.push(`cvar ${argv.join(' ')}`);
       return taken;
     },
+    cvarString: (name) => config.cvars.get(name),
     cgame: (argv) => {
       if (argv[0] !== 'viewpos' && argv[0] !== 'weapon') return false;
       log.push(`cgame ${argv.join(' ')}`);
@@ -53,7 +54,7 @@ function setup(
     add: (name, run) =>
       router.add(name, (argv) => {
         log.push(`config ${argv.join(' ')}`);
-        return run(argv);
+        return run?.(argv);
       })
   });
   for (const name of ['connect', 'map', 'kick']) {
@@ -111,6 +112,7 @@ describe('the router', () => {
     const order: string[] = [];
     const router = new CommandRouter({
       cvar: () => false,
+      cvarString: () => '',
       cgame: (argv) => {
         order.push('cgame');
         return argv[0] === 'both';
@@ -157,6 +159,100 @@ describe('the router', () => {
   });
 });
 
+describe('the command table', () => {
+  /** A router of its own commands, with `a`, then `b`, then `c` added after them. */
+  function table() {
+    const printed: string[] = [];
+    const ran: string[] = [];
+    const router = new CommandRouter({
+      cvar: () => false,
+      cvarString: () => '',
+      cgame: (argv) => {
+        ran.push(`cgame ${argv[0]}`);
+        return argv[0] === 'weapon';
+      },
+      game: () => false,
+      forward: (line) => {
+        ran.push(`server ${line}`);
+        return true;
+      },
+      readCfg: () => Promise.resolve(undefined),
+      print: (text) => void printed.push(text)
+    });
+    for (const name of ['a', 'b', 'c']) router.add(name, () => void ran.push(name));
+    return { router, printed, ran };
+  }
+
+  it("lists every name newest first, cmd.c's own among them, then counts them (Cmd_List_f, cmd.c:822–842)", () => {
+    const { router, printed } = table();
+    router.execute(['cmdlist']);
+    expect(printed).toEqual([
+      // `cmdlist` ran, so it is at the front.
+      'cmdlist\n',
+      'c\n',
+      'b\n',
+      'a\n',
+      'wait\n',
+      'echo\n',
+      'vstr\n',
+      'execq\n',
+      'exec\n',
+      '9 commands\n'
+    ]);
+  });
+
+  it('moves a command to the front as it runs, as Cmd_ExecuteString does (cmd.c:777–779)', () => {
+    const { router, printed } = table();
+    router.execute(['A']);
+    router.execute(['echo']);
+    printed.length = 0;
+    router.execute(['cmdlist']);
+    expect(printed.slice(0, 5)).toEqual(['cmdlist\n', 'echo\n', 'a\n', 'c\n', 'b\n']);
+  });
+
+  it("lists the names Com_Filter's wildcards match, without regard to case, and counts those", () => {
+    const { router, printed } = table();
+    router.execute(['cmdlist', 'E*']);
+    expect(printed).toEqual(['echo\n', 'execq\n', 'exec\n', '3 commands\n']);
+    printed.length = 0;
+    router.execute(['cmdlist', 'nothing']);
+    expect(printed).toEqual(['0 commands\n']);
+  });
+
+  it('keeps a name for completion alone, which goes on to cgame and the server, and is listed', () => {
+    const { router, printed, ran } = table();
+    router.add('weapon');
+    router.add('kill');
+    // Added again, as every gamestate's cgame adds them, without a word.
+    router.add('Weapon');
+    router.add('kill');
+    router.execute(['weapon', '3']);
+    router.execute(['KILL']);
+    expect(ran).toEqual(['cgame weapon', 'cgame KILL', 'server "KILL"']);
+    router.execute(['cmdlist', '?i*']);
+    expect(printed).toEqual(['kill\n', '1 commands\n']);
+  });
+
+  it('keeps a name for completion alone over a command added after it, and says so', () => {
+    const { router, printed, ran } = table();
+    router.add('kill');
+    router.add('KILL', () => void ran.push('mine'));
+    router.add('a');
+    router.execute(['kill']);
+    expect(ran).toEqual(['cgame kill', 'server "kill"']);
+    expect(printed).toEqual(['Cmd_AddCommand: KILL already defined\n']);
+  });
+});
+
+describe('echo', () => {
+  it("prints the rest of the line, its words joined by a space (Cmd_Echo_f, cmd.c:326–329)", () => {
+    const { router, printed } = setup();
+    router.execute(['echo', 'hello', 'big  world', '^1red']);
+    router.execute(['ECHO']);
+    expect(printed).toEqual(['hello big  world ^1red\n', '\n']);
+  });
+});
+
 describe('exec', () => {
   it('gives a file the .cfg it lacks, and leaves an extension it has', async () => {
     const { router, asked } = setup();
@@ -166,9 +262,9 @@ describe('exec', () => {
     await router.settled();
     expect(asked).toEqual(['presets/cpm.cfg', 'autoexec.cfg', 'my.dir/file.cfg', 'notes.txt']);
 
-    // id's `COM_DefaultExtension`: a dot counts only after the last slash, and not as the name's
-    // first character.
-    expect(defaultExtension('.hidden', '.cfg')).toBe('.hidden.cfg');
+    // ioq3's `COM_DefaultExtension`: a dot counts only after the last slash, the name's first
+    // character among them, where id's walk back stopped short of it.
+    expect(defaultExtension('.hidden', '.cfg')).toBe('.hidden');
     expect(defaultExtension('a.b/c', '.cfg')).toBe('a.b/c.cfg');
     expect(defaultExtension('a/.b', '.cfg')).toBe('a/.b');
   });
@@ -182,12 +278,12 @@ describe('exec', () => {
     expect(asked).toEqual([]);
   });
 
-  it("says it couldn't exec a file there is none of, and that it is execing one there is, as typed", async () => {
+  it("says it couldn't exec a file there is none of, and that it is execing one there is, by the name it read", async () => {
     const { router, printed } = setup({ 'autoexec.cfg': '' });
     router.execute(['exec', 'missing']);
     router.execute(['EXEC', 'autoexec']);
     await router.settled();
-    expect(printed).toEqual(["couldn't exec missing\n", 'execing autoexec\n']);
+    expect(printed).toEqual(["couldn't exec missing.cfg\n", 'execing autoexec.cfg\n']);
   });
 
   it("runs a file's lines in order, each where a bind's would go", async () => {
@@ -203,7 +299,7 @@ describe('exec', () => {
       'kick all'
     ]);
     expect(config.cvars.settings.fov).toBe(110);
-    expect(printed).toEqual(['execing a\n', 'Unknown command "nope^7"\n']);
+    expect(printed).toEqual(['execing a.cfg\n', 'Unknown command "nope^7"\n']);
   });
 
   it("runs a command that comes while a file is read after the file's lines, as Cbuf_InsertText has it", async () => {
@@ -216,7 +312,7 @@ describe('exec', () => {
     await router.settled();
     expect(log).toEqual(['config seta cg_fov 100', 'config seta cg_fov 120']);
     expect(config.cvars.settings.fov).toBe(120);
-    expect(printed).toEqual(['execing a\n', 'Unknown command "nope^7"\n']);
+    expect(printed).toEqual(['execing a.cfg\n', 'Unknown command "nope^7"\n']);
 
     // With the file done, a command runs at once again.
     router.execute(['cg_fov', '90']);
@@ -242,7 +338,7 @@ describe('exec', () => {
       'config seta four 4',
       'config seta five 5'
     ]);
-    expect(printed).toEqual(['execing a\n', 'execing b\n', 'execing c\n']);
+    expect(printed).toEqual(['execing a.cfg\n', 'execing b.cfg\n', 'execing c.cfg\n']);
   });
 
   it("reads the home folder's copy of a preset before the port's own", async () => {
@@ -259,28 +355,46 @@ describe('exec', () => {
     expect(shipped.config.cvars.get('g_quadfactor')).toBe('4');
   });
 
+  it('runs a file without saying so as execq, and says how each is used (cmd.c:275–291)', async () => {
+    const { router, config, printed } = setup({ 'a.cfg': 'seta quiet 1' });
+    router.execute(['execq', 'a']);
+    router.execute(['EXECQ', 'missing']);
+    router.execute(['execq']);
+    router.execute(['exec', 'a', 'b']);
+    await router.settled();
+    expect(config.cvars.get('quiet')).toBe('1');
+    expect(printed).toEqual([
+      "couldn't exec missing.cfg\n",
+      'execq <filename> : execute a script file without notification\n',
+      USAGE
+    ]);
+  });
+
   it('stops a file that execs itself, and runs on after it', async () => {
     const { router, config, printed } = setup({ 'loop.cfg': 'seta n 1\nexec loop' });
     router.execute(['exec', 'loop']);
     router.execute(['seta', 'after', '1']);
     await router.settled();
-    expect(printed.filter((line) => line === 'execing loop\n')).toHaveLength(MAX_EXEC_DEPTH);
-    expect(printed.at(-1)).toBe("couldn't exec loop: nested too deeply\n");
+    expect(printed.filter((line) => line === 'execing loop.cfg\n')).toHaveLength(MAX_INSERT_DEPTH);
+    expect(printed.at(-1)).toBe("couldn't exec loop.cfg: nested too deeply\n");
     expect(config.cvars.get('after')).toBe('1');
   });
 });
 
 /**
  * A router whose `map` holds until {@link loaded} is called, whose game module takes `addbot`,
- * and whose server, where there is one, hears what is forwarded. `log` has every command taken,
- * in the order they ran, and `printed` what it printed.
+ * whose cvars are `cvars`, and whose server, where there is one, hears what is forwarded. `log`
+ * has every command taken, in the order they ran, and `printed` what it printed.
  */
-function buffer(options: { server?: boolean; client?: boolean } = {}) {
+function buffer(
+  options: { server?: boolean; client?: boolean; cvars?: Record<string, string> } = {}
+) {
   const log: string[] = [];
   const printed: string[] = [];
   let loaded: (ok: boolean) => void = () => {};
   const routes: CommandRouterOptions = {
     cvar: () => false,
+    cvarString: (name) => options.cvars?.[name] ?? '',
     game: (_line, argv) => {
       if (argv[0] !== 'addbot') return false;
       log.push(`game ${argv.join(' ')}`);
@@ -439,5 +553,65 @@ describe('a command nothing here takes (CL_ForwardCommandToServer, cl_main.c:149
     router.frame();
     await router.settled();
     expect(printed).toEqual([]);
+  });
+});
+
+describe('vstr (Cmd_Vstr_f, cmd.c:306–316)', () => {
+  it("runs a cvar's string as commands, in front of what is queued behind it", async () => {
+    const { router, log, finish } = buffer({
+      cvars: { rot: 'seta a 1; seta b 1', next: 'map q3dm17; seta c 1' }
+    });
+    run(router, 'vstr rot; seta after 1');
+    expect(log).toEqual(['config seta a 1', 'config seta b 1', 'config seta after 1']);
+    log.length = 0;
+    run(router, 'VSTR next; seta d 1');
+    expect(log).toEqual(['map q3dm17']);
+    await finish();
+    expect(log).toEqual(['map q3dm17', 'config seta c 1', 'config seta d 1']);
+  });
+
+  it('says how it is used, and runs nothing for a cvar there is none of', () => {
+    const { router, log, printed } = buffer();
+    router.execute(['vstr']);
+    router.execute(['vstr', 'a', 'b']);
+    router.execute(['vstr', 'nothing']);
+    const usage = 'vstr <variablename> : execute a variable command\n';
+    expect(printed).toEqual([usage, usage]);
+    expect(log).toEqual([]);
+  });
+
+  it('stops a cvar that runs itself, and runs on after it', () => {
+    const { router, log, printed } = buffer({ cvars: { loop: 'seta n 1; vstr loop' } });
+    run(router, 'vstr loop; seta after 1');
+    expect(log.filter((line) => line === 'config seta n 1')).toHaveLength(MAX_INSERT_DEPTH);
+    expect(log.at(-1)).toBe('config seta after 1');
+    expect(printed).toEqual(['vstr loop: nested too deeply\n']);
+  });
+});
+
+describe('a wait between nestings', () => {
+  it('lets a cvar that runs itself after a wait run on, holding what comes behind it, as Q3 does', async () => {
+    const { router, log, printed, frames } = buffer({
+      cvars: { loop: 'seta n 1; wait; vstr loop' }
+    });
+    run(router, 'vstr loop');
+    await settle();
+    router.execute(['seta', 'behind', '1']);
+    await frames(MAX_INSERT_DEPTH + 4);
+    expect(log.filter((line) => line === 'config seta n 1')).toHaveLength(MAX_INSERT_DEPTH + 5);
+    expect(log).not.toContain('config seta behind 1');
+    expect(printed).toEqual([]);
+  });
+
+  it('lets a file that execs itself after a wait run on too', async () => {
+    const { router, printed } = setup({ 'loop.cfg': 'seta n 1\nwait\nexec loop' });
+    router.execute(['exec', 'loop']);
+    for (let i = 0; i < MAX_INSERT_DEPTH + 4; i++) {
+      await settle();
+      router.frame();
+    }
+    await settle();
+    expect(printed.filter((line) => line === 'execing loop.cfg\n')).toHaveLength(MAX_INSERT_DEPTH + 5);
+    expect(printed.filter((line) => line.includes('nested too deeply'))).toEqual([]);
   });
 });

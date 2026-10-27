@@ -307,7 +307,7 @@ describe('GameConfig as it runs', () => {
 describe('GameConfig at the console', () => {
   it("puts its commands in the console's table, as Cvar_Init and CL_InitKeyCommands do", () => {
     const config = new GameConfig({ debugMode: true });
-    const table = new Map<string, CommandFunction>();
+    const table = new Map<string, CommandFunction | undefined>();
     config.addCommands({ add: (name, run) => void table.set(name, run) });
     expect([...table.keys()].sort()).toEqual(
       [

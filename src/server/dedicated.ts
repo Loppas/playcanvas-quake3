@@ -1,4 +1,3 @@
-import { atoi } from '../formats/c-scan';
 import { readInfoFiles, type InfoFile } from '../formats/arena';
 import { tokenize } from '../formats/q3config';
 import { mapKind } from '../formats/map-kind';
@@ -33,10 +32,9 @@ import {
  * console's own `map`, and until one is spawned `sv_running` is 0 and the server answers nobody.
  *
  * The frame is Q3's dedicated frame: {@link frameMsec} paces the loop (`SV_FrameMsec`), the msec
- * is the real time that passed, `Com_ModifyMsec` clamps it at {@link MAX_DEDICATED_FRAME_MSEC}
- * with a hitch warning over 500, and the `dedicated` latch is read after the server's frame,
- * where Q3 shuts a server down whose flag went to 0 (`common.c:3198–3206`). An error in a frame
- * is `Com_Error`'s: the server goes, and the program waits at its console for the next `map`.
+ * is the real time that passed, and `Com_ModifyMsec` clamps it at {@link MAX_DEDICATED_FRAME_MSEC}
+ * with a hitch warning over 500. An error in a frame is `Com_Error`'s: the server goes, and the
+ * program waits at its console for the next `map`. `quit` ends it.
  */
 
 /** Q3's hitch warning threshold (`common.c:3041`): a frame longer than this is reported. */
@@ -112,11 +110,8 @@ export class DedicatedServer {
 
   private readonly options: DedicatedServerOptions;
   private readonly botFiles: readonly InfoFile[];
-  private readonly cvars: CvarStore;
   private readonly printLine: (text: string) => void;
   private readonly now: () => number;
-  /** `com_dedicated`'s modification count, as the last frame saw it. */
-  private dedicatedModified: number;
   /** The network, once the boot has opened it. */
   private network: ServerNetwork | null = null;
   /** `Com_Error`'s `lastErrorTime` and `errorCount`: how close the errors have come. */
@@ -126,19 +121,11 @@ export class DedicatedServer {
   /**
    * @param options - The cvars, the search path and the console's own settings.
    * @param botFiles - The bots' files, already read, which `addbot` finds its bots in.
-   * @param dedicatedModified - `dedicated`'s modification count before the boot set it, as
-   *   `com_dedicated.modified` is set by Q3's own default and by its command line alike — the
-   *   first frame acts on either, so the mark is taken before one.
    */
-  constructor(
-    options: DedicatedServerOptions,
-    botFiles: readonly InfoFile[],
-    dedicatedModified: number
-  ) {
+  constructor(options: DedicatedServerOptions, botFiles: readonly InfoFile[]) {
     const { config } = options;
     this.options = options;
     this.botFiles = botFiles;
-    this.cvars = config.cvars;
     this.printLine = options.print;
     this.now = options.now ?? (() => performance.now());
     this.program = this.build();
@@ -147,6 +134,7 @@ export class DedicatedServer {
     // none is sent on to a server.
     this.router = new CommandRouter({
       cvar: (argv) => config.cvarCommand(argv),
+      cvarString: (name) => config.cvars.get(name),
       game: (line, argv) => {
         if (!isGameCommand(argv[0])) return false;
         this.program.sendConsoleCommand(line);
@@ -159,7 +147,12 @@ export class DedicatedServer {
     for (const name of HOST_COMMANDS) {
       this.router.add(name, (argv) => this.program.sendConsoleCommand(commandLine(argv)));
     }
-    this.dedicatedModified = dedicatedModified;
+    // `Com_Quit_f` (`common.c:376–392`): the rest of the line the reason the clients are given.
+    // Nothing behind it runs, as `Sys_Quit` never returns.
+    this.router.add('quit', (argv) => {
+      this.stop(argv.slice(1).join(' ') || 'Server quit');
+      return new Promise<void>(() => {});
+    });
   }
 
   /** A server with no map, on the network as it stands. */
@@ -234,7 +227,7 @@ export class DedicatedServer {
 
   /**
    * One frame of `Com_Frame`'s server half, on the loop's clock: the real time that passed, the
-   * clamp, the server's frame, the net's flush, the console's `wait`s, and the `dedicated` latch.
+   * clamp, the server's frame, the net's flush and the console's `wait`s.
    *
    * @param msec - The real time since the last frame, in milliseconds and any fraction of one.
    */
@@ -273,15 +266,6 @@ export class DedicatedServer {
     // `Com_Frame`'s turn at the command buffer, after the server's frame: a `wait` counts this one.
     this.router.frame();
     this.network?.frame();
-
-    // "if 'dedicated' has been modified, start up or shut down the client system. Do this after
-    // the server may have started" (`common.c:3198–3206`): the latched value, and a 0 stops the
-    // server — which is how `dedicated 0` on a console shuts one down.
-    const modified = this.cvars.modificationCount('dedicated');
-    if (modified !== this.dedicatedModified) {
-      this.dedicatedModified = modified;
-      if (atoi(this.cvars.get('dedicated')) === 0) this.stop('dedicated set to 0');
-    }
   }
 
   /**
@@ -361,7 +345,7 @@ function asError(err: unknown): Error {
  *
  * A dedicated build registers `dedicated` at 1, where a page's defaults to 0
  * (`common.c:2737–2741`); a `+set dedicated` on the command line still wins, because it runs
- * after. Either way the latch's mark is taken first, so the first frame acts on it.
+ * after. From then on it is write protected, as ioq3ded registers it `CVAR_INIT`.
  *
  * The network opens last, once the command line's cfgs have run, so that a `net_port` or
  * `sv_runMaster` one of them sets is the one it opens with. Quake 3 opens it before those run, so
@@ -371,15 +355,15 @@ export async function startDedicatedServer(
   options: DedicatedServerOptions
 ): Promise<DedicatedServer> {
   const { cvars } = options.config;
-  const dedicatedModified = cvars.modificationCount('dedicated');
   if (cvars.get('dedicated') === '0') cvars.load('dedicated', '1');
 
   const commands = commandsFromArgv(options.argv ?? []);
   for (const command of commands) {
     if (isStartupSet(command[0])) options.config.command(command);
   }
+  cvars.writeProtect('dedicated');
   const botFiles = await readInfoFiles(options.fs, BOTS_FILE, '.bot', BOT_LIST);
-  const server = new DedicatedServer(options, botFiles, dedicatedModified);
+  const server = new DedicatedServer(options, botFiles);
   for (const command of commands) {
     if (!isStartupSet(command[0])) server.router.execute(command);
   }

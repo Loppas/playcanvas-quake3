@@ -46,6 +46,8 @@ interface Slot {
   applied: string;
   /** `CVAR_ARCHIVE`: the registry's, or added by `seta` (`Cvar_Set_f`, `cvar.c:873–879`). */
   archive: boolean;
+  /** `CVAR_INIT`: only the command line sets it, and the console's set is refused. */
+  init?: boolean;
 }
 
 /** A cvar the port does not use, kept so the file keeps it. */
@@ -88,6 +90,7 @@ function column(on: boolean, letter: string): string {
 /** A cvar's own flags, as `cvarlist` shows them. */
 interface OwnFlags {
   readOnly?: boolean;
+  init?: boolean;
   archive: boolean;
   latched?: boolean;
   cheat?: boolean;
@@ -102,8 +105,7 @@ function flagColumns(name: string, own: OwnFlags): string {
     column(SYSTEMINFO.has(lower), 's'),
     column(USERINFO.has(lower), 'U'),
     column(own.readOnly === true, 'R'),
-    // `CVAR_INIT`: none of the port's cvars is write protected.
-    ' ',
+    column(own.init === true, 'I'),
     column(own.archive, 'A'),
     column(own.latched === true, 'L'),
     column(own.cheat === true, 'C'),
@@ -314,6 +316,15 @@ export class Cvars implements CvarStore {
    */
   setFromConsole(name: string, raw: string, archive = false): boolean {
     return this.assign(name, raw, archive, true);
+  }
+
+  /**
+   * Make a setting `CVAR_INIT`, as a program registers one that only its command line may set
+   * (`Cvar_Get`): from now on the console's set is refused (`cvar.c:566–570`).
+   */
+  writeProtect(name: string): void {
+    const key = settingForCvar(name);
+    if (key) this.slot(key).init = true;
   }
 
   /**
@@ -604,6 +615,10 @@ export class Cvars implements CvarStore {
     // (`cvar.c:540–551`).
     const callingOff = console && def.latched === 'reload' && raw === slot.applied;
     if (console && raw === this.string(name)) return true;
+    if (console && slot.init) {
+      this.print(`${name} is write protected.\n`);
+      return false;
+    }
     if (!callingOff && this.isProtected(key)) {
       this.print(`${console ? name : def.cvar} is cheat protected.\n`);
       return false;
@@ -648,6 +663,7 @@ export class Cvars implements CvarStore {
     const settings = [...SETTING_KEYS].reverse().map((key) => {
       const def = SETTINGS[key];
       const flags = flagColumns(def.cvar, {
+        init: this.slot(key).init,
         archive: this.slot(key).archive,
         latched: def.latched !== undefined,
         cheat: def.cheat

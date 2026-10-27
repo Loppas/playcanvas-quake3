@@ -243,6 +243,27 @@ export interface AppHandle {
 }
 
 /**
+ * The names cgame puts in the command table for completion alone (`CG_InitConsoleCommands`,
+ * `cg_consolecmds.c:540–583`), in its order, as far as the port has them: its own commands, then
+ * the game's that it lists, which go on to the server.
+ */
+const CGAME_COMMAND_NAMES: readonly string[] = [
+  'viewpos',
+  '+scores',
+  '-scores',
+  'weapnext',
+  'weapprev',
+  'weapon',
+  'loaddeferred',
+  'kill',
+  'team',
+  'follow',
+  'follownext',
+  'followprev',
+  'addbot'
+];
+
+/**
  * `viewpos`'s reading, printed where Q3's `CG_Printf` prints: the console, whose notify
  * lines show it and whose other half is the browser's console. And the clipboard, ready to paste
  * into splat-maps' `entities readings`.
@@ -281,7 +302,7 @@ export interface SetupOptions {
   home: HomeFolder;
   /** `favorites.txt` as it was read at start, and where it is kept. */
   favorites: { saved: string | undefined; stores: readonly FileStore[] };
-  /** What the menu does beyond the game. */
+  /** What the menu and the console do beyond the game. */
   host: MenuHost;
   /**
    * The shell's: the vertical sync its launch started Chromium with, which holds until the next.
@@ -310,7 +331,10 @@ export interface SetupOptions {
 /** What App does with a map's load screen. */
 type MapLoadScreen = Pick<LoadScreen, 'step' | 'close' | 'showServer' | 'showInformation'>;
 
-/** What the menu does beyond the game: `vid_restart`, export and import, and EXIT GAME. */
+/**
+ * What the menu does beyond the game: `vid_restart`, export and import, and EXIT GAME, which the
+ * console's `vid_restart` and `quit` do too.
+ */
 export interface MenuHost {
   /** Save the settings and reload the page, taking up the latched ones. */
   vidRestart(): void;
@@ -805,6 +829,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   // cfgs. `viewpos` runs here, at the press, as Q3 runs a console command between frames.
   const commands = new CommandRouter({
     cvar: (argv) => config.cvarCommand(argv),
+    cvarString: (name) => config.cvars.get(name),
     cgame: (argv) => {
       // A preview's view is the free camera's.
       if (!controller && mapPreview && isViewpos(argv)) {
@@ -857,6 +882,24 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   commands.add('globalservers', (argv) => cls.globalServers(argv));
   commands.add('localservers', () => cls.localServers());
   commands.add('ping', (argv) => cls.ping(argv));
+  // `CL_ForwardToServer_f` (`cl_main.c:1645–1655`): the rest of the line to the server as a client
+  // command, once this client is in the match.
+  commands.add('cmd', (argv) => {
+    if (controller?.game.connection.state === CA.ACTIVE) {
+      if (argv.length > 1) controller.game.sendClientCommand(argv.slice(1).join(' '));
+    } else {
+      print('Not connected to a server.\n');
+    }
+  });
+  commands.add('vid_restart', () => host.vidRestart());
+  commands.add('clear', () => consoleText.clear());
+  // `Com_Quit_f` (`common.c:376–392`): EXIT GAME's way out, the rest of the line the reason the
+  // server's clients are given. Nothing behind it runs, as `Sys_Quit` never returns.
+  commands.add('quit', (argv) => {
+    quit(argv.slice(1).join(' '));
+    host.exit();
+    return new Promise<void>(() => {});
+  });
   config.addCommands(commands);
   /**
    * The host's commands, for the command buffer of the server running in this page. With none, Q3
@@ -916,6 +959,9 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
    */
   const clientLoader: ClientLoader = {
     load: async (name) => {
+      // `CG_Init`'s `CG_InitConsoleCommands` (`cg_main.c:1870`): cgame's names, for completion
+      // alone, which every gamestate adds again without a word, and which outlast its match.
+      for (const command of CGAME_COMMAND_NAMES) commands.add(command);
       const playing = controller;
       const inHand = map?.name === name;
       loadingMap = true;
@@ -1450,12 +1496,12 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     leave('Server disconnected', true);
   };
   /**
-   * `Com_Quit_f` (`common.c:376–392`): the program quitting, by EXIT GAME or a tab going. The
-   * server's clients are told "Server quit", or a server elsewhere that this client has left, and
-   * the match goes. Once gone, a second quit has nothing to tell.
+   * `Com_Quit_f` (`common.c:376–392`): the program quitting, by `quit`, EXIT GAME or a tab going.
+   * The server's clients are told why, "Server quit" unless `quit` said, or a server elsewhere
+   * that this client has left, and the match goes. Once gone, a second quit has nothing to tell.
    */
-  const quit = () => {
-    if (controller) leave('Server quit');
+  const quit = (reason = '') => {
+    if (controller) leave(reason || 'Server quit');
   };
   // A tab going goes on without waiting, and the worker with it, so its quit is a best try. A page
   // kept for the back button has not quit.
@@ -2617,7 +2663,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
         : mapPreview
           ? viewpos(flyer.view())
           : null,
-    quit,
+    quit: () => quit(),
     arenas,
     madeSinceWarmUp: () =>
       made && madeAtWarmUp
