@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { K } from '../formats/q3-keys';
+import type { CommandFunction } from './command-router';
 import { GameConfig } from './game-config';
 import { DEFAULT_SETTINGS } from './registry';
+
+/** A printable key's number. */
+const key = (char: string) => char.charCodeAt(0);
 
 /** The file a first run writes, under DEBUG_MODE. */
 const FRESH = [
@@ -235,7 +239,7 @@ describe('GameConfig at start', () => {
     const warn = vi.fn();
     new GameConfig({ config: 'vstr go\nbind NOPE +attack', debugMode: true, warn });
     expect(warn.mock.calls.map(([message]) => message)).toEqual([
-      'Unknown command "vstr"',
+      'Unknown command "vstr^7"',
       '"NOPE" isn\'t a valid key'
     ]);
   });
@@ -276,6 +280,55 @@ describe('GameConfig as it runs', () => {
 
   it("does not take a command it doesn't know", () => {
     expect(new GameConfig({ debugMode: true }).command(['weapon', '5'])).toBe(false);
+  });
+});
+
+describe('GameConfig at the console', () => {
+  it("puts its commands in the console's table, as Cvar_Init and CL_InitKeyCommands do", () => {
+    const config = new GameConfig({ debugMode: true });
+    const table = new Map<string, CommandFunction>();
+    config.addCommands({ add: (name, run) => void table.set(name, run) });
+    expect([...table.keys()].sort()).toEqual(
+      ['bind', 'reset', 'set', 'seta', 'sets', 'setu', 'toggle', 'unbind', 'unbindall'].sort()
+    );
+
+    const run = (...argv: string[]) => table.get(argv[0])!(argv);
+    run('unbindall');
+    run('bind', 'x', '+attack');
+    run('bind', 'y', '+moveup');
+    run('unbind', 'y');
+    run('set', 'pcq_one', '1');
+    run('sets', 'pcq_two', '2');
+    run('setu', 'pcq_three', '3');
+    run('seta', 'cg_fov', '100');
+    run('toggle', 'cg_drawFPS');
+    run('seta', 'sensitivity', '9');
+    run('reset', 'sensitivity');
+    // Set as the game runs, not loaded at start: a latched setting waits for the next.
+    run('seta', 'cl_renderer', 'opengl2');
+    expect(config.cvars.settings.renderer).toBe('opengl1');
+    expect(config.text()).toContain('seta cl_renderer "opengl2"\n');
+    expect(config.binds.entries()).toEqual([[key('x'), '+attack']]);
+    expect(['pcq_one', 'pcq_two', 'pcq_three'].map((name) => config.cvars.get(name))).toEqual([
+      '1',
+      '2',
+      '3'
+    ]);
+    expect(config.cvars.settings).toMatchObject({ fov: 100, drawFPS: true });
+    expect(config.cvars.get('sensitivity')).toBe('6.8');
+  });
+
+  it("sets a cvar by its name, as Cvar_Command does, and takes no other's", () => {
+    const config = new GameConfig({ debugMode: true });
+    expect(config.cvarCommand(['cg_fov', '90'])).toBe(true);
+    expect(config.cvarCommand(['CG_FOV'])).toBe(true);
+    expect(config.cvars.settings.fov).toBe(90);
+    expect(config.cvarCommand(['nosuch', '1'])).toBe(false);
+    expect(config.cvarCommand(['set', 'nosuch', '1'])).toBe(false);
+    expect(config.cvars.get('nosuch')).toBe('');
+    // Set as the game runs, not loaded at start: a latched setting waits for the next.
+    config.cvarCommand(['cl_renderer', 'opengl2']);
+    expect(config.cvars.settings.renderer).toBe('opengl1');
   });
 });
 

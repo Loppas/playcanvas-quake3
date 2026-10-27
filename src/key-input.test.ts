@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { K } from './formats/q3-keys';
 import { KeyInput } from './key-input';
 import { BUTTON_ATTACK } from './sim/constants';
-import { BindTable, defaultBinds } from './settings/binds';
-import { ClientInput } from './settings/client-input';
+import type { ClientInput } from './settings/client-input';
+import { routedInput } from './settings/input-test-fixtures';
 
 /**
  * The DOM seam: which browser event becomes which Q3 key, and when the game takes them. Pointer
@@ -26,7 +26,7 @@ beforeEach(() => {
   Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => locked });
   requestPointerLock = vi.fn(async () => {});
   canvas.requestPointerLock = requestPointerLock;
-  input = new ClientInput(new BindTable(defaultBinds(true)), { command: () => true });
+  input = routedInput().input;
   keys = new KeyInput(canvas, input);
 });
 

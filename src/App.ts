@@ -61,7 +61,7 @@ import { mapConcurrent } from './pak/concurrency';
 import type { GameDataContext } from './pak/game-data';
 import { searchPath, type PakFileSystem } from './pak/vfs';
 import { RemoteChannel } from './server/channel';
-import { isHostCommand } from './server/host';
+import { HOST_COMMANDS } from './server/host';
 import { readHostMapData, type HostMapData } from './server/host-map';
 import type { DevRequest } from './server/worker-messages';
 import { WorkerChannel, type MapFiles } from './server/worker-channel';
@@ -118,6 +118,7 @@ import {
   STAT,
   TEAM
 } from './sim/constants';
+import { isGameCommand } from './sim/game';
 import { ITEMS, powerupMask } from './sim/items';
 import {
   createScoreboardState,
@@ -803,31 +804,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   // The console's commands, `exec` among them, which reads the home folder before the port's own
   // cfgs. `viewpos` runs here, at the press, as Q3 runs a console command between frames.
   const commands = new CommandRouter({
-    client: (argv) => {
-      // The client's own, which run with no match as well.
-      switch (argv[0]?.toLowerCase()) {
-        case 'connect':
-          cls.connect(argv, leaveFor, found);
-          return true;
-        case 'reconnect':
-          cls.reconnect(leaveFor, found);
-          return true;
-        case 'disconnect':
-          disconnect();
-          return true;
-        case 'serverstatus':
-          cls.serverStatus(argv);
-          return true;
-        case 'globalservers':
-          cls.globalServers(argv);
-          return true;
-        case 'localservers':
-          cls.localServers();
-          return true;
-        case 'ping':
-          cls.ping(argv);
-          return true;
-      }
+    cvar: (argv) => config.cvarCommand(argv),
+    cgame: (argv) => {
       // A preview's view is the free camera's.
       if (!controller && mapPreview && isViewpos(argv)) {
         printViewpos(viewpos(flyer.view()), print);
@@ -840,59 +818,62 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
         printViewpos(viewpos(drawnView(controller)), print);
         return true;
       }
+      const name = argv[0].toLowerCase();
       // `CG_ScoresDown_f`/`CG_ScoresUp_f` (`cg_consolecmds.c:87–116`): the press asks the match
       // for the board when the cache is stale — `trap_SendClientCommand( "score" )` — and the
       // release starts the fade. The board itself draws from the state this moves on.
-      if (argv[0] === '+scores') {
+      if (name === '+scores') {
         if (scoresDown(scoreboardState, controller.time, controller.scores)) {
           controller.game.sendClientCommand('score');
         }
         return true;
       }
-      if (argv[0] === '-scores') {
+      if (name === '-scores') {
         scoresUp(scoreboardState, controller.time);
         return true;
       }
       // `CG_LoadDeferredPlayers` on demand (`cg_consolecmds.c:503`).
-      if (argv[0]?.toLowerCase() === 'loaddeferred') {
+      if (name === 'loaddeferred') {
         controller.loadDeferredPlayers();
         return true;
       }
       return false;
     },
-    host: (line, argv) => {
-      // A map that previews is no server's to load, so `map` leaves the match for it.
-      const preview = argv[0].toLowerCase() === 'map' && argv[1] !== undefined && previews(argv[1]);
-      if (controller && preview) return startMatch(argv[1]);
-      if (!controller?.game.consoleCommand(line)) return noServer(line, argv);
-      return argv[0].toLowerCase() === 'map' ? hostSettled(controller) : true;
+    // Only a server running in this page has a game module to take its commands.
+    game: (line, argv) => isGameCommand(argv[0]) && (controller?.game.consoleCommand(line) ?? false),
+    forward: (line) => {
+      if (!controller) return false;
+      controller.game.sendClientCommand(line);
+      return true;
     },
-    config: (argv) => config.command(argv),
-    forward: (line) => forward(line),
     readCfg: (path) => readCfg(path, setup.home),
-    print,
-    warn
+    print
   });
+  // The client's own, which run with no match as well.
+  commands.add('connect', (argv) => cls.connect(argv, leaveFor, found));
+  commands.add('reconnect', () => cls.reconnect(leaveFor, found));
+  commands.add('disconnect', () => disconnect());
+  commands.add('serverstatus', (argv) => cls.serverStatus(argv));
+  commands.add('globalservers', (argv) => cls.globalServers(argv));
+  commands.add('localservers', () => cls.localServers());
+  commands.add('ping', (argv) => cls.ping(argv));
+  config.addCommands(commands);
   /**
-   * The host's commands with no server running in this page, as Q3 answers them with
-   * `com_sv_running` 0 (`sv_ccmds.c:223, 335`): `map` starts one, and the game module's are
-   * nobody's here, so they go to a server elsewhere as the client's.
+   * The host's commands, for the command buffer of the server running in this page. With none, Q3
+   * answers them with `com_sv_running` 0 (`sv_ccmds.c:223, 335`): `map` starts one, and the rest
+   * have nothing to run on. A map that previews is no server's to load, so `map` leaves the match
+   * for it.
    */
-  const noServer = (line: string, argv: readonly string[]): boolean | Promise<void> => {
-    if (argv[0].toLowerCase() === 'map') return startMatch(argv[1]);
-    if (!isHostCommand(argv[0])) return forward(line);
+  const hostCommand = (argv: readonly string[]): void | Promise<void> => {
+    const map = argv[0].toLowerCase() === 'map';
+    if (controller && map && argv[1] !== undefined && previews(argv[1])) return startMatch(argv[1]);
+    if (controller?.game.consoleCommand(commandLine(argv))) {
+      return map ? hostSettled(controller) : undefined;
+    }
+    if (map) return startMatch(argv[1]);
     print('Server is not running.\n');
-    return true;
   };
-  /**
-   * `CL_ForwardCommandToServer`: a command nothing here knows, sent to the match's server as a
-   * client command. Whether there was a match to send it to.
-   */
-  const forward = (line: string): boolean => {
-    if (!controller) return false;
-    controller.game.sendClientCommand(line);
-    return true;
-  };
+  for (const name of HOST_COMMANDS) commands.add(name, hostCommand);
   /**
    * Resolves once the host has run the commands it was sent, and read any map they asked for: a
    * `map` holds the command buffer as Q3's load holds the program. The host runs them at the top of
@@ -915,9 +896,9 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       };
       app.on('update', look);
     });
-  // The player's keys and mouse, through the binds. A bound command that is neither a
-  // button nor a weapon's runs as the console would run it, C's toggle among them.
+  // The player's keys and mouse, through the binds, each bound command run as the console runs it.
   const input = new ClientInput(config.binds, { command: (argv) => commands.execute(argv), warn });
+  input.addCommands(commands);
   // The server's map is the entity text and the collision, and the server's own to read: the
   // page reads the files and hands them to the worker that hosts the match. The world
   // the client draws and predicts in is the client's own load, from the gamestate it is sent.
@@ -1013,14 +994,14 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
    * on it, which resolves once the map is in and the program is playing it. The menu goes as the
    * load starts, as `CL_MapLoading` takes the keys from it.
    */
-  const startMatch = (name: string | undefined): boolean | Promise<void> => {
+  const startMatch = (name: string | undefined): void | Promise<void> => {
     const boot = bootSteps;
     bootSteps = null;
-    if (!name) return true;
+    if (!name) return;
     const kind = mapKind(name);
     if (kind === null) {
       print(`Can't find map ${bspPath(name)}\n`);
-      return true;
+      return;
     }
     menu.forceOff();
     // `CL_MapLoading` (`cl_main.c:1303–1306`): a client of a server elsewhere leaves it.
@@ -1498,10 +1479,6 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   // the host's command buffer, run at the top of its next frame.
   const sendCommand = (...argv: (string | number)[]) =>
     current().game.consoleCommand(commandLine(argv));
-  /** `trap_Cmd_ExecuteText`: a console command from a page, run as a bind's would run. */
-  const runCommand = (argv: readonly string[]) => {
-    if (!commands.execute(argv)) warn(`Unknown command "${argv[0]}"`);
-  };
   // The presets both Server Options pages offer, looked for again each time the in-game menu opens
   // or Server Options is built, so a cfg put in the home folder's `presets` meanwhile is offered.
   let presets: readonly string[] = SHIPPED_PRESETS;
@@ -1524,7 +1501,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     presets: () => presets,
     refreshPresets,
     missing: (icon) => menuIcons?.missing(icon) ?? false,
-    actions: { command: runCommand },
+    actions: { command: (argv) => commands.execute(argv) },
     canDraw: (map) => mapKind(map) !== null,
     preview: previews
   });
@@ -1532,7 +1509,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   const servers = serversMenu({
     menu,
     config,
-    actions: { command: runCommand },
+    actions: { command: (argv) => commands.execute(argv) },
     servers: cls.servers,
     status: cls,
     favorites,
@@ -1576,7 +1553,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
         setTeam: (team) => current().game.sendClientCommand(`team ${team}`),
         addBot: (name, skill, team, delay) => sendCommand('addbot', name, skill, team, delay),
         removeBot: (clientNum) => sendCommand('clientkick', clientNum),
-        command: runCommand,
+        command: (argv) => commands.execute(argv),
         addFavorite: (address, name) => void favorites.add(address, name)
       }
     },
@@ -1651,9 +1628,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     (window as unknown as { pcqInput: unknown }).pcqInput = input;
     // `pcqConsole('disconnect')` runs a console line, as a script can't type one.
     (window as unknown as { pcqConsole: unknown }).pcqConsole = (line: string) => {
-      for (const argv of configCommands(line)) {
-        if (!commands.execute(argv)) warn(`Unknown command "${argv[0]}"`);
-      }
+      for (const argv of configCommands(line)) commands.execute(argv);
     };
     (window as unknown as { pcqMenu: unknown }).pcqMenu = {
       menu,

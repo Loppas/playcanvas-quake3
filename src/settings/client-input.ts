@@ -1,6 +1,8 @@
+import { atoi } from '../formats/c-scan';
 import { K } from '../formats/q3-keys';
 import { tokenize } from '../formats/q3config';
 import type { BindTable } from './binds';
+import type { CommandTable } from './command-router';
 
 /** `movespeed` in `CL_KeyMove` with `cl_run` on (`cl_input.c:326–332`): the port always runs. */
 const MOVE_SPEED = 127;
@@ -8,20 +10,8 @@ const MOVE_SPEED = 127;
 /** The commands cgame runs, which wait for the frame: the weapons (`cg_consolecmds.c`). */
 const CGAME_COMMANDS = new Set(['weapon', 'weapnext', 'weapprev']);
 
-/** Buttons with two names: `+attack` is `+button0` (`cl_input.c:961–963`). */
-const BUTTON_ALIASES = new Map([['attack', 'button0']]);
-
-/** The moves the client reads by name (`CL_KeyMove`), which are button state and no command. */
-const MOVE_BUTTONS = new Set(['forward', 'back', 'moveleft', 'moveright', 'moveup', 'movedown']);
-
-/**
- * Whether a `+`-command is one of the client's own buttons, which only the move and the button
- * bits read. Every other one — `+scores` among them — runs as the console's, as Q3 runs each
- * (`cl_keys.c:1208–1218`).
- */
-function isButtonCommand(name: string): boolean {
-  return MOVE_BUTTONS.has(name) || BUTTON_ALIASES.has(name) || /^button\d+$/.test(name);
-}
+/** The moves `CL_KeyMove` reads, each a button held by its `+` command. */
+const MOVE_BUTTONS = ['forward', 'back', 'moveleft', 'moveright', 'moveup', 'movedown'];
 
 /** How many `+button<i>` commands reach a user command's button bits (`CL_CmdButtons`). */
 const CMD_BUTTONS = 15;
@@ -45,11 +35,13 @@ class KeyButton {
   wasPressed = false;
 
   /**
-   * `IN_KeyDown` (`cl_input.c:76–110`).
+   * `IN_KeyDown` (`cl_input.c:76–110`), given the key its command names. A command typed at the
+   * console names none, and holds the button until a release typed there too.
    *
    * @returns `false` for a third key, which Q3 refuses.
    */
-  down(key: number): boolean {
+  down(arg: string | undefined): boolean {
+    const key = arg ? atoi(arg) : -1;
     if (key === this.keys[0] || key === this.keys[1]) return true;
     if (!this.keys[0]) this.keys[0] = key;
     else if (!this.keys[1]) this.keys[1] = key;
@@ -61,8 +53,17 @@ class KeyButton {
     return true;
   }
 
-  /** `IN_KeyUp` (`cl_input.c:112–150`): a key that isn't holding it is passed by. */
-  up(key: number): void {
+  /**
+   * `IN_KeyUp` (`cl_input.c:112–150`): a key that isn't holding it is passed by, and a release
+   * typed at the console, naming none, lets go whatever holds it.
+   */
+  up(arg: string | undefined): void {
+    if (!arg) {
+      this.keys[0] = this.keys[1] = 0;
+      this.active = false;
+      return;
+    }
+    const key = atoi(arg);
     if (this.keys[0] === key) this.keys[0] = 0;
     else if (this.keys[1] === key) this.keys[1] = 0;
     else return;
@@ -71,16 +72,16 @@ class KeyButton {
 }
 
 export interface ClientInputOptions {
-  /** Run a command that is neither a button nor cgame's: `toggle`, a cvar's name, `bind`. */
-  command?: (argv: readonly string[]) => boolean;
-  /** Where a command nothing takes is reported. */
+  /** Run a bind's command as the console runs it. */
+  command?: (argv: readonly string[]) => void;
+  /** Where a third key on one button is reported. */
   warn?: (message: string) => void;
 }
 
 /**
  * Q3's keys as the client takes them. A key runs its bind as `CL_ParseBinding`
- * does (`cl_keys.c:1184–1232`), and the binds hold Q3's buttons, which each frame's move is made
- * from (`CL_KeyMove`, `CL_CmdButtons`).
+ * does (`cl_keys.c:1184–1232`), as the console's commands, and the buttons those hold are what
+ * each frame's move is made from (`CL_KeyMove`, `CL_CmdButtons`).
  *
  * Input reaches the game only while it is {@link active}: the mouse captured and no menu up. Going
  * out lets every key go, as `Key_ClearStates` does. While out, a key pressed runs nothing, but a
@@ -91,7 +92,7 @@ export interface ClientInputOptions {
  */
 export class ClientInput {
   private readonly binds: BindTable;
-  private readonly command: (argv: readonly string[]) => boolean;
+  private readonly command: (argv: readonly string[]) => void;
   private readonly warn: (message: string) => void;
   private readonly buttons = new Map<string, KeyButton>();
   /** The keys down, `keys[].down`, so they can all be let go at once. */
@@ -106,8 +107,25 @@ export class ClientInput {
 
   constructor(binds: BindTable, options: ClientInputOptions = {}) {
     this.binds = binds;
-    this.command = options.command ?? (() => false);
+    this.command = options.command ?? (() => {});
     this.warn = options.warn ?? console.warn;
+    for (const name of MOVE_BUTTONS) this.buttons.set(name, new KeyButton());
+    for (let i = 0; i < CMD_BUTTONS; i++) this.buttons.set(`button${i}`, new KeyButton());
+  }
+
+  /**
+   * Put the buttons in the console's table as `CL_InitInput` does (`cl_input.c:934–994`), as
+   * far as the port's move reads them: `+attack` is `+button0`.
+   */
+  addCommands(table: CommandTable): void {
+    const add = (name: string, button: KeyButton) => {
+      table.add(`+${name}`, (argv) => {
+        if (!button.down(argv[1])) this.warn('Three keys down for a button!');
+      });
+      table.add(`-${name}`, (argv) => button.up(argv[1]));
+    };
+    for (const [name, button] of this.buttons) add(name, button);
+    add('attack', this.buttons.get('button0')!);
   }
 
   /** Whether input reaches the game: the mouse captured and no menu up. */
@@ -197,8 +215,7 @@ export class ClientInput {
   cmdButtons(): number {
     let buttons = 0;
     for (let i = 0; i < CMD_BUTTONS; i++) {
-      const button = this.buttons.get(`button${i}`);
-      if (!button) continue;
+      const button = this.buttons.get(`button${i}`)!;
       if (button.active || button.wasPressed) buttons |= 1 << i;
       button.wasPressed = false;
     }
@@ -222,44 +239,30 @@ export class ClientInput {
 
   /** A move button's speed: {@link MOVE_SPEED} while it is held. */
   private held(name: string): number {
-    return this.buttons.get(name)?.active ? MOVE_SPEED : 0;
+    return this.buttons.get(name)!.active ? MOVE_SPEED : 0;
   }
 
-  /** `CL_ParseBinding`: each of a bind's commands, split at its semicolons. */
+  /**
+   * `CL_ParseBinding`: each of a bind's commands, split at its semicolons. A `+` command runs on
+   * the press as itself and on the release with a `-`, each given the key, so that two keys
+   * holding one button let it go apart. Q3 gives the time as well, for the part of a frame the key
+   * was down, which the port's move leaves out.
+   */
   private parseBinding(key: number, down: boolean): void {
     const binding = this.binds.get(key);
     if (!binding) return;
     for (const part of binding.split(';')) {
       const command = part.trimStart();
       if (command.startsWith('+')) {
-        if (this.live || !down) this.press(command.slice(1), key, down);
-        // Q3 runs a `+`-command as a console command too: `+scores` on the press and `-scores` on
-        // the release (`cl_keys.c:1208–1218`). A button of the client's own runs no command.
-        const name = command.slice(1);
-        if (isButtonCommand(name)) continue;
-        if (down && this.live) this.run(tokenize(`+${name}`));
-        else if (!down) this.run(tokenize(`-${name}`));
+        if (this.live || !down) this.run(`${down ? '+' : '-'}${command.slice(1)} ${key}`);
       } else if (down && this.live) {
-        this.run(tokenize(command));
+        this.run(command);
       }
     }
   }
 
-  private press(command: string, key: number, down: boolean): void {
-    const name = tokenize(command)[0]?.toLowerCase();
-    if (!name) return;
-    const id = BUTTON_ALIASES.get(name) ?? name;
-    let button = this.buttons.get(id);
-    if (!button) {
-      button = new KeyButton();
-      this.buttons.set(id, button);
-    }
-    if (!down) button.up(key);
-    else if (!button.down(key)) this.warn('Three keys down for a button!');
-  }
-
-  private run(argv: string[]): void {
-    if (argv.length === 0) return;
-    if (!this.cgameCommand(argv) && !this.command(argv)) this.warn(`Unknown command "${argv[0]}"`);
+  private run(line: string): void {
+    const argv = tokenize(line);
+    if (argv.length > 0) this.command(argv);
   }
 }

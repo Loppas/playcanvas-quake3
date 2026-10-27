@@ -14,9 +14,10 @@ import {
   updatePeak
 } from './player-controller';
 import { CS } from './server/host';
-import { BindTable } from './settings/binds';
-import { ClientInput } from './settings/client-input';
+import { defaultBinds } from './settings/binds';
+import type { ClientInput } from './settings/client-input';
 import { Cvars } from './settings/cvars';
+import { routedInput } from './settings/input-test-fixtures';
 import { createFlatWorldTrace } from './sim/box-world';
 import { damage } from './sim/combat';
 import {
@@ -192,7 +193,7 @@ function controlled(
 ) {
   const cvars = new Cvars({ debugMode: true, warn: () => {} });
   for (const [name, value] of Object.entries(cvarValues)) cvars.set(name, value);
-  const input = new ClientInput(new BindTable());
+  const { input } = routedInput(defaultBinds());
   input.active = true;
   // A spawn stands the player nine units above the point itself, so the point goes that far
   // below where they are wanted.

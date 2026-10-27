@@ -175,6 +175,30 @@ describe('the dedicated server', () => {
     expect(lines.some((line) => line.startsWith('cl score ping'))).toBe(true);
   });
 
+  it('says nothing of a command nothing takes with no map running, as ioq3ded says nothing', async () => {
+    const { server, lines, warnings } = await start();
+    lines.length = 0;
+
+    server.consoleLine('nosuch');
+    server.consoleLine('+nosuch');
+    server.consoleLine('-nosuch');
+    server.consoleLine('wait');
+    server.consoleLine('nosuch');
+    server.frame(1);
+    await server.router.settled();
+
+    expect(lines).toEqual([]);
+    expect(warnings).toEqual([]);
+  });
+
+  it("sends the server the game module's commands, and no other", async () => {
+    const { server } = await start();
+    server.consoleLine('nosuch');
+    expect(server.program.host.commandsPending).toBe(false);
+    server.consoleLine('AddBot');
+    expect(server.program.host.commandsPending).toBe(true);
+  });
+
   it('runs a preset off the command line, where a console would', async () => {
     const { server, config, lines } = await start({ argv: ['+exec', 'presets/vq3'] });
     await server.router.settled();

@@ -234,9 +234,10 @@ const SERVERINFO_CVARS = [
 
 /**
  * The commands the host runs of its own, as far as the port has them: nine of those
- * `SV_AddOperatorCommands` registers (`sv_ccmds.c:1523–1542`).
+ * `SV_AddOperatorCommands` registers (`sv_ccmds.c:1523–1542`). The program the host runs in puts
+ * them in its console's table, to be sent here as lines for the command buffer.
  */
-const HOST_COMMANDS: ReadonlySet<string> = new Set([
+export const HOST_COMMANDS: readonly string[] = [
   'heartbeat',
   'map',
   'devmap',
@@ -246,17 +247,7 @@ const HOST_COMMANDS: ReadonlySet<string> = new Set([
   'kickbots',
   'status',
   'serverinfo'
-]);
-
-/**
- * Whether a console command is the host's, and so goes in its command buffer rather than to the
- * client's settings. Q3 matches a command's name without regard to case (`Cmd_ExecuteString`).
- *
- * @param name - The command's first token.
- */
-export function isHostCommand(name: string | undefined): boolean {
-  return name !== undefined && HOST_COMMANDS.has(name.toLowerCase());
-}
+];
 
 /** The world of a map given no collision: nothing in it is solid. */
 const emptyWorld: TraceFn = (_start, _mins, _maxs, end) => clearTrace(end);

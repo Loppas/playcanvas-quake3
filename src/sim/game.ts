@@ -835,7 +835,8 @@ export class Game implements GameModule {
   /**
    * `ClientCommand` (`g_cmds.c:1709–1822`), for the client commands the game module answers:
    * `score`, which asks for the board (`Cmd_Score_f`, `:105–107`), then `kill`, `team` and the
-   * follow commands. A command's name is matched without regard to case, as `Q_stricmp` matches it.
+   * follow commands. Any other is answered as one it doesn't know. A command's name is matched
+   * without regard to case, as `Q_stricmp` matches it.
    *
    * "Not fully in game yet" clients are passed over, as Q3 passes them (`:1714–1724`): a client
    * that has connected but not begun has no board to be shown. At the intermission the board is
@@ -873,6 +874,8 @@ export class Game implements GameModule {
       case 'followprev':
         this.followCycle(entity, -1);
         break;
+      default:
+        this.traps.sendServerCommand(clientNum, `print "unknown cmd ${argv[0] ?? ''}\n"`);
     }
   }
 

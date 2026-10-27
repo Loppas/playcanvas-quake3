@@ -2,19 +2,20 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { K } from '../formats/q3-keys';
 import { BUTTON_AFFIRMATIVE, BUTTON_ATTACK } from '../sim/constants';
-import { BindTable, defaultBinds } from './binds';
-import { ClientInput } from './client-input';
+import { routedInput } from './input-test-fixtures';
 
 /** A printable key's number. */
 const key = (char: string) => char.charCodeAt(0);
 
-/** Input taking the default binds, or the ones given, with the game taking input. */
-function setup(binds: Iterable<readonly [number, string]> = defaultBinds(true), taken = true) {
-  const command = vi.fn(() => taken);
-  const warn = vi.fn();
-  const input = new ClientInput(new BindTable(binds), { command, warn });
-  input.active = true;
-  return { input, command, warn };
+/**
+ * Input taking the default binds, or the ones given, with the game taking input, and its commands
+ * run through a console of its own. `cgame` hears cgame's commands other than the weapons'.
+ */
+function setup(binds?: Iterable<readonly [number, string]>) {
+  const cgame = vi.fn((argv: readonly string[]) => argv[0].toLowerCase().endsWith('scores'));
+  const wired = routedInput(binds, cgame);
+  wired.input.active = true;
+  return { ...wired, cgame };
 }
 
 describe('ClientInput: the move', () => {
@@ -62,7 +63,7 @@ describe('ClientInput: the move', () => {
   });
 
   it('refuses a third key on one button, as Q3 does', () => {
-    const { input, warn } = setup([
+    const { input, printed } = setup([
       [key('w'), '+forward'],
       [K.UPARROW, '+forward'],
       [K.KP_UPARROW, '+forward']
@@ -70,7 +71,7 @@ describe('ClientInput: the move', () => {
     input.keyDown(key('w'));
     input.keyDown(K.UPARROW);
     input.keyDown(K.KP_UPARROW);
-    expect(warn).toHaveBeenCalledWith('Three keys down for a button!');
+    expect(printed).toEqual(['Three keys down for a button!\n']);
     input.keyUp(key('w'));
     input.keyUp(K.UPARROW);
     expect(input.keyMove().forwardmove).toBe(0);
@@ -101,10 +102,12 @@ describe('ClientInput: the buttons', () => {
     expect(input.cmdButtons()).toBe(8 | BUTTON_AFFIRMATIVE | 16384);
   });
 
-  it('leaves a button past the fifteenth off the command, as Quake III does', () => {
-    const { input } = setup([[key('1'), '+button15']]);
+  it('has no button past the fifteenth, as Quake III has none', () => {
+    const { input, printed } = setup([[key('1'), '+button15']]);
     input.keyDown(key('1'));
+    input.keyUp(key('1'));
     expect(input.cmdButtons()).toBe(0);
+    expect(printed).toEqual(['Unknown command "+button15^7"\n']);
   });
 
   it('fires once for a click shorter than a frame, as CL_CmdButtons reads one', () => {
@@ -115,34 +118,95 @@ describe('ClientInput: the buttons', () => {
     expect(input.cmdButtons()).toBe(0);
   });
 
-  it('takes +button0 as +attack', () => {
-    const { input } = setup([[K.CTRL, '+button0']]);
+  it('takes +button0 as +attack, one button held by either', () => {
+    const { input } = setup([
+      [K.CTRL, '+button0'],
+      [key('x'), '+attack']
+    ]);
     input.keyDown(K.CTRL);
+    input.keyDown(key('x'));
+    input.keyUp(K.CTRL);
     expect(input.cmdButtons()).toBe(BUTTON_ATTACK);
+    input.keyUp(key('x'));
+    expect(input.cmdButtons()).toBe(0);
+  });
+});
+
+describe('ClientInput: the buttons as console commands (cl_input.c:76–150)', () => {
+  it('holds a button pressed at the console, naming no key, until a release there', () => {
+    const { input, router } = setup();
+    router.execute(['+forward']);
+    expect(input.keyMove().forwardmove).toBe(127);
+    // Pressed again, it is the same key held, as a key's repeat is.
+    router.execute(['+forward']);
+    input.keyDown(key('w'));
+    input.keyUp(key('w'));
+    expect(input.keyMove().forwardmove).toBe(127);
+    router.execute(['-forward']);
+    expect(input.keyMove().forwardmove).toBe(0);
+  });
+
+  it('lets go whatever keys hold a button at a release typed at the console', () => {
+    const { input, router, printed } = setup([
+      [key('w'), '+forward'],
+      [K.UPARROW, '+forward'],
+      [K.KP_UPARROW, '+forward'],
+      [K.MOUSE1, '+attack']
+    ]);
+    input.keyDown(key('w'));
+    input.keyDown(K.UPARROW);
+    input.keyDown(K.MOUSE1);
+    router.execute(['-FORWARD']);
+    router.execute(['-attack']);
+    expect(input.keyMove().forwardmove).toBe(0);
+    // The click was pressed since the last frame, so the frame still sees it once.
+    expect(input.cmdButtons()).toBe(BUTTON_ATTACK);
+    expect(input.cmdButtons()).toBe(0);
+    // Neither key holds the button now, so two others can.
+    input.keyUp(key('w'));
+    input.keyDown(key('w'));
+    input.keyDown(K.KP_UPARROW);
+    expect(input.keyMove().forwardmove).toBe(127);
+    expect(printed).toEqual([]);
+  });
+
+  it('holds a button by the key a command names, and lets it go by that key alone', () => {
+    const { input, router } = setup();
+    router.execute(['+moveup', '200']);
+    router.execute(['-moveup', '201']);
+    expect(input.keyMove().upmove).toBe(127);
+    router.execute(['-moveup', '200']);
+    expect(input.keyMove().upmove).toBe(0);
+  });
+
+  it("leaves the buttons the port's move doesn't read unknown, as they were: +speed", () => {
+    const { input, printed } = setup([[K.SHIFT, '+speed']]);
+    input.keyDown(K.SHIFT);
+    input.keyUp(K.SHIFT);
+    expect(printed).toEqual(['Unknown command "+speed^7"\n']);
   });
 });
 
 describe('ClientInput: commands', () => {
   it('keeps the weapon commands for the frame, the number row and the wheel alike', () => {
-    const { input, command } = setup();
+    const { input, printed } = setup();
     for (const pressed of [key('5'), K.MWHEELUP, K.MWHEELDOWN]) {
       input.keyDown(pressed);
       input.keyUp(pressed);
     }
     expect(input.takeCommands()).toEqual([['weapon', '5'], ['weapprev'], ['weapnext']]);
     expect(input.takeCommands()).toEqual([]);
-    expect(command).not.toHaveBeenCalled();
+    expect(printed).toEqual([]);
   });
 
   it("keeps the console's weapon commands for the frame as a bind's, input taken or not", () => {
-    const { input, command } = setup();
+    const { input } = setup();
     input.active = false;
     expect(input.cgameCommand(['weapon', '5'])).toBe(true);
     expect(input.cgameCommand(['WEAPNEXT'])).toBe(true);
     expect(input.cgameCommand(['cg_fov', '100'])).toBe(false);
     expect(input.cgameCommand([])).toBe(false);
     expect(input.takeCommands()).toEqual([['weapon', '5'], ['WEAPNEXT']]);
-    expect(command).not.toHaveBeenCalled();
   });
 
   it('makes nothing for a frame with no command to take', () => {
@@ -154,75 +218,71 @@ describe('ClientInput: commands', () => {
     expect(none).toEqual([]);
   });
 
-  it('runs +scores on the press and -scores on the release, as Q3 runs a +command', () => {
-    const { input, command } = setup([[K.TAB, '+scores']]);
+  it('runs +scores on the press and -scores on the release, each given its key, as CL_ParseBinding does', () => {
+    const { input, cgame } = setup([[K.TAB, '+scores']]);
     input.keyDown(K.TAB);
-    expect(command).toHaveBeenCalledWith(['+scores']);
+    expect(cgame).toHaveBeenCalledWith(['+scores', '9']);
 
-    command.mockClear();
+    cgame.mockClear();
     input.keyUp(K.TAB);
-    expect(command).toHaveBeenCalledWith(['-scores']);
+    expect(cgame).toHaveBeenCalledWith(['-scores', '9']);
   });
 
   it('runs the -scores half even with input out, as the - half of a bind', () => {
-    const { input, command } = setup([[K.TAB, '+scores']]);
+    const { input, cgame } = setup([[K.TAB, '+scores']]);
     input.keyDown(K.TAB);
-    command.mockClear();
+    cgame.mockClear();
 
     // Going out lets every key go, and a `-` command still runs (`cl_keys.c:1352–1358`).
     input.active = false;
-    expect(command).toHaveBeenCalledWith(['-scores']);
-  });
-
-  it("keeps the client's own buttons out of the console: +forward and +button5 run nothing", () => {
-    const { input, command } = setup();
-    for (const pressed of [key('w'), key('f')]) {
-      input.keyDown(pressed);
-      input.keyUp(pressed);
-    }
-    expect(command).not.toHaveBeenCalled();
+    expect(cgame).toHaveBeenCalledWith(['-scores', '9']);
   });
 
   it("runs any other command at once, on the press alone: C's toggle", () => {
-    const { input, command } = setup();
+    const { input, config } = setup();
     input.keyDown(key('c'));
     input.keyUp(key('c'));
-    expect(command).toHaveBeenCalledOnce();
-    expect(command).toHaveBeenCalledWith(['toggle', 'pcq_drawCollision']);
+    expect(config.cvars.settings.drawCollision).toBe(true);
   });
 
   it('runs each command of a bind split at its semicolons', () => {
-    const { input, command } = setup([[key('x'), '+attack; weapon 7;cg_fov 100']]);
+    const { input, config } = setup([[key('x'), '+attack; weapon 7;cg_fov 100']]);
     input.keyDown(key('x'));
     expect(input.cmdButtons()).toBe(BUTTON_ATTACK);
     expect(input.takeCommands()).toEqual([['weapon', '7']]);
-    expect(command).toHaveBeenCalledWith(['cg_fov', '100']);
+    expect(config.cvars.settings.fov).toBe(100);
     input.keyUp(key('x'));
     expect(input.cmdButtons()).toBe(0);
   });
 
-  it('reports a command nothing takes', () => {
-    const { input, warn } = setup([[key('x'), 'vstr go']], false);
+  it("prints a command nothing takes, and a press nothing takes but not its release", () => {
+    const { input, printed } = setup([
+      [key('x'), 'vstr go'],
+      [key('y'), '+nosuch']
+    ]);
     input.keyDown(key('x'));
-    expect(warn).toHaveBeenCalledWith('Unknown command "vstr"');
+    input.keyDown(key('y'));
+    input.keyUp(key('y'));
+    expect(printed).toEqual(['Unknown command "vstr^7"\n', 'Unknown command "+nosuch^7"\n']);
   });
 
   it('leaves Escape to the menu, whatever it is bound to', () => {
-    const { input, command } = setup([[K.ESCAPE, 'togglemenu']]);
+    const { input, printed } = setup([[K.ESCAPE, 'togglemenu']]);
     input.keyDown(K.ESCAPE);
-    expect(command).not.toHaveBeenCalled();
+    expect(printed).toEqual([]);
   });
 });
 
 describe('ClientInput: when the game takes input', () => {
   it('runs nothing while the game does not take input', () => {
-    const { input, command } = setup();
+    const { input, config, printed } = setup();
     input.active = false;
     for (const pressed of [key('w'), key('c'), key('5'), K.MOUSE1]) input.keyDown(pressed);
     expect(input.keyMove().forwardmove).toBe(0);
     expect(input.cmdButtons()).toBe(0);
     expect(input.takeCommands()).toEqual([]);
-    expect(command).not.toHaveBeenCalled();
+    expect(config.cvars.settings.drawCollision).toBe(false);
+    expect(printed).toEqual([]);
   });
 
   it('lets every key go when the game stops taking input, as Key_ClearStates does', () => {
