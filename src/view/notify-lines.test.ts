@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { CON_LINE_WIDTH, CON_NOTIFY_TIME, NotifyLines, type NotifyRow } from './notify-lines';
+import { ConsoleBuffer } from './console-buffer';
+import { notifyRows, type NotifyRow, type NotifySettings } from './notify-lines';
+
+/** `con_notifylines`, `con_notifytime` and `cl_conXOffset` at ioquake3's defaults. */
+const DEFAULTS: NotifySettings = { notifyLines: 3, notifyTime: 3, conXOffset: 0 };
 
 /** The text of a row, the spaces it does not draw put back from where its characters are. */
 function text(row: NotifyRow): string {
@@ -11,124 +15,122 @@ function text(row: NotifyRow): string {
   return out;
 }
 
-/** A console that echoes nowhere. */
-function quiet(): NotifyLines {
-  return new NotifyLines(() => {});
+/** A buffer `width` characters wide, with each of `prints` printed at its time. */
+function printed(width: number, ...prints: [string, number][]): ConsoleBuffer {
+  const buffer = new ConsoleBuffer();
+  buffer.resize(width);
+  for (const [line, time] of prints) buffer.print(line, time);
+  return buffer;
 }
 
-describe('NotifyLines', () => {
+/** The rows' text at `realTime`. */
+function shown(buffer: ConsoleBuffer, realTime: number, settings: Partial<NotifySettings> = {}) {
+  return notifyRows(buffer, { ...DEFAULTS, ...settings }, realTime, false).map(text);
+}
+
+// Every expectation below is what ioquake3's own `Con_DrawNotify`, compiled from its C, drew for
+// the same prints.
+describe('notifyRows', () => {
   it('shows a line at the top left, a character to every 8 pixels from the 8th', () => {
-    const lines = quiet();
-    lines.print('Hi there\n', 1000);
-    const rows = lines.rows(1000, false);
-    // The line, and under it the one being written, which is empty but has its row.
-    expect(rows.map(text)).toEqual(['Hi there', '']);
-    expect(rows.map((row) => row.y)).toEqual([0, 16]);
+    const rows = notifyRows(printed(20, ['Hi there\n', 1000]), DEFAULTS, 1000, false);
+    // The line being written under it is empty, and takes no row.
+    expect(rows.map(text)).toEqual(['Hi there']);
+    expect(rows[0].y).toBe(0);
     // 'H' is 72: row 4, column 8. The space between the words is not drawn.
     expect(rows[0].glyphs[0]).toEqual({ x: 8, row: 4, col: 8, color: 7 });
     expect(rows[0].glyphs.map((glyph) => glyph.x)).toEqual([8, 16, 32, 40, 48, 56, 64]);
   });
 
-  it('colours what follows each code, and starts each print in white', () => {
-    const lines = quiet();
-    lines.print('^1Sarge^7 was railed by ^4Visor\n', 1000);
-    lines.print('next\n', 1000);
-    const [railed, next] = lines.rows(1000, false);
+  it('draws each character in its own colour', () => {
+    const buffer = printed(40, ['^1Sarge^7 was railed by ^4Visor\n', 1000], ['next\n', 1000]);
+    const [railed, next] = notifyRows(buffer, DEFAULTS, 1000, false);
     expect(text(railed)).toBe('Sarge was railed by Visor');
     expect(railed.glyphs.map((glyph) => glyph.color).join('')).toBe(
       `${'1'.repeat(5)}${'7'.repeat(11)}${'4'.repeat(5)}`
     );
+    expect(next.y).toBe(16);
     expect(next.glyphs.every((glyph) => glyph.color === 7)).toBe(true);
   });
 
-  it('keeps three whole lines over the one being written, and lets the oldest go', () => {
-    const lines = quiet();
-    for (const line of ['one', 'two', 'three', 'four']) lines.print(`${line}\n`, 1000);
-    expect(lines.rows(1000, false).map(text)).toEqual(['two', 'three', 'four', '']);
+  it('looks at con_notifylines lines over the one being written', () => {
+    const buffer = printed(20, ['one\n', 1000], ['two\n', 1000], ['three\n', 1000]);
+    buffer.print('four\n', 1000);
+    expect(shown(buffer, 1000)).toEqual(['two', 'three', 'four']);
+    expect(shown(buffer, 1000, { notifyLines: 1 })).toEqual(['four']);
+    expect(shown(buffer, 1000, { notifyLines: 16 })).toEqual(['one', 'two', 'three', 'four']);
   });
 
-  it('shows a line for three seconds of real time, and then gives its row up', () => {
-    expect(CON_NOTIFY_TIME).toBe(3000);
-    const lines = quiet();
-    lines.print('one\n', 1000);
-    lines.print('two\n', 2000);
-    expect(lines.rows(4000, false).map(text)).toEqual(['one', 'two', '']);
-    const later = lines.rows(4001, false);
-    expect(later.map(text)).toEqual(['two', '']);
+  it('shows a line for con_notifytime seconds of real time, and then gives its row up', () => {
+    const buffer = printed(20, ['one\n', 1000], ['two\n', 2000]);
+    expect(shown(buffer, 4000)).toEqual(['one', 'two']);
+    const later = notifyRows(buffer, DEFAULTS, 4001, false);
+    expect(later.map(text)).toEqual(['two']);
     expect(later[0].y).toBe(0);
-    expect(lines.rows(5001, false)).toEqual([]);
+    expect(shown(buffer, 5001)).toEqual([]);
+    // A fraction of a second, as the cvar's `value` reads it.
+    expect(shown(buffer, 1499, { notifyTime: 0.5 })).toEqual(['one', 'two']);
+    expect(shown(buffer, 1501, { notifyTime: 0.5 })).toEqual(['two']);
   });
 
-  it('gives a blank line a row of its own', () => {
-    const lines = quiet();
-    lines.print('a\n\nb\n', 1000);
-    const rows = lines.rows(1000, false);
-    expect(rows.map(text)).toEqual(['a', '', 'b', '']);
-    expect(rows.map((row) => row.y)).toEqual([0, 16, 32, 48]);
+  it('gives a blank line no row', () => {
+    const rows = notifyRows(printed(20, ['a\n\nb\n', 1000]), DEFAULTS, 1000, false);
+    expect(rows.map(text)).toEqual(['a', 'b']);
+    expect(rows.map((row) => row.y)).toEqual([0, 16]);
   });
 
-  it('starts a word that would run past the edge on a new line', () => {
-    expect(CON_LINE_WIDTH).toBe(78);
-    const lines = quiet();
-    lines.print(`${'a'.repeat(70)} ${'b'.repeat(10)}\n`, 1000);
-    expect(lines.rows(1000, false).map(text)).toEqual(['a'.repeat(70), 'b'.repeat(10), '']);
+  it('shows the line being written once it has something on it, and nothing after a clear', () => {
+    const buffer = printed(20, ['old\n', 1000], ['part', 1000]);
+    expect(shown(buffer, 1000)).toEqual(['old', 'part']);
+    buffer.clearNotify();
+    expect(shown(buffer, 1000)).toEqual([]);
+    buffer.print('ial\n', 1500);
+    expect(shown(buffer, 1500)).toEqual(['partial']);
   });
 
-  it('breaks a word longer than a line where the rest of it fits on the next', () => {
-    // The word is counted again at every character, and only once what is left is shorter than a
-    // line does it go over: 23 in, 77 are left.
-    const lines = quiet();
-    lines.print(`${'c'.repeat(100)}\n`, 1000);
-    expect(lines.rows(1000, false).map(text)).toEqual(['c'.repeat(23), 'c'.repeat(77), '']);
+  it('leaves out what a [skipnotify] print wrote', () => {
+    const buffer = printed(20, ['one\n', 1000], ['[skipnotify]two\n', 2000]);
+    expect(shown(buffer, 2000)).toEqual(['one']);
+    buffer.print('three\n', 3000);
+    expect(shown(buffer, 3000)).toEqual(['one', 'three']);
   });
 
-  it('starts a new line as soon as one is full, with nothing more to print', () => {
-    // A space is a word of none, so nothing wraps before one, and 77 of them take the line to
-    // its edge. The line is done there, before the next print, which starts on a line of its own.
-    const lines = quiet();
-    lines.print(`a${' '.repeat(77)}`, 1000);
-    expect(lines.rows(1000, false).map(text)).toEqual(['a', '']);
-    lines.print('b\n', 1000);
-    expect(lines.rows(1000, false).map(text)).toEqual(['a', 'b', '']);
+  it('starts cl_conXOffset pixels in, either way', () => {
+    const buffer = printed(20, ['ab\n', 1000]);
+    const x = (conXOffset: number) => {
+      const [row] = notifyRows(buffer, { ...DEFAULTS, conXOffset }, 1000, false);
+      return row.glyphs.map((glyph) => glyph.x);
+    };
+    expect(x(100)).toEqual([108, 116]);
+    expect(x(-8)).toEqual([0, 8]);
   });
 
-  it('ends a word at a byte over 127, as C reads a signed character', () => {
-    const lines = quiet();
-    // "bbbbé" fits after the a's, and only "bbbbb" goes over; read whole, all ten would.
-    lines.print(`${'a'.repeat(70)} bbbbébbbbb\n`, 1000);
-    const rows = lines.rows(1000, false).map(text);
-    expect(rows).toEqual([`${'a'.repeat(70)} bbbbé`, 'bbbbb', '']);
+  it('hides every line while it is hidden', () => {
+    const buffer = printed(20, ['one\n', 1000]);
+    expect(notifyRows(buffer, DEFAULTS, 1000, true)).toEqual([]);
+    expect(notifyRows(buffer, DEFAULTS, 1000, false).map(text)).toEqual(['one']);
   });
 
-  it('goes back to the start of the line for a carriage return', () => {
-    const lines = quiet();
-    lines.print('abc\rX\n', 1000);
-    expect(lines.rows(1000, false).map(text)).toEqual(['Xbc', '']);
+  it('shows a word wrapped onto the next line as a row of its own', () => {
+    expect(shown(printed(10, ['aaaa bbbbbbb\n', 1000]), 1000)).toEqual(['aaaa', 'bbbbbbb']);
   });
 
-  it('hides every line under a menu', () => {
-    const lines = quiet();
-    lines.print('one\n', 1000);
-    expect(lines.rows(1000, true)).toEqual([]);
-    expect(lines.rows(1000, false)).toHaveLength(2);
+  it('shows nothing printed before a resize, and what comes after', () => {
+    const buffer = printed(20, ['x\n', 1000]);
+    buffer.resize(30);
+    expect(shown(buffer, 1000)).toEqual([]);
+    buffer.print('y\n', 2000);
+    expect(shown(buffer, 2000)).toEqual(['y']);
   });
 
-  it('shows nothing printed before a clear, but the unfinished line once it is written to', () => {
-    const lines = quiet();
-    lines.print('old\n', 1000);
-    lines.print('part', 1000);
-    lines.clear();
-    expect(lines.rows(1000, false)).toEqual([]);
-
-    lines.print('ial\n', 1500);
-    expect(lines.rows(1500, false).map(text)).toEqual(['partial', '']);
+  it('draws a byte past 127 as the character it is in the font', () => {
+    const [row] = notifyRows(printed(20, ['caf\xe9 \xff\n', 1000]), DEFAULTS, 1000, false);
+    expect(row.glyphs.slice(3)).toEqual([
+      { x: 32, row: 14, col: 9, color: 7 },
+      { x: 48, row: 15, col: 15, color: 7 }
+    ]);
   });
 
-  it("echoes each print to the browser's console, without its colours or its last newline", () => {
-    const echoed: string[] = [];
-    const lines = new NotifyLines((line) => echoed.push(line));
-    lines.print('^1Sarge^7 connected\n', 1000);
-    lines.print('two\nlines\n', 1000);
-    expect(echoed).toEqual(['Sarge connected', 'two\nlines']);
+  it('never shows a line written at time 0', () => {
+    expect(shown(printed(20, ['zero\n', 0]), 0)).toEqual([]);
   });
 });

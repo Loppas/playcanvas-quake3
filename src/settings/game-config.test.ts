@@ -76,6 +76,8 @@ const FRESH = [
   'seta cg_predictItems "1"',
   'seta xp_delagWeapons "0"',
   'seta cg_projectileNudge "0"',
+  'seta con_notifytime "3"',
+  'seta con_notifylines "3"',
   'seta fraglimit "20"',
   'seta timelimit "0"',
   'seta capturelimit "8"',

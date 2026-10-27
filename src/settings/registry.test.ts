@@ -55,6 +55,10 @@ describe('the settings registry', () => {
       showMiss: 0,
       delagWeapons: 0,
       projectileNudge: 0,
+      noPrint: false,
+      notifyTime: 3,
+      notifyLines: 3,
+      conXOffset: 0,
       gametype: 0,
       fragLimit: 20,
       timeLimit: 0,
@@ -183,6 +187,10 @@ describe('the settings registry', () => {
       showMiss: 'cg_showmiss',
       delagWeapons: 'xp_delagWeapons',
       projectileNudge: 'cg_projectileNudge',
+      noPrint: 'cl_noprint',
+      notifyTime: 'con_notifytime',
+      notifyLines: 'con_notifylines',
+      conXOffset: 'cl_conXOffset',
       gametype: 'g_gametype',
       fragLimit: 'fraglimit',
       timeLimit: 'timelimit',
@@ -346,6 +354,10 @@ describe('the settings registry', () => {
         'showMiss',
         'delagWeapons',
         'projectileNudge',
+        'noPrint',
+        'notifyTime',
+        'notifyLines',
+        'conXOffset',
         'dedicated',
         'hostname',
         'master1',
@@ -406,6 +418,8 @@ describe('the settings registry', () => {
       'noPredict',
       'errorDecay',
       'showMiss',
+      'noPrint',
+      'conXOffset',
       'gametype',
       'maxClients',
       // The server's frame and the move's step, which no Q3 cvar table archives.
@@ -611,6 +625,17 @@ describe('reading a setting from a string', () => {
     expect(read('overBrightBits', '-1')).toEqual({ value: 0 });
     expect(read('fov', '200')).toEqual({ value: 160 });
     expect(read('fov', '0')).toEqual({ value: 1 });
+  });
+
+  it('clamps con_notifylines to 1–16, as Cvar_CheckRange does', () => {
+    expect(read('notifyLines', '0')).toEqual({ value: 1 });
+    expect(read('notifyLines', '1')).toEqual({ value: 1 });
+    expect(read('notifyLines', '16')).toEqual({ value: 16 });
+    expect(read('notifyLines', '17')).toEqual({ value: 16 });
+  });
+
+  it('takes con_notifytime as any number of seconds', () => {
+    expect(read('notifyTime', '0.5')).toEqual({ value: 0.5 });
   });
 
   it('refuses a grapple type or speedometer that does not exist, and armor below 0', () => {

@@ -137,6 +137,14 @@ export interface Settings {
    * everyone else's missiles, grenades aside, to show them nearer where they are by now.
    */
   projectileNudge: number;
+  /** `cl_noprint`: nothing printed goes into the console, though the devtools still get it. */
+  noPrint: boolean;
+  /** `con_notifytime`: how long a line shows on the notify lines, in seconds. */
+  notifyTime: number;
+  /** `con_notifylines`: how many of the console's last lines the notify lines show, 1–16. */
+  notifyLines: number;
+  /** `cl_conXOffset`: the notify lines' indent from the left, in the screen's pixels. */
+  conXOffset: number;
   /**
    * `g_gametype`: 0 free-for-all, 1 tournament, 3 team deathmatch, 4 capture the flag, 8 clan
    * arena.
@@ -607,6 +615,24 @@ export const SETTINGS: SettingDefs = {
     default: '0',
     read: wholeNumber(),
     section: null
+  },
+  // The console's, with ioquake3's defaults and flags (`cl_main.c:3560, 3608`,
+  // `cl_console.c:368–370`), on no page. `con_notifylines` is held to 1–16, as
+  // `Cvar_CheckRange` holds it.
+  noPrint: { cvar: 'cl_noprint', default: '0', read: flag, section: null, archive: false },
+  notifyTime: { cvar: 'con_notifytime', default: '3', read: decimal(), section: null },
+  notifyLines: {
+    cvar: 'con_notifylines',
+    default: '3',
+    read: wholeNumber({ min: 1, max: 16, clamp: true }),
+    section: null
+  },
+  conXOffset: {
+    cvar: 'cl_conXOffset',
+    default: '0',
+    read: wholeNumber(),
+    section: null,
+    archive: false
   },
 
   // Server options. The match's own, with Q3's defaults (`gameCvarTable`, `g_main.c:105–132`):

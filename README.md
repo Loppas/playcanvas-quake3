@@ -180,7 +180,9 @@ own sounds, from where it is. It bleeds where your shots strike it, and your lig
 at it.
 
 Who killed whom, and who joined, left or was renamed, shows for three seconds at the top left, as
-Quake 3's console notify lines show it, and goes to the browser's console too.
+Quake 3's console notify lines show it, and goes to the browser's console too. So does what Quake 3
+warns of, such as a command nothing knows or a cheat-protected cvar. `con_notifylines` and
+`con_notifytime` set how many lines show and for how long, and `cl_noprint 1` keeps them clear.
 
 ## Quake 3 assets
 

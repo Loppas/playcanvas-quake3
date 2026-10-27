@@ -275,6 +275,28 @@ it('throws the grapple style the query string asks for', async () => {
   expect(setup().config.cvars.settings.allowGrapple).toBe(3);
 });
 
+it("prints the config's warnings to the console at once, then holds to cl_noprint", async () => {
+  window.history.replaceState(null, '', '/?cl_noprint=1&cg_fov=wide');
+  const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+  setupApp.mockResolvedValue(fakeHandle());
+  await bootPage();
+  const { consoleText, print } = setup();
+  /** The console's last whole line. */
+  const lastLine = () => {
+    const cells = consoleText.line(consoleText.current - 1);
+    return String.fromCharCode(...cells.map((cell) => cell & 255)).trimEnd();
+  };
+
+  // Read with the settings, before `cl_noprint` is: Quake 3 prints everything until `CL_Init`.
+  expect(lastLine()).toMatch(/^cg_fov "wide" /);
+  expect(log).toHaveBeenCalledWith(expect.stringMatching(/^cg_fov "wide" /));
+  // From then on the app's prints go only to the devtools.
+  print('later\n');
+  expect(lastLine()).toMatch(/^cg_fov "wide" /);
+  expect(log).toHaveBeenLastCalledWith('later');
+  log.mockRestore();
+});
+
 it('takes the hook away at g_allowGrapple 0, as CorkScrew does', async () => {
   window.history.replaceState(null, '', '/?g_allowGrapple=0');
   setupApp.mockResolvedValue(fakeHandle());

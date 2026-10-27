@@ -813,9 +813,10 @@ export class PlayerController {
    * boolean would be "true", which no reader of a userinfo parses.
    */
   private buildUserinfo(): string {
+    const warn = (message: string) => this.view.console.print(`${message}\n`);
     let info = '';
     for (const [key, setting] of USERINFO) {
-      info = infoSetValueForKey(info, key, this.cvars.get(SETTINGS[setting].cvar));
+      info = infoSetValueForKey(info, key, this.cvars.get(SETTINGS[setting].cvar), warn);
     }
     return info;
   }
