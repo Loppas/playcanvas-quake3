@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { K } from '../formats/q3-keys';
 import { BUTTON_AFFIRMATIVE, BUTTON_ATTACK } from '../sim/constants';
+import { KEYCATCH } from './client-input';
 import { routedInput } from './input-test-fixtures';
 
 /** A printable key's number. */
@@ -323,9 +324,211 @@ describe('ClientInput: when the game takes input', () => {
     expect(movement).toEqual({ dx: 2, dy: 3 });
   });
 
-  it('says which keys are bound', () => {
+  it('says whether it took a key, so its browser default is stopped: a bound one in game', () => {
     const { input } = setup();
-    expect(input.bound(key('w'))).toBe(true);
-    expect(input.bound(key('z'))).toBe(false);
+    expect(input.keyDown(key('w'))).toBe(true);
+    expect(input.keyDown(key('z'))).toBe(false);
+    input.active = false;
+    expect(input.keyDown(key('w'))).toBe(false);
+  });
+});
+
+/** Which catchers are up, as bits, and which of them a key goes to. */
+const SETS: [string, number, string][] = [
+  ['the console', KEYCATCH.CONSOLE, 'console'],
+  ['the menu', KEYCATCH.UI, 'menu'],
+  ['the chat line', KEYCATCH.MESSAGE, 'chat'],
+  ['the console over the menu', KEYCATCH.CONSOLE | KEYCATCH.UI, 'console'],
+  ['the menu and the chat line', KEYCATCH.UI | KEYCATCH.MESSAGE, 'menu'],
+  ['the console and the chat line', KEYCATCH.CONSOLE | KEYCATCH.MESSAGE, 'console'],
+  ['all three', KEYCATCH.CONSOLE | KEYCATCH.UI | KEYCATCH.MESSAGE, 'console']
+];
+
+/**
+ * Input with a catcher of each kind, each recording what reaches it in `heard` and using it, and
+ * `+probe` and `toggleconsole` in the console, recorded there too. The menu's `open` is Escape's.
+ */
+function catching(binds?: Iterable<readonly [number, string]>) {
+  const heard: string[] = [];
+  const catcher = (name: string) => ({
+    key: vi.fn((pressed: number) => heard.push(`${name} key ${pressed}`) > 0),
+    char: vi.fn((ch: string) => heard.push(`${name} char ${ch}`) > 0),
+    paste: vi.fn((text: string) => heard.push(`${name} paste ${text}`) > 0)
+  });
+  const menu = { ...catcher('menu'), open: vi.fn(() => void heard.push('menu open')) };
+  const wired = routedInput(binds, undefined, {
+    console: catcher('console'),
+    menu,
+    chat: catcher('chat')
+  });
+  for (const name of ['+probe', '-probe', 'toggleconsole']) {
+    wired.router.add(name, (argv) => void heard.push(argv.join(' ')));
+  }
+  wired.input.active = true;
+  return { ...wired, heard, menu };
+}
+
+describe('ClientInput: the key catchers', () => {
+  it.each(SETS)('gives a key to %s, and runs none of its bind', (_, catchers, who) => {
+    const { input, heard } = catching([[key('w'), '+forward']]);
+    input.setCatcher(catchers);
+    expect(input.keyDown(key('w'))).toBe(true);
+    expect(heard).toEqual([`${who} key ${key('w')}`]);
+    expect(input.keyMove().forwardmove).toBe(0);
+  });
+
+  it.each(SETS)("gives a character and a paste to %s, where its key goes", (_, catchers, who) => {
+    const { input, heard } = catching();
+    input.setCatcher(catchers);
+    expect(input.char('q')).toBe(true);
+    expect(input.paste('203.0.113.9')).toBe(true);
+    expect(heard).toEqual([`${who} char q`, `${who} paste 203.0.113.9`]);
+  });
+
+  it('runs the bind with none up, and gives no catcher the key, the character or the paste', () => {
+    const { input, heard } = catching([[key('w'), '+forward']]);
+    input.keyDown(key('w'));
+    expect(input.char('w')).toBe(false);
+    expect(input.paste('x')).toBe(false);
+    expect(input.keyMove().forwardmove).toBe(127);
+    expect(heard).toEqual([]);
+  });
+
+  it.each(SETS)("runs a key's release with %s up, which no catcher sees", (_, catchers) => {
+    const { input, heard } = catching([[key('w'), '+probe']]);
+    input.setCatcher(catchers);
+    input.keyDown(key('w'));
+    heard.length = 0;
+    input.keyUp(key('w'));
+    expect(heard).toEqual([`-probe ${key('w')}`]);
+  });
+
+  it('lets every key go when the catchers change, and not when they are set as they were', () => {
+    const { input, heard } = catching([[key('w'), '+probe']]);
+    input.keyDown(key('w'));
+    input.setCatcher(0);
+    expect(heard).toEqual([`+probe ${key('w')}`]);
+    input.setCatcher(KEYCATCH.UI);
+    expect(heard).toEqual([`+probe ${key('w')}`, `-probe ${key('w')}`]);
+    expect(input.catchers).toBe(KEYCATCH.UI);
+
+    input.keyDown(key('w'));
+    heard.length = 0;
+    input.setCatcher(KEYCATCH.UI);
+    expect(heard).toEqual([]);
+    input.setCatcher(KEYCATCH.UI | KEYCATCH.CONSOLE);
+    expect(heard).toEqual([`-probe ${key('w')}`]);
+  });
+
+  it('turns the view with the mouse unless the menu is up, as CL_MouseEvent does', () => {
+    const { input } = catching();
+    for (const catchers of [0, KEYCATCH.CONSOLE, KEYCATCH.MESSAGE]) {
+      input.setCatcher(catchers);
+      input.mouseMove(2, 3);
+      expect(input.takeMouse()).toEqual({ dx: 2, dy: 3 });
+    }
+    for (const catchers of [KEYCATCH.UI, KEYCATCH.UI | KEYCATCH.CONSOLE]) {
+      input.setCatcher(catchers);
+      input.mouseMove(2, 3);
+      expect(input.takeMouse()).toEqual({ dx: 0, dy: 0 });
+    }
+  });
+});
+
+describe('ClientInput: Escape', () => {
+  it.each([
+    ['closes the chat line first, the console and the menu up too', 7, 'chat key 27'],
+    ['goes to the menu while it is up, the console over it', 3, 'menu key 27'],
+    ['opens the menu with the console alone up', 1, 'menu open'],
+    ['opens the menu with nothing up', 0, 'menu open']
+  ])('%s, and never runs its bind', (_, catchers, heardAs) => {
+    const { input, heard, printed } = catching([[K.ESCAPE, 'echo bound']]);
+    input.setCatcher(catchers);
+    expect(input.keyDown(K.ESCAPE)).toBe(true);
+    expect(heard).toEqual([heardAs]);
+    expect(printed).toEqual([]);
+  });
+
+  it('runs its bind\'s release on the way up, as CL_KeyUpEvent does for any key', () => {
+    const { input, heard } = catching([[K.ESCAPE, '+probe']]);
+    input.keyDown(K.ESCAPE);
+    input.keyUp(K.ESCAPE);
+    expect(heard).toEqual(['menu open', `-probe ${K.ESCAPE}`]);
+  });
+});
+
+describe('ClientInput: binds over a catcher', () => {
+  const binds: [number, string][] = [
+    [key('m'), 'togglemenu'],
+    [key('n'), 'TOGGLECONSOLE'],
+    [key('b'), 'echo hi'],
+    [key('v'), 'togglemenu x'],
+    [key('w'), '+forward']
+  ];
+
+  it('runs togglemenu and toggleconsole on a press over the menu, after the menu has the key', () => {
+    const { input, heard, printed } = catching(binds);
+    input.setCatcher(KEYCATCH.UI);
+    expect(input.keyDown(key('m'))).toBe(true);
+    expect(input.keyDown(key('n'))).toBe(true);
+    input.keyDown(key('b'));
+    input.keyDown(key('v'));
+    expect(heard).toEqual([
+      `menu key ${key('m')}`,
+      'menu key 27',
+      `menu key ${key('n')}`,
+      'TOGGLECONSOLE',
+      `menu key ${key('b')}`,
+      `menu key ${key('v')}`
+    ]);
+    expect(printed).toEqual([]);
+  });
+
+  it('runs neither with the console up', () => {
+    const { input, heard } = catching(binds);
+    input.setCatcher(KEYCATCH.CONSOLE | KEYCATCH.UI);
+    input.keyDown(key('m'));
+    input.keyDown(key('n'));
+    expect(heard).toEqual([`console key ${key('m')}`, `console key ${key('n')}`]);
+  });
+
+  it('runs togglemenu over the chat line, whose Escape closes it', () => {
+    const { input, heard } = catching(binds);
+    input.setCatcher(KEYCATCH.MESSAGE);
+    input.keyDown(key('m'));
+    expect(heard).toEqual([`chat key ${key('m')}`, 'chat key 27']);
+  });
+
+  it('decides the commands before the menu has the key, so the click that closes it fires nothing', () => {
+    const { input, menu } = catching();
+    input.setCatcher(KEYCATCH.UI);
+    menu.key.mockImplementation(() => {
+      input.setCatcher(0);
+      return true;
+    });
+    input.keyDown(K.MOUSE1);
+    expect(input.catchers).toBe(0);
+    expect(input.cmdButtons()).toBe(0);
+  });
+
+  it('runs on a press without the mouse only what it would over the menu, with nothing up', () => {
+    const { input, heard, printed } = catching(binds);
+    input.active = false;
+    input.keyDown(key('b'));
+    input.keyDown(key('w'));
+    expect(input.keyDown(key('m'))).toBe(true);
+    expect(heard).toEqual(['menu open']);
+    expect(printed).toEqual([]);
+    expect(input.keyMove().forwardmove).toBe(0);
+  });
+});
+
+describe('ClientInput: togglemenu', () => {
+  it('is an Escape pressed and let go: it opens the menu, and goes to the menu while up', () => {
+    const { input, router, heard } = catching();
+    router.execute(['togglemenu']);
+    input.setCatcher(KEYCATCH.UI);
+    router.execute(['togglemenu']);
+    expect(heard).toEqual(['menu open', 'menu key 27']);
   });
 });

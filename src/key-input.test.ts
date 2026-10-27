@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { K } from './formats/q3-keys';
 import { KeyInput } from './key-input';
 import { BUTTON_ATTACK } from './sim/constants';
-import type { ClientInput } from './settings/client-input';
+import { KEYCATCH, type ClientInput } from './settings/client-input';
 import { routedInput } from './settings/input-test-fixtures';
 
 /**
@@ -72,8 +72,8 @@ describe('capturing the mouse', () => {
     expect(requestPointerLock).toHaveBeenLastCalledWith();
   });
 
-  it('does not capture with a menu up', () => {
-    keys.menuOpen = true;
+  it('does not capture with a catcher up', () => {
+    input.setCatcher(KEYCATCH.UI);
     click();
     expect(requestPointerLock).not.toHaveBeenCalled();
   });
@@ -128,12 +128,12 @@ describe('when the game takes input', () => {
     expect(input.keyMove().forwardmove).toBe(0);
   });
 
-  it('holds input back while a menu is up, and gives it back after', () => {
+  it('holds input back while a catcher is up, and gives it back after', () => {
     lock();
-    keys.menuOpen = true;
+    input.setCatcher(KEYCATCH.UI);
     keyDown('KeyW');
     expect(input.keyMove().forwardmove).toBe(0);
-    keys.menuOpen = false;
+    input.setCatcher(0);
     keyDown('KeyW');
     expect(input.keyMove().forwardmove).toBe(127);
   });
@@ -196,40 +196,77 @@ describe('the menu', () => {
     key: ReturnType<typeof vi.fn<(key: number) => boolean>>;
     char: ReturnType<typeof vi.fn<(ch: string) => boolean>>;
     paste: ReturnType<typeof vi.fn<(text: string) => boolean>>;
-    open: ReturnType<typeof vi.fn<(escape: boolean) => void>>;
+    open: ReturnType<typeof vi.fn<() => void>>;
   };
+  let lost: ReturnType<typeof vi.fn<() => void>>;
 
   beforeEach(() => {
     keys.destroy();
+    const up = () => input.setCatcher(KEYCATCH.UI);
     menu = {
       key: vi.fn(() => true),
       char: vi.fn(() => true),
       paste: vi.fn(() => true),
-      open: vi.fn(() => {
-        keys.menuOpen = true;
-      })
+      open: vi.fn(up)
     };
-    keys = new KeyInput(canvas, input, menu);
+    lost = vi.fn(up);
+    input = routedInput([['m'.charCodeAt(0), 'togglemenu']], undefined, { menu }).input;
+    keys = new KeyInput(canvas, input, lost);
   });
 
   const pressed = () => menu.key.mock.calls.map(([key]) => key);
 
   it('opens on Escape before the first capture, and neither the game nor the menu takes the key', () => {
     keyDown('Escape');
-    expect(menu.open).toHaveBeenCalledExactlyOnceWith(true);
-    expect(keys.menuOpen).toBe(true);
+    expect(menu.open).toHaveBeenCalledOnce();
+    expect(input.catchers).toBe(KEYCATCH.UI);
     expect(menu.key).not.toHaveBeenCalled();
+    expect(lost).not.toHaveBeenCalled();
   });
 
   it('opens when the game loses the mouse', () => {
     lock();
     lock(null);
-    expect(menu.open).toHaveBeenCalledExactlyOnceWith(false);
+    expect(lost).toHaveBeenCalledOnce();
     expect(input.active).toBe(false);
   });
 
+  it('leaves Escape to the browser while the mouse is captured, whose letting it go opens the menu', () => {
+    lock();
+    expect(keyDown('Escape').defaultPrevented).toBe(false);
+    expect(menu.open).not.toHaveBeenCalled();
+    lock(null);
+    expect(lost).toHaveBeenCalledOnce();
+  });
+
+  it('opens nothing more when the mouse is lost with a catcher up', () => {
+    lock();
+    input.setCatcher(KEYCATCH.CONSOLE);
+    lock(null);
+    expect(lost).not.toHaveBeenCalled();
+  });
+
+  it('opens on a key bound to togglemenu with the mouse captured, and hands the menu Escape on it', () => {
+    lock();
+    keyDown('KeyM');
+    expect(menu.open).toHaveBeenCalledOnce();
+    expect(input.catchers).toBe(KEYCATCH.UI);
+    keyDown('KeyM');
+    expect(pressed()).toEqual(['m'.charCodeAt(0), K.ESCAPE]);
+  });
+
+  it('lets the mouse go when asked, for a menu opened over it, and not when it is free', () => {
+    const exitPointerLock = vi.fn();
+    document.exitPointerLock = exitPointerLock;
+    keys.release();
+    expect(exitPointerLock).not.toHaveBeenCalled();
+    lock();
+    keys.release();
+    expect(exitPointerLock).toHaveBeenCalledOnce();
+  });
+
   it('gives the menu every key while it is up, repeats too, and stops the defaults of those it uses', () => {
-    keys.menuOpen = true;
+    input.setCatcher(KEYCATCH.UI);
     const tab = keyDown('Tab');
     menu.key.mockReturnValueOnce(false);
     const q = keyDown('KeyQ');
@@ -240,7 +277,7 @@ describe('the menu', () => {
   });
 
   it("hands the menu the character a key types, after the key, but no Ctrl chord's", () => {
-    keys.menuOpen = true;
+    input.setCatcher(KEYCATCH.UI);
     menu.key.mockReturnValue(false);
     const typed = keyDown('KeyA', { key: 'A' });
     keyDown('KeyC', { key: 'c', ctrlKey: true });
@@ -249,8 +286,16 @@ describe('the menu', () => {
     expect(typed.defaultPrevented).toBe(true);
   });
 
+  it('gives it the wheel while it is up, and stops its default', () => {
+    input.setCatcher(KEYCATCH.UI);
+    const wheel = new WheelEvent('wheel', { deltaY: 100, cancelable: true });
+    canvas.dispatchEvent(wheel);
+    expect(pressed()).toEqual([K.MWHEELDOWN]);
+    expect(wheel.defaultPrevented).toBe(true);
+  });
+
   it('gives it the buttons as keys, and neither captures nor fires', () => {
-    keys.menuOpen = true;
+    input.setCatcher(KEYCATCH.UI);
     click(0);
     click(2);
     expect(pressed()).toEqual([K.MOUSE1, K.MOUSE2]);
@@ -281,7 +326,7 @@ describe('the menu', () => {
   it("hands the menu the browser's paste while up, and stops the default of one taken", () => {
     expect(paste('203.0.113.9').defaultPrevented).toBe(false);
     expect(menu.paste).not.toHaveBeenCalled();
-    keys.menuOpen = true;
+    input.setCatcher(KEYCATCH.UI);
     expect(paste('203.0.113.9').defaultPrevented).toBe(true);
     expect(menu.paste).toHaveBeenCalledExactlyOnceWith('203.0.113.9');
     menu.paste.mockReturnValueOnce(false);
@@ -292,7 +337,7 @@ describe('the menu', () => {
   });
 
   it("leaves Shift+Ins to the browser to paste with, where Insert alone is the menu's", () => {
-    keys.menuOpen = true;
+    input.setCatcher(KEYCATCH.UI);
     const shifted = keyDown('Insert', { shiftKey: true });
     expect(menu.key).not.toHaveBeenCalled();
     expect(shifted.defaultPrevented).toBe(false);
@@ -318,8 +363,9 @@ describe('teardown', () => {
   it('stops hearing a paste once destroyed', () => {
     const paste = vi.fn(() => true);
     keys.destroy();
-    keys = new KeyInput(canvas, input, { key: () => true, paste, open: () => {} });
-    keys.menuOpen = true;
+    input = routedInput(undefined, undefined, { menu: { key: () => true, paste, open: () => {} } }).input;
+    keys = new KeyInput(canvas, input);
+    input.setCatcher(KEYCATCH.UI);
     keys.destroy();
     const event = new Event('paste');
     Object.defineProperty(event, 'clipboardData', { value: { getData: () => 'x' } });

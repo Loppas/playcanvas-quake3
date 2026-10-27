@@ -17,12 +17,13 @@ import {
 
 const KEY_Q = 'q'.charCodeAt(0);
 
-/** A menu that records the sounds it plays, and its closing. */
+/** A menu that records the sounds it plays, its pages going up, and its closing. */
 function recorded() {
   const sounds: MenuSound[] = [];
+  const pushed = vi.fn();
   const closed = vi.fn();
-  const menu = new Menu({ sound: (sound) => sounds.push(sound), closed });
-  return { menu, sounds, closed };
+  const menu = new Menu({ sound: (sound) => sounds.push(sound), pushed, closed });
+  return { menu, sounds, pushed, closed };
 }
 
 /** A page of items by their labels, a label in brackets greyed, with the items activated, in order. */
@@ -49,6 +50,18 @@ describe('the stack (UI_PushMenu, UI_PopMenu)', () => {
     expect(menu.page).toBeNull();
     expect(sounds).toEqual([]);
     expect(closed).toHaveBeenCalledOnce();
+  });
+
+  it('says so at each page put up, as UI_PushMenu sets the catcher, and not at one put in its place', () => {
+    const { menu, pushed } = recorded();
+    const first = page(['A']).page;
+    menu.open(first);
+    menu.push(page(['B']).page);
+    menu.push(first);
+    expect(pushed).toHaveBeenCalledTimes(3);
+    menu.replace(page(['C']).page);
+    menu.pop();
+    expect(pushed).toHaveBeenCalledTimes(3);
   });
 
   it('is not closed twice by a force-off on a menu that is already off', () => {
