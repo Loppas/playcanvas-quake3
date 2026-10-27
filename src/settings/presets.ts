@@ -1,4 +1,4 @@
-import type { HomeFolder } from './home-folder';
+import { type HomeFolder, homePath } from './home-folder';
 
 /**
  * The presets: cfgs in `presets` that set a ruleset's cvars, run with `exec`, so a switch takes
@@ -31,12 +31,14 @@ export function shippedCfg(path: string): string | undefined {
 }
 
 /**
- * A cfg by its path: the home folder's, else the port's own, as Q3 searches `fs_homepath` before
- * the install.
+ * A cfg by its name: the home folder's, else the port's own, as Q3 searches `fs_homepath` before
+ * the install. The name is taken as a path the way the console's writes take it ({@link homePath}),
+ * so a cfg is read back by the name it was written under.
  *
  * @returns Its text, or `undefined` where neither has it.
  */
-export async function readCfg(path: string, home: HomeFolder): Promise<string | undefined> {
+export async function readCfg(name: string, home: HomeFolder): Promise<string | undefined> {
+  const path = homePath(name);
   return (await home.read(path)) ?? shippedCfg(path);
 }
 

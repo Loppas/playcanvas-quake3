@@ -193,6 +193,23 @@ export class ConsoleBuffer {
     this.bottom();
   }
 
+  /**
+   * `Con_Dump_f`'s text (`:216–257`): the lines from the first with anything but spaces on it to
+   * the one being written, each without its trailing spaces and ended with `lineEnd`.
+   */
+  dump(lineEnd: string): string {
+    const isBlank = (cells: Uint16Array) => cells.every((cell) => (cell & 255) === 32);
+    let index = this.currentLine - this.lines + 1;
+    while (index <= this.currentLine && isBlank(this.line(index))) index++;
+    let text = '';
+    for (; index <= this.currentLine; index++) {
+      let line = '';
+      for (const cell of this.line(index)) line += String.fromCharCode(cell & 255);
+      text += line.replace(/ +$/, '') + lineEnd;
+    }
+    return text;
+  }
+
   /** `Con_PageUp` (`:830–835`): the view back two lines, as far as the oldest the ring holds. */
   pageUp(): void {
     this.displayLine -= 2;

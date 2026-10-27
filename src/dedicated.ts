@@ -28,7 +28,8 @@ import { versionString } from './version';
  *
  * The search path is `fs_basepath`'s `baseq3` and the port's own `public/maps`, the same folders
  * the page's build reads, resolved the same way (`scripts/fs-basepath.mjs`); the home folder is
- * `fs_homepath`, where `exec` finds cfgs and where `q3config.cfg` is read, never written.
+ * `fs_homepath`, where `exec` finds cfgs, `writeconfig` writes, and `q3config.cfg` is read, never
+ * written.
  *
  * The bundle sits in `build/`, so the repo is one folder up — that is the root those folders are
  * taken from. Players reach it through its masters, by node-datachannel's peer connections on one

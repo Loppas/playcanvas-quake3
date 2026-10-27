@@ -36,5 +36,8 @@ export declare function configResponse(
   file: string
 ): Promise<ConfigAnswer>;
 
+/** Replace a file in the home folder, written beside it and moved into place. */
+export declare function replaceFile(file: string, text: string): Promise<void>;
+
 /** A request's body as text, or `null` for one past `limit` bytes. */
 export declare function readBody(request: Readable, limit?: number): Promise<string | null>;

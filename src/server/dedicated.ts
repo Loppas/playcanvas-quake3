@@ -1,10 +1,11 @@
 import { readInfoFiles, type InfoFile } from '../formats/arena';
-import { tokenize } from '../formats/q3config';
+import { tokenize, writeConfig } from '../formats/q3config';
 import { mapKind } from '../formats/map-kind';
 import type { CvarStore } from '../net/cvar';
 import type { DatagramSocket } from '../net/net';
 import type { PakFileSystem } from '../pak/vfs';
 import { CommandRouter, commandLine } from '../settings/command-router';
+import { addWriteConfig } from '../settings/file-commands';
 import type { GameConfig } from '../settings/game-config';
 import type { HomeFolder } from '../settings/home-folder';
 import { readCfg } from '../settings/presets';
@@ -70,7 +71,10 @@ export interface DedicatedServerOptions {
   config: GameConfig;
   /** The search path: the map's files, the bots and nothing else are read here. */
   fs: PakFileSystem;
-  /** Where `exec` finds cfgs — the home folder first, then the port's own presets. */
+  /**
+   * Where `exec` finds cfgs — the home folder first, then the port's own presets — and where
+   * `writeconfig` writes.
+   */
   home: HomeFolder;
   /** `Com_Printf`: the console's lines. */
   print: (text: string) => void;
@@ -152,6 +156,12 @@ export class DedicatedServer {
     this.router.add('quit', (argv) => {
       this.stop(argv.slice(1).join(' ') || 'Server quit');
       return new Promise<void>(() => {});
+    });
+    // With no client half there are no binds to write, as ioq3ded writes none.
+    addWriteConfig(this.router, {
+      text: () => writeConfig(undefined, config.cvars.archived()),
+      home: options.home,
+      print: options.print
     });
   }
 

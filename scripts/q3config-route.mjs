@@ -73,14 +73,24 @@ export async function configResponse(method, body, file) {
     };
   }
   if (method === 'PUT') {
-    await mkdir(nodePath.dirname(file), { recursive: true });
-    // Written beside it and moved into place, so an editor never sees half a file.
-    const temp = `${file}.${++writes}.tmp`;
-    await writeFile(temp, body ?? '', 'utf8');
-    await rename(temp, file);
+    await replaceFile(file, body ?? '');
     return { status: 204, headers };
   }
   return { status: 405, headers: { ...headers, Allow: 'GET, HEAD, PUT' } };
+}
+
+/**
+ * Replace a file in the home folder, making its folder if there is none. It is written beside the
+ * file and moved into place, so an editor never sees half a file.
+ *
+ * @param file - The file's path.
+ * @param text - What it is to hold.
+ */
+export async function replaceFile(file, text) {
+  await mkdir(nodePath.dirname(file), { recursive: true });
+  const temp = `${file}.${++writes}.tmp`;
+  await writeFile(temp, text, 'utf8');
+  await rename(temp, file);
 }
 
 /**

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -83,12 +83,11 @@ describe('handleAppRequest', () => {
     expect(await read.text()).toBe(text);
   });
 
-  it('keeps favorites.txt beside it, and no other file', async () => {
+  it('keeps favorites.txt beside it', async () => {
     const text = '10.0.0.5:27960 "Office"\n';
     expect((await get('/homepath/favorites.txt', { method: 'PUT', body: text })).status).toBe(204);
     expect(readFileSync(join(routes.homepath, 'favorites.txt'), 'utf8')).toBe(text);
     expect(await (await get('/homepath/favorites.txt')).text()).toBe(text);
-    expect((await get('/homepath/other.txt', { method: 'PUT', body: text })).status).toBe(405);
   });
 
   it("reads fs_homepath's other cfgs, and lists a folder of them, as the dev server does", async () => {
@@ -104,7 +103,19 @@ describe('handleAppRequest', () => {
     for (const path of ['/homepath/presets/pmc.cfg', '/homepath/..%2Fsecret.cfg', '/homepath/..%5Csecret.cfg']) {
       expect((await get(path)).status, path).toBe(404);
     }
-    expect((await get('/homepath/presets/cpm.cfg', { method: 'PUT', body: 'x' })).status).toBe(405);
+  });
+
+  it("writes the console's cfgs and .txt files in fs_homepath, as the dev server does", async () => {
+    writeFileSync(join(root, 'secret.cfg'), 'outside');
+    expect((await get('/homepath/sub/mine.cfg', { method: 'PUT', body: 'seta a "1"\n' })).status).toBe(204);
+    expect(readFileSync(join(routes.homepath, 'sub', 'mine.cfg'), 'utf8')).toBe('seta a "1"\n');
+    expect(await (await get('/homepath/sub/mine.cfg')).text()).toBe('seta a "1"\n');
+    expect((await get('/homepath/dump.txt', { method: 'PUT', body: 'one\r\n\r\n' })).status).toBe(204);
+    expect(readFileSync(join(routes.homepath, 'dump.txt'), 'utf8')).toBe('one\r\n\r\n');
+    for (const path of ['/homepath/notes.md', '/homepath/..%2Fsecret.cfg', '/homepath/sub/']) {
+      expect((await get(path, { method: 'PUT', body: 'x' })).status, path).toBe(404);
+    }
+    expect(readFileSync(join(root, 'secret.cfg'), 'utf8')).toBe('outside');
   });
 
   it('reads the install this launch runs on, and the one kept for the next', async () => {
@@ -154,9 +165,11 @@ describe('handleAppRequest', () => {
     expect((await get('/launch')).status).toBe(404);
   });
 
-  it('refuses a config past the size limit', async () => {
+  it('refuses a file past the size limit', async () => {
     const body = 'x'.repeat((1 << 20) + 1);
     expect((await get('/homepath/q3config.cfg', { method: 'PUT', body })).status).toBe(413);
+    expect((await get('/homepath/dump.txt', { method: 'PUT', body })).status).toBe(413);
+    expect(existsSync(join(routes.homepath, 'dump.txt'))).toBe(false);
   });
 
   it('serves the page from the build', async () => {

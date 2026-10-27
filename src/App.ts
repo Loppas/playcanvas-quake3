@@ -105,6 +105,7 @@ import type { WorldEffect } from './view/entity-events';
 import { ClientInput } from './settings/client-input';
 import { CommandRouter, commandLine } from './settings/command-router';
 import { keepFile, type FileStore } from './settings/config-file';
+import { addCondump, addWriteConfig, lineEndFor, type FileWriter } from './settings/file-commands';
 import { GameConfig } from './settings/game-config';
 import type { HomeFolder } from './settings/home-folder';
 import { SHIPPED_PRESETS, listPresets, readCfg } from './settings/presets';
@@ -298,8 +299,12 @@ export interface SetupOptions {
   print: (text: string) => void;
   /** The console's text, which `print` writes, and whose last lines are the notify lines. */
   consoleText: ConsoleText;
-  /** The home folder, where `exec` looks for a cfg before the port's own. */
+  /**
+   * The home folder, where `exec` looks for a cfg before the port's own, and `writeconfig` writes.
+   */
   home: HomeFolder;
+  /** Where `condump` writes: the home folder where the player can open it, else a download. */
+  dumps: FileWriter;
   /** `favorites.txt` as it was read at start, and where it is kept. */
   favorites: { saved: string | undefined; stores: readonly FileStore[] };
   /** What the menu and the console do beyond the game. */
@@ -893,6 +898,13 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   });
   commands.add('vid_restart', () => host.vidRestart());
   commands.add('clear', () => consoleText.clear());
+  addCondump(commands, {
+    consoleText,
+    dumps: setup.dumps,
+    lineEnd: lineEndFor(navigator.platform),
+    print
+  });
+  addWriteConfig(commands, { text: () => config.text(), home: setup.home, print });
   // `Com_Quit_f` (`common.c:376–392`): EXIT GAME's way out, the rest of the line the reason the
   // server's clients are given. Nothing behind it runs, as `Sys_Quit` never returns.
   commands.add('quit', (argv) => {

@@ -4,7 +4,8 @@
  * - `/baseq3/` lists the install's paks, and `/baseq3/<name>.pk3` answers `Range` over one;
  * - `/homepath/q3config.cfg` and `/homepath/favorites.txt` read and replace those files in
  *   `fs_homepath`;
- * - `/homepath/<path>.cfg` reads another cfg there, and `/homepath/<dir>/` lists a folder's;
+ * - `/homepath/<path>.cfg` reads another cfg there, and `/homepath/<dir>/` lists a folder's; a
+ *   `.cfg` or `.txt` there is written;
  * - `/install`, the shell's own: the install this launch reads and the one kept for the next, and
  *   the dialog that picks another;
  * - `/launch`, the shell's own too: the vertical sync Chromium was started with
@@ -59,7 +60,7 @@ const CONTENT_TYPES = new Map([
  * @typedef {object} AppRoutes
  * @property {string} baseq3 - The install's `baseq3` folder.
  * @property {string} homepath - `fs_homepath`: the game's kept files are read and replaced there,
- *   and its other cfgs only read.
+ *   its other cfgs read, and the console's `.cfg` and `.txt` files written.
  * @property {(request: Request) => Promise<Response>} page - The page's files.
  * @property {InstallRoute} [install] - The install, read and changed for the next launch.
  * @property {LaunchRoute} [launch] - What this launch started Chromium with.
@@ -222,8 +223,8 @@ async function keptFileAnswer(request, file) {
 }
 
 /**
- * Another cfg in `fs_homepath`, or a folder's listing of them, read only. Like the kept files, it
- * needs no origin check.
+ * Another cfg in `fs_homepath` or a folder's listing of them, or a `.cfg` or `.txt` written there.
+ * Like the kept files, it needs no origin check, and takes no body past their limit.
  *
  * @param {Request} request
  * @param {string} encoded - The path below the route, as the URL has it.
@@ -231,7 +232,13 @@ async function keptFileAnswer(request, file) {
  * @returns {Promise<Response>}
  */
 async function homeCfgs(request, encoded, home) {
-  const answer = await homeCfgResponse(request.method, encoded, home);
+  /** @type {string | undefined} */
+  let body;
+  if (request.method === 'PUT') {
+    body = await request.text();
+    if (Buffer.byteLength(body) > MAX_CONFIG_BYTES) return new Response(null, { status: 413 });
+  }
+  const answer = await homeCfgResponse(request.method, encoded, home, body);
   return new Response(answer.body ?? null, { status: answer.status, headers: answer.headers });
 }
 

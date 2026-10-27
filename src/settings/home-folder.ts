@@ -1,8 +1,9 @@
 import { opfsAvailable, opfsRoot } from '../browser-storage';
+import { downloadFile } from './config-file';
 
 /**
- * The home folder, `fs_homepath`, as `exec` reads it: the cfgs kept beside `q3config.cfg`, which
- * the game only reads.
+ * The home folder, `fs_homepath`: the cfgs kept beside `q3config.cfg`, which `exec` reads, and the
+ * files the console writes there.
  *
  * It is kept where the config is (`config-file.ts`): the folder itself in the desktop shell, OPFS
  * in a browser build, and both in dev, the folder first.
@@ -11,7 +12,7 @@ import { opfsAvailable, opfsRoot } from '../browser-storage';
 /** The route to the folder (`scripts/home-cfg-route.mjs`). */
 export const HOME_ROUTE = '/homepath/';
 
-/** The home folder, read only. Neither call throws. */
+/** The home folder. No call throws. */
 export interface HomeFolder {
   /** A file's text by its path below the folder, or `undefined` if there is none or it can't be read. */
   read(path: string): Promise<string | undefined>;
@@ -20,12 +21,26 @@ export interface HomeFolder {
    * none for a folder there is none of.
    */
   list(dir: string): Promise<string[]>;
+  /**
+   * Replace a file by its path below the folder, making the folders it is in.
+   *
+   * @returns Whether it was written.
+   */
+  write(path: string, text: string): Promise<boolean>;
 }
 
-/** The part of a `FileSystemDirectoryHandle` read here, whose listing TypeScript's DOM types don't carry. */
+/**
+ * A file's name as a path below the home folder, as `FS_BuildOSPath` makes one
+ * (`files.c:501–516`): `\` is a separator as `/` is, a run of them is one, and none leads.
+ */
+export function homePath(name: string): string {
+  return name.replace(/[/\\]+/g, '/').replace(/^\//, '');
+}
+
+/** The part of a `FileSystemDirectoryHandle` used here, whose listing TypeScript's DOM types don't carry. */
 interface OpfsFolder {
-  getDirectoryHandle(name: string): Promise<OpfsFolder>;
-  getFileHandle(name: string): Promise<{ getFile(): Promise<Blob> }>;
+  getDirectoryHandle(name: string, options?: { create: boolean }): Promise<OpfsFolder>;
+  getFileHandle(name: string, options?: { create: boolean }): Promise<FileSystemFileHandle>;
   values(): AsyncIterable<{ readonly kind: 'file' | 'directory'; readonly name: string }>;
 }
 
@@ -33,11 +48,11 @@ const isCfgName = (name: string) => /\.cfg$/i.test(name);
 
 /**
  * The folder below the build's folder in OPFS that `names` lead to, a name at a time. Rejects
- * where there is none.
+ * where there is none, unless `create` makes it.
  */
-async function opfsFolder(names: readonly string[]): Promise<OpfsFolder> {
+async function opfsFolder(names: readonly string[], create = false): Promise<OpfsFolder> {
   let folder = (await opfsRoot()) as unknown as OpfsFolder;
-  for (const name of names) folder = await folder.getDirectoryHandle(name);
+  for (const name of names) folder = await folder.getDirectoryHandle(name, { create });
   return folder;
 }
 
@@ -64,6 +79,20 @@ export const opfsHome: HomeFolder = {
       return names.sort();
     } catch {
       return [];
+    }
+  },
+  async write(path, text) {
+    if (!opfsAvailable()) return false;
+    try {
+      const names = path.split('/');
+      const folder = await opfsFolder(names.slice(0, -1), true);
+      const file = await folder.getFileHandle(names[names.length - 1], { create: true });
+      const writable = await file.createWritable();
+      await writable.write(text);
+      await writable.close();
+      return true;
+    } catch {
+      return false;
     }
   }
 };
@@ -99,6 +128,18 @@ export function routeHome(fetcher: typeof fetch = (...args) => fetch(...args)): 
       } catch {
         return [];
       }
+    },
+    async write(path, text) {
+      try {
+        const response = await fetcher(routePath(path), {
+          method: 'PUT',
+          body: text,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        });
+        return response.ok;
+      } catch {
+        return false;
+      }
     }
   };
 }
@@ -116,8 +157,31 @@ export function homeFolders(dev: boolean = import.meta.env.DEV, shell = false): 
 }
 
 /**
+ * Where the console's text is dumped: the folder over its route in the desktop shell and in dev,
+ * where the player can open it, and otherwise a download, as a browser build's OPFS is out of
+ * their reach.
+ *
+ * @param shell - In the desktop shell, which dev can be too.
+ * @param download - Hands a file over by its name: {@link downloadFile}, or a stand-in for a test.
+ */
+export function dumpFolder(
+  dev: boolean = import.meta.env.DEV,
+  shell = false,
+  download: (name: string, text: string) => void = downloadFile
+): Pick<HomeFolder, 'write'> {
+  if (shell || dev) return routeHome();
+  return {
+    async write(path, text) {
+      download(path.slice(path.lastIndexOf('/') + 1), text);
+      return true;
+    }
+  };
+}
+
+/**
  * Several folders read as one, as Q3 reads its search path: a file from the first that has it,
- * and a listing of every name any of them has.
+ * and a listing of every name any of them has. A file is written to each, as every store of a
+ * kept file is (`keepFile`), and is written once every one of them has it.
  */
 export function searchFolders(folders: readonly HomeFolder[]): HomeFolder {
   return {
@@ -132,6 +196,10 @@ export function searchFolders(folders: readonly HomeFolder[]): HomeFolder {
       const names = new Set<string>();
       for (const folder of folders) for (const name of await folder.list(dir)) names.add(name);
       return [...names].sort();
+    },
+    async write(path, text) {
+      const written = await Promise.all(folders.map((folder) => folder.write(path, text)));
+      return written.every(Boolean);
     }
   };
 }

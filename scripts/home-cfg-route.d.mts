@@ -19,9 +19,10 @@ export interface HomeCfgAnswer {
   body?: string;
 }
 
-/** Answer a request below the route: a cfg's text, or a folder's listing. */
+/** Answer a request below the route: a cfg's text, a folder's listing, or a file replaced. */
 export declare function homeCfgResponse(
   method: string,
   encoded: string,
-  home: string
+  home: string,
+  body?: string
 ): Promise<HomeCfgAnswer>;
