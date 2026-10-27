@@ -37,7 +37,7 @@ import { Level } from '../sim/level';
 import { playerBounds, type PointContentsFn, type TraceFn } from '../sim/types';
 import { traceShot } from '../sim/weapons/hitscan';
 import { copy, vec3, type Vec3 } from '../sim/vec3';
-import { CS, Host, SS, isHostCommand, type HostOptions } from './host';
+import { CS, HOST_COMMANDS, Host, SS, type HostOptions } from './host';
 import {
   connectLocal,
   connectRemote,
@@ -271,6 +271,15 @@ describe('the commands the game module asks the host for', () => {
     expect(host.commandQueue).toEqual([]);
     expect(host.commandsPending).toBe(false);
     expect(game.calls).toContain('shutdown true');
+  });
+
+  it('runs each of those it has a console send it, whatever its case, and hands the game none', () => {
+    const { host, game } = makeHost();
+
+    for (const name of HOST_COMMANDS) host.sendConsoleCommand(`${name.toUpperCase()}\n`);
+    host.runFrame(8);
+
+    expect(game.calls.filter((call) => call.startsWith('console '))).toEqual([]);
   });
 
   it('hands one it has no answer for to the game module', () => {
@@ -1139,19 +1148,6 @@ describe('map <n>', () => {
 
     expect(asked).toEqual([]);
     expect(printed).toEqual([]);
-  });
-
-  it("is the host's command, as map_restart is, whatever its case", () => {
-    expect(isHostCommand('map')).toBe(true);
-    expect(isHostCommand('MAP_RESTART')).toBe(true);
-    expect(isHostCommand('Kick')).toBe(true);
-    expect(isHostCommand('clientkick')).toBe(true);
-    expect(isHostCommand('kickbots')).toBe(true);
-    expect(isHostCommand('status')).toBe(true);
-    expect(isHostCommand('ServerInfo')).toBe(true);
-    expect(isHostCommand('Heartbeat')).toBe(true);
-    expect(isHostCommand('viewpos')).toBe(false);
-    expect(isHostCommand(undefined)).toBe(false);
   });
 });
 

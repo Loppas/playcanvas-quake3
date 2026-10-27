@@ -1727,6 +1727,25 @@ describe('the scores message', () => {
     expect(fixture.traps.commands.filter((c) => c.text.startsWith('scores '))).toHaveLength(0);
   });
 
+  it("tells a client of a command it doesn't know, by the name it sent (g_cmds.c:1821)", () => {
+    const fixture = makeGame();
+    join(fixture, 0, '\\name\\A');
+    fixture.traps.commands.length = 0;
+
+    fixture.game.clientCommand(0, '"NoSuch" "word"');
+    fixture.game.clientCommand(0, 'score');
+
+    expect(fixture.traps.commands.filter((c) => c.text.startsWith('print '))).toEqual([
+      { to: 0, text: 'print "unknown cmd NoSuch\n"' }
+    ]);
+
+    // At the intermission Quake 3 says it as chat, which the port has none of.
+    fixture.traps.commands.length = 0;
+    fixture.game.level.intermissiontime = 1000;
+    fixture.game.clientCommand(0, 'nosuch');
+    expect(fixture.traps.commands).toEqual([]);
+  });
+
   it('sends the board to everyone when the intermission begins', () => {
     const fixture = makeGame({}, { timelimit: '1' });
     join(fixture, 0, '\\name\\A');

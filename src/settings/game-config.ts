@@ -2,8 +2,25 @@ import { DEBUG_MODE } from '../config';
 import { stringToKey } from '../formats/q3-keys';
 import { configCommands, writeConfig } from '../formats/q3config';
 import { BindTable, bindWarning, defaultBinds } from './binds';
+import { type CommandTable, unknownCommand } from './command-router';
 import { Cvars } from './cvars';
 import { SETTINGS, SETTING_KEYS, settingForCvar } from './registry';
+
+/**
+ * The settings' commands, as `CL_InitKeyCommands` and `Cvar_Init` register them
+ * (`cl_keys.c:1148–1155`, `cvar.c:1445–1463`), as far as the port has them.
+ */
+const CONFIG_COMMANDS = [
+  'bind',
+  'unbind',
+  'unbindall',
+  'toggle',
+  'set',
+  'sets',
+  'setu',
+  'seta',
+  'reset'
+] as const;
 
 export interface GameConfigOptions {
   /** The saved `q3config.cfg`, or nothing on a first run. */
@@ -75,6 +92,20 @@ export class GameConfig {
     return this.runCommand(argv, false);
   }
 
+  /** Put the settings' commands in the console's table. */
+  addCommands(table: CommandTable): void {
+    for (const name of CONFIG_COMMANDS) table.add(name, (argv) => void this.runCommand(argv, false));
+  }
+
+  /**
+   * `Cvar_Command` (`cvar.c:750–768`): a cvar's name, and a value to set it to.
+   *
+   * @returns Whether it was a cvar's name.
+   */
+  cvarCommand(argv: readonly string[]): boolean {
+    return this.cvarByName(argv, false);
+  }
+
   /** The file, as Q3 writes it (`Com_WriteConfigToFile`). */
   text(): string {
     return writeConfig(this.binds.entries(), this.cvars.archived());
@@ -106,7 +137,7 @@ export class GameConfig {
 
   private run(text: string, loading: boolean): void {
     for (const argv of configCommands(text)) {
-      if (!this.runCommand(argv, loading)) this.warn(`Unknown command "${argv[0]}"`);
+      if (!this.runCommand(argv, loading)) this.warn(unknownCommand(argv[0]));
     }
   }
 
@@ -116,11 +147,6 @@ export class GameConfig {
    */
   private runCommand(argv: readonly string[], loading: boolean): boolean {
     const [name, ...args] = argv;
-    const setCvar = (cvar: string, value: string, archive: boolean) => {
-      if (loading) this.cvars.load(cvar, value, archive);
-      else this.cvars.set(cvar, value, archive);
-    };
-
     switch (name.toLowerCase()) {
       case 'unbindall':
         this.binds.clear();
@@ -140,7 +166,9 @@ export class GameConfig {
       case 'sets':
       case 'setu':
         // `Cvar_Set_f` (`cvar.c:852–893`): a name alone only prints its value.
-        if (args.length >= 2) setCvar(args[0], args.slice(1).join(' '), name.toLowerCase() === 'seta');
+        if (args.length >= 2) {
+          this.setCvar(args[0], args.slice(1).join(' '), name.toLowerCase() === 'seta', loading);
+        }
         return true;
       case 'toggle':
         if (args.length > 0) this.cvars.toggle(args[0], args.slice(1));
@@ -149,10 +177,20 @@ export class GameConfig {
         if (args.length === 1) this.cvars.reset(args[0]);
         return true;
       default:
-        // `Cvar_Command` (`cvar.c:750–768`): a cvar's name, and a value to set it to.
-        if (!settingForCvar(name) && this.cvars.string(name) === undefined) return false;
-        if (args.length > 0) setCvar(name, args.join(' '), false);
-        return true;
+        return this.cvarByName(argv, loading);
     }
+  }
+
+  /** {@link cvarCommand}, loading the value instead while the saved file is read at start. */
+  private cvarByName(argv: readonly string[], loading: boolean): boolean {
+    const [name, ...args] = argv;
+    if (!settingForCvar(name) && this.cvars.string(name) === undefined) return false;
+    if (args.length > 0) this.setCvar(name, args.join(' '), false, loading);
+    return true;
+  }
+
+  private setCvar(name: string, value: string, archive: boolean, loading: boolean): void {
+    if (loading) this.cvars.load(name, value, archive);
+    else this.cvars.set(name, value, archive);
   }
 }

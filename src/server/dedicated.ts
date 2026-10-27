@@ -5,11 +5,13 @@ import { mapKind } from '../formats/map-kind';
 import type { CvarStore } from '../net/cvar';
 import type { DatagramSocket } from '../net/net';
 import type { PakFileSystem } from '../pak/vfs';
-import { CommandRouter } from '../settings/command-router';
+import { CommandRouter, commandLine } from '../settings/command-router';
 import type { GameConfig } from '../settings/game-config';
 import type { HomeFolder } from '../settings/home-folder';
 import { readCfg } from '../settings/presets';
 import { BOT_LIST, BOTS_FILE } from '../sim/bots';
+import { isGameCommand } from '../sim/game';
+import { HOST_COMMANDS } from './host';
 import { hostMapFromData, readHostMapData } from './host-map';
 import {
   MAX_DEDICATED_FRAME_MSEC,
@@ -141,18 +143,22 @@ export class DedicatedServer {
     this.now = options.now ?? (() => performance.now());
     this.program = this.build();
 
+    // A dedicated server has no client half: no command is the client's own, none is cgame's, and
+    // none is sent on to a server.
     this.router = new CommandRouter({
-      // A dedicated server has no client half, so no command is the client's own.
-      client: () => false,
-      host: (line) => {
+      cvar: (argv) => config.cvarCommand(argv),
+      game: (line, argv) => {
+        if (!isGameCommand(argv[0])) return false;
         this.program.sendConsoleCommand(line);
         return true;
       },
-      config: (argv) => config.command(argv),
       readCfg: (path) => readCfg(path, options.home),
-      print: options.print,
-      warn: options.print
+      print: options.print
     });
+    config.addCommands(this.router);
+    for (const name of HOST_COMMANDS) {
+      this.router.add(name, (argv) => this.program.sendConsoleCommand(commandLine(argv)));
+    }
     this.dedicatedModified = dedicatedModified;
   }
 
