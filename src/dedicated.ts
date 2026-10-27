@@ -113,7 +113,7 @@ try {
 
   // `while (1) Com_Frame()` (`sys_main.c:137–140`), paced by `SV_FrameMsec` — and the msec that
   // reaches the server is the real time that passed, so the server's own clock keeps up whether
-  // the timer is late or not. A server that has stopped, by a signal, by `dedicated 0` or by a
+  // the timer is late or not. A server that has stopped, by a signal, by `quit` or by a
   // fatal error, ends the process with its code, and node-datachannel holds it open until its
   // threads are let go.
   let last = performance.now();

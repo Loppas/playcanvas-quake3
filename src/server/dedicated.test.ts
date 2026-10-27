@@ -203,8 +203,30 @@ describe('the dedicated server', () => {
     const { server, config, lines } = await start({ argv: ['+exec', 'presets/vq3'] });
     await server.router.settled();
 
-    expect(lines).toContain('execing presets/vq3\n');
+    expect(lines).toContain('execing presets/vq3.cfg\n');
     expect(config.cvars.get('g_gamepreset')).toBe('VQ3');
+  });
+
+  it("has cmd.c's and common.c's commands, and none of the client's, as ioq3ded", async () => {
+    const { server, lines } = await start();
+    server.consoleLine('cmdlist');
+    for (const name of ['cmdlist', 'exec', 'execq', 'vstr', 'echo', 'wait', 'quit', 'map', 'set']) {
+      expect(lines).toContain(`${name}\n`);
+    }
+    for (const name of ['clear', 'condump', 'cmd', 'vid_restart', 'connect', 'kill']) {
+      expect(lines).not.toContain(`${name}\n`);
+    }
+    expect(lines.at(-1)).toMatch(/^\d+ commands\n$/);
+  });
+
+  it("runs a cvar's string with vstr, a map's change among it", async () => {
+    const { server, config, lines } = await booted();
+    server.consoleLine('set rotation "echo next; map other"');
+    server.consoleLine('vstr rotation');
+    server.frame(1);
+    await server.program.mapLoad;
+    expect(lines).toContain('next\n');
+    expect(config.cvars.get('mapname')).toBe('other');
   });
 
   it("takes the command line's cvars before the server is built, as Com_StartupVariable does", async () => {
@@ -280,9 +302,8 @@ describe('the dedicated server', () => {
     server.frame(1);
     expect([frames, closes, server.stopped]).toEqual([2, 0, false]);
 
-    server.consoleLine('set dedicated 0');
-    server.frame(1);
-    expect([frames, closes, server.stopped]).toEqual([3, 1, true]);
+    server.consoleLine('quit');
+    expect([frames, closes, server.stopped]).toEqual([2, 1, true]);
   });
 
   it('answers nobody before its map is in, nor once it is shut down', async () => {
@@ -316,15 +337,31 @@ describe('the dedicated server', () => {
     expect(answered()).toEqual([false, false]);
   });
 
-  it('shuts the server down when dedicated goes to 0, after the frame that saw it', async () => {
-    const { server, lines } = await booted();
+  it("holds dedicated write protected once its command line has run, as ioq3ded's CVAR_INIT", async () => {
+    const { server, config, warnings } = await booted();
+    server.consoleLine('set dedicated 0');
+    server.consoleLine('dedicated 2');
+    server.frame(1);
+    expect(warnings).toEqual(['dedicated is write protected.\n', 'dedicated is write protected.\n']);
+    expect(config.cvars.get('dedicated')).toBe('1');
     expect(server.program.svRunning).toBe(true);
 
-    server.consoleLine('set dedicated 0');
-    server.frame(1);
+    const set = await start({ argv: ['+set', 'dedicated', '2'] });
+    expect(set.config.cvars.get('dedicated')).toBe('2');
+  });
 
+  it('quits, the rest of the line the reason its clients are given, and runs nothing after it', async () => {
+    const { server, config, lines } = await booted();
+    server.consoleLine('quit');
+    server.consoleLine('set after 1');
     expect(server.program.svRunning).toBe(false);
-    expect(lines).toContain('----- Server Shutdown (dedicated set to 0) -----');
+    expect([server.stopped, server.exitCode]).toEqual([true, 0]);
+    expect(lines).toContain('----- Server Shutdown (Server quit) -----');
+    expect(config.cvars.get('after')).toBe('');
+
+    const reason = await booted();
+    reason.server.consoleLine('quit "back soon"  folks');
+    expect(reason.lines).toContain('----- Server Shutdown (back soon folks) -----');
   });
 
   it("prints Q3's words for a map that is not there, and lets the match run on", async () => {

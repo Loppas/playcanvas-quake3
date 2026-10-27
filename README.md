@@ -184,6 +184,11 @@ Quake 3's console notify lines show it, and goes to the browser's console too. S
 warns of, such as a command nothing knows or a cheat-protected cvar. `con_notifylines` and
 `con_notifytime` set how many lines show and for how long, and `cl_noprint 1` keeps them clear.
 
+Quake 3's own console commands run from a bind or a cfg as they do in Quake 3: `echo`,
+`cmdlist`, `exec` and `execq`, `vstr`, `wait`, `cmd`, `clear`, `vid_restart`, and `quit`, which
+does what EXIT GAME does. A `wait` lets a script that runs itself go on, a frame at a time;
+without one it stops 16 deep, where Quake 3 would hang or overflow its command buffer.
+
 ## Quake 3 assets
 
 No Quake 3 data ships in this repo or its builds. The game reads the weapons, their sounds and
@@ -345,6 +350,9 @@ the error is printed between rows of stars, the server shuts down without tellin
 who time out, and it waits at its console for the next `map`. Errors that keep coming, each
 within 100 ms of the last, end the program instead, with exit code 3. Its terminal gets each
 error's stack as well.
+
+`quit` ends it, giving its players the rest of the line as the reason, or "Server quit". Once
+the command line has run, `dedicated` is write protected, as it is in Quake 3's dedicated server.
 
 It reads the paks from the same folders as the dev server: the `baseq3` that `PCQ_FS_BASEPATH`
 names, from the environment or `.env.local`, and the port's own `public/maps`. Its home folder is

@@ -20,6 +20,7 @@ export function routedInput(
   const printed: string[] = [];
   const router = new CommandRouter({
     cvar: (argv) => config.cvarCommand(argv),
+    cvarString: (name) => config.cvars.get(name),
     cgame: (argv) => input.cgameCommand(argv) || cgame(argv),
     game: () => false,
     forward: () => false,

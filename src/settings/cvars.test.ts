@@ -720,6 +720,41 @@ describe("Cvars: the console's set, and the player's own cvars", () => {
   });
 });
 
+describe('Cvars: a write-protected setting', () => {
+  it("refuses the console's set once write protected, but the value it holds (cvar.c:540–570)", () => {
+    const { cvars, printed } = store();
+    cvars.load('dedicated', '1');
+    cvars.writeProtect('DEDICATED');
+    expect(cvars.setFromConsole('Dedicated', '2')).toBe(false);
+    expect(printed()).toBe('Dedicated is write protected.\n');
+    expect(cvars.setFromConsole('dedicated', '1')).toBe(true);
+    cvars.toggle('dedicated');
+    cvars.resetFromConsole('dedicated');
+    expect(printed()).toBe('dedicated is write protected.\ndedicated is write protected.\n');
+    expect(cvars.get('dedicated')).toBe('1');
+    // The program's own set, as the engine's, still takes.
+    expect(cvars.set('dedicated', '2')).toBe(true);
+    expect(cvars.get('dedicated')).toBe('2');
+  });
+
+  it("shows I in cvarlist's fifth column", () => {
+    const { cvars, printed } = store();
+    cvars.listCvars('dedicated');
+    expect(printed().split('\n')[0]).toBe('      L   dedicated "0"');
+    cvars.writeProtect('dedicated');
+    cvars.listCvars('dedicated');
+    expect(printed().split('\n')[0]).toBe('    I L   dedicated "0"');
+  });
+
+  it('leaves a cvar that is not a setting as it is', () => {
+    const { cvars, printed } = store();
+    cvars.setFromConsole('xp_rule', '1');
+    cvars.writeProtect('xp_rule');
+    expect(cvars.setFromConsole('xp_rule', '2')).toBe(true);
+    expect(printed()).toBe('');
+  });
+});
+
 describe('Cvars: what seta archives', () => {
   const MASTER = 'ws://localhost:27950';
 
@@ -800,6 +835,14 @@ describe('Cvars: what seta archives', () => {
     expect(cvars.get('sv_master1')).toBe('ws://localhost:27951');
     expect(saved(cvars, 'sv_master1')).toBeUndefined();
     expect(save).not.toHaveBeenCalled();
+  });
+
+  it('archives a write-protected setting it refuses, as it archives any', () => {
+    const { cvars, printed } = store();
+    cvars.writeProtect('dedicated');
+    expect(cvars.setFromConsole('dedicated', '2', true)).toBe(false);
+    expect(printed()).toBe('dedicated is write protected.\n');
+    expect(saved(cvars, 'dedicated')).toBe('0');
   });
 
   it('archives no cvar a server made, since a server may set none the player made', () => {
