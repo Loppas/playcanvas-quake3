@@ -102,7 +102,7 @@ import { HitBoxes } from './render/hit-boxes';
 import { ItemEntities, listedItems } from './render/item-entities';
 import { WorldEffects, type DrawnBolt, type DrawnHook } from './render/world-effects';
 import type { WorldEffect } from './view/entity-events';
-import { ClientInput } from './settings/client-input';
+import { ClientInput, KEYCATCH } from './settings/client-input';
 import { CommandRouter, commandLine } from './settings/command-router';
 import { keepFile, type FileStore } from './settings/config-file';
 import { addCondump, addWriteConfig, lineEndFor, type FileWriter } from './settings/file-commands';
@@ -951,8 +951,18 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       };
       app.on('update', look);
     });
-  // The player's keys and mouse, through the binds, each bound command run as the console runs it.
-  const input = new ClientInput(config.binds, { command: (argv) => commands.execute(argv), warn });
+  // The player's keys and mouse, through the binds, each bound command run as the console runs it,
+  // and the menu's while it is up.
+  const input = new ClientInput(config.binds, {
+    command: (argv) => commands.execute(argv),
+    warn,
+    menu: {
+      key: (key) => menu.key(key),
+      char: (ch) => menu.char(ch),
+      paste: (text) => menu.paste(text),
+      open: () => openMenu(true)
+    }
+  });
   input.addCommands(commands);
   // The server's map is the entity text and the collision, and the server's own to read: the
   // page reads the files and hands them to the worker that hosts the match. The world
@@ -1527,11 +1537,15 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   // refuses leaves the game running without it until a click on the view, as at the start.
   // The keys and the mouse, once the game begins.
   let keys: KeyInput | null = null;
+  // The menu is the UI catcher, set alone on each page it puts up, and cleared as it goes. A page
+  // put up over the captured mouse lets it go, to point with.
   const menu = new Menu({
     sound: (cue) => sound?.playMenu(cue),
-    closed: () => {
-      if (keys) keys.menuOpen = false;
-    }
+    pushed: () => {
+      input.setCatcher(KEYCATCH.UI);
+      keys?.release();
+    },
+    closed: () => input.setCatcher(input.catchers & ~KEYCATCH.UI)
   });
   // `trap_Cmd_ExecuteText` for the two commands the bot pages send, which go where a bind's go:
   // the host's command buffer, run at the top of its next frame.
@@ -1630,7 +1644,6 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     if (!controller && !mapPreview) return;
     refreshPresets();
     menu.open(inGame);
-    if (keys) keys.menuOpen = true;
   };
   /** `UI_MainMenu`: the main menu, or its error screen while a dropped match's message stands. */
   const openMain = () => {
@@ -1642,21 +1655,14 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
             menu.open(mainMenu, 'q3ui');
           });
     menu.open(page, 'q3ui');
-    if (keys) keys.menuOpen = true;
   };
   begin = () => {
     keys = new KeyInput(
       canvas,
       input,
-      {
-        key: (key) => menu.key(key),
-        char: (ch) => menu.char(ch),
-        paste: (text) => menu.paste(text),
-        open: openMenu
-      },
+      () => openMenu(false),
       controller !== null || mapPreview !== null
     );
-    keys.menuOpen = menu.isOpen;
     began = true;
   };
   // The scoreboard: `cg`'s own state, and the port's screen for it. It draws over the HUD, and
@@ -1691,10 +1697,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     (window as unknown as { pcqMenu: unknown }).pcqMenu = {
       menu,
       open: () => openMenu(true),
-      setup: () => {
-        menu.open(setupMenu, 'q3ui');
-        if (keys) keys.menuOpen = true;
-      }
+      setup: () => menu.open(setupMenu, 'q3ui')
     };
     (window as unknown as { pcqMap: unknown }).pcqMap = () => map;
     // `pcqPreview()` is a map's preview once it is in and drawn, for a check to wait on, as one

@@ -281,6 +281,8 @@ export interface MenuPage {
 export interface MenuOptions {
   /** Play one of the four sounds. */
   sound?: (sound: MenuSound) => void;
+  /** A page went up: `UI_PushMenu`'s `trap_Key_SetCatcher( KEYCATCH_UI )` (`ui_atoms.c:112`). */
+  pushed?: () => void;
   /** The last page went: `UI_ForceMenuOff`, which lets the game go on (`ui_atoms.c:152–160`). */
   closed?: () => void;
 }
@@ -320,6 +322,7 @@ function firstLive(page: MenuPage): number {
 export class Menu {
   private readonly stack: Level[] = [];
   private readonly sound: (sound: MenuSound) => void;
+  private readonly pushed: () => void;
   private readonly closed: () => void;
   /** `QMF_HASMOUSEFOCUS` on the item at the cursor. */
   private mouse = false;
@@ -329,6 +332,7 @@ export class Menu {
 
   constructor(options: MenuOptions = {}) {
     this.sound = options.sound ?? (() => {});
+    this.pushed = options.pushed ?? (() => {});
     this.closed = options.closed ?? (() => {});
   }
 
@@ -392,6 +396,7 @@ export class Menu {
     this.mouse = false;
     // `m_entersound`, which Q3 plays once the page has first drawn (`ui_atoms.c:1250–1254`).
     this.sound('in');
+    this.pushed();
   }
 
   /**
