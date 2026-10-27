@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   CONFIG_ROUTE,
-  exportConfigFile,
+  downloadFile,
   FAVORITES_TXT,
   homeStores,
   keepFile,
@@ -224,7 +224,7 @@ describe('keepFile', () => {
 });
 
 describe('export and import', () => {
-  it('hands the file over as a q3config.cfg download', async () => {
+  it('hands a file over as a download under the name it is given', async () => {
     const blobs: Blob[] = [];
     Object.defineProperty(URL, 'createObjectURL', {
       configurable: true,
@@ -237,12 +237,16 @@ describe('export and import', () => {
       clicked = this;
     });
 
-    exportConfigFile('unbindall\n');
+    downloadFile('q3config.cfg', 'unbindall\n');
     expect(clicked?.download).toBe('q3config.cfg');
     expect(clicked?.href).toBe('blob:q3config');
     expect(await blobs[0].text()).toBe('unbindall\n');
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(revoke).toHaveBeenCalledWith('blob:q3config');
+
+    downloadFile('dump.txt', 'one\r\n\r\n');
+    expect(clicked?.download).toBe('dump.txt');
+    expect(await blobs[1].text()).toBe('one\r\n\r\n');
   });
 
   it('reads the file the player picks, or nothing if they cancel', async () => {

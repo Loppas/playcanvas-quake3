@@ -226,6 +226,45 @@ describe('ConsoleBuffer', () => {
   });
 });
 
+// `Con_Dump_f`'s loops (`cl_console.c:216–257`), read from its C.
+describe('ConsoleBuffer.dump', () => {
+  it('has nothing of a blank buffer', () => {
+    expect(new ConsoleBuffer().dump('\r\n')).toBe('');
+  });
+
+  it('starts at the first line with anything on it and ends with the one being written', () => {
+    const buffer = sized(20);
+    buffer.print('   \n', 1000);
+    buffer.print('^1one  \n\n  two\n', 1000);
+    expect(buffer.dump('\r\n')).toBe('one\r\n\r\n  two\r\n\r\n');
+    expect(buffer.dump('\n')).toBe('one\n\n  two\n\n');
+    buffer.print('three', 2000);
+    expect(buffer.dump('\n')).toBe('one\n\n  two\nthree\n');
+  });
+
+  it('writes a line as wide as the console whole, and a character past 127 as itself', () => {
+    const buffer = sized(10);
+    // A word longer than a line fills the first.
+    buffer.print('abcdefghijklmnopqrstuvwxy\nx\xe9\n', 1000);
+    expect(buffer.dump('\r\n')).toBe('abcdefghij\r\nklmnop\r\nqrstuvwxy\r\nx\xe9\r\n\r\n');
+  });
+
+  it('has only the lines the ring still holds', () => {
+    const buffer = sized(1000);
+    for (let n = 1; n <= 40; n++) buffer.print(`${n}\n`, 1000);
+    const lines = Array.from({ length: 31 }, (_, i) => `${i + 10}\n`);
+    expect(buffer.dump('\n')).toBe(`${lines.join('')}\n`);
+  });
+
+  it('has only what was printed since a clear, from where the last print left off on its line', () => {
+    const buffer = sized(20);
+    buffer.print('gone\nabc', 1000);
+    buffer.clear();
+    buffer.print('d\n', 2000);
+    expect(buffer.dump('\n')).toBe('   d\n\n');
+  });
+});
+
 // `Con_Clear_f` (`cl_console.c:165–173`) fills the cells and calls `Con_Bottom`, and nothing more.
 describe('ConsoleBuffer.clear', () => {
   it('blanks every cell and puts the view at the bottom, the line, the place on it and the times kept', () => {

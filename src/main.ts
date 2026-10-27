@@ -9,7 +9,7 @@ import type { PakFileSystem } from './pak/vfs';
 import { inflateWith } from './pak/zip';
 import { decodeTgasWith } from './render/md3-mesh';
 import {
-  exportConfigFile,
+  downloadFile,
   FAVORITES_TXT,
   homeStores,
   keepFile,
@@ -18,7 +18,7 @@ import {
   readKeptFile
 } from './settings/config-file';
 import { GameConfig } from './settings/game-config';
-import { homeFolders, searchFolders } from './settings/home-folder';
+import { dumpFolder, homeFolders, searchFolders } from './settings/home-folder';
 import { vidRestart } from './settings/vid-restart';
 import { inShell, shellLaunch } from './shell';
 import { ConsoleBuffer } from './view/console-buffer';
@@ -81,7 +81,7 @@ let stopGame = () => {};
 /** What the menu does beyond the game: `vid_restart`, export and import, and EXIT GAME. */
 const host: MenuHost = {
   vidRestart: () => void vidRestart(config, keeper),
-  exportConfig: () => exportConfigFile(config.text()),
+  exportConfig: () => downloadFile(Q3CONFIG_CFG, config.text()),
   importConfig: () => {
     void pickConfigFile().then((text) => {
       if (text !== undefined) config.exec(text);
@@ -175,6 +175,7 @@ try {
     print,
     consoleText: consoleBuffer,
     home,
+    dumps: dumpFolder(import.meta.env.DEV, shell),
     favorites: { saved: savedFavorites, stores: favoriteStores },
     host,
     launchVsync: launch?.vsync,

@@ -244,9 +244,10 @@ function serveHomeFiles(home: string): Plugin {
 
 /**
  * Dev-only route for the other cfgs in `fs_homepath`, which `exec` reads there before the port's
- * own copies: a cfg's text, or a folder's listing (`scripts/home-cfg-route.mjs`). It only reads.
+ * own copies: a cfg's text, or a folder's listing, and a `.cfg` or `.txt` the console writes
+ * (`scripts/home-cfg-route.mjs`).
  *
- * `apply: 'serve'` and the same-origin check, as the config's route has them.
+ * `apply: 'serve'`, the same-origin check and the size limit, as the config's route has them.
  *
  * @param home the home folder
  */
@@ -266,9 +267,13 @@ function serveHomeCfgs(home: string): Plugin {
         };
         if (!isSameOrigin(req.headers)) return send({ status: 403, headers: {} });
 
-        homeCfgResponse(req.method ?? 'GET', url.slice(HOME_ROUTE.length), home).then(send, () =>
-          send({ status: 500, headers: {} })
-        );
+        (req.method === 'PUT' ? readBody(req) : Promise.resolve(undefined))
+          .then((body): Promise<Answer> | Answer =>
+            body === null
+              ? { status: 413, headers: {} }
+              : homeCfgResponse(req.method ?? 'GET', url.slice(HOME_ROUTE.length), home, body)
+          )
+          .then(send, () => send({ status: 500, headers: {} }));
       });
     }
   };

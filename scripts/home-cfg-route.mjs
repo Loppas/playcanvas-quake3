@@ -1,17 +1,19 @@
 /**
  * The pure parts of the home folder's cfg route, which the dev server (`vite.config.ts`) and the
- * shell's `app:` scheme both answer: the `.cfg` files in `fs_homepath` that `exec` reads.
+ * shell's `app:` scheme both answer: the `.cfg` files in `fs_homepath` that `exec` reads, and the
+ * `.cfg` and `.txt` files the console writes there.
  *
  * `GET /homepath/<path>.cfg` answers a file's text, or 404. `GET /homepath/<dir>/` lists the
  * `.cfg` files directly in a folder as a JSON array of their names, `[]` for a folder there is
- * none of. The route only reads; the files the game keeps there have their own route
- * (`q3config-route.mjs`), which writes them. No path leaves the home folder.
+ * none of. `PUT /homepath/<path>.cfg` or `.txt` replaces a file, making its folders. The files the
+ * game keeps there have their own route (`q3config-route.mjs`). No path leaves the home folder.
  */
 
 import { readdir, readFile, stat } from 'node:fs/promises';
 import nodePath from 'node:path';
 
 import { resolveInside } from './baseq3-route.mjs';
+import { replaceFile } from './q3config-route.mjs';
 
 /** The URL prefix the home folder is read under. */
 export const HOME_ROUTE = '/homepath/';
@@ -23,6 +25,15 @@ export const HOME_ROUTE = '/homepath/';
  */
 export function isCfgName(name) {
   return /\.cfg$/i.test(name);
+}
+
+/**
+ * Whether a path names a file the route may write: a cfg, or a `.txt`, in any case.
+ *
+ * @param name - A path below the home folder.
+ */
+function isWritableName(name) {
+  return isCfgName(name) || /\.txt$/i.test(name);
 }
 
 /**
@@ -62,17 +73,26 @@ export async function listCfgs(dir) {
  * @param method - The request's method.
  * @param encoded - The path below the route, as the URL has it.
  * @param home - The home folder.
+ * @param body - A `PUT`'s body, as text.
  * @returns `status` and `headers` to send, and `body` when there is one.
  */
-export async function homeCfgResponse(method, encoded, home) {
+export async function homeCfgResponse(method, encoded, home, body) {
   // Nothing is cached, so a cfg edited on disk is read afresh by the next `exec`.
   const headers = { 'Cache-Control': 'no-store' };
-  if (method !== 'GET' && method !== 'HEAD') {
-    return { status: 405, headers: { ...headers, Allow: 'GET, HEAD' } };
+  if (method !== 'GET' && method !== 'HEAD' && method !== 'PUT') {
+    return { status: 405, headers: { ...headers, Allow: 'GET, HEAD, PUT' } };
   }
   const notFound = { status: 404, headers };
   const relative = decode(encoded);
   if (relative === undefined) return notFound;
+
+  if (method === 'PUT') {
+    const file =
+      isHomePath(relative) && isWritableName(relative) ? resolveInside(home, relative) : null;
+    if (!file) return notFound;
+    await replaceFile(file, body ?? '');
+    return { status: 204, headers };
+  }
 
   if (relative === '' || relative.endsWith('/')) {
     const dir = relative.slice(0, -1);

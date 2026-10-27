@@ -82,6 +82,14 @@ export function defaultExtension(path: string, extension: string): string {
   return dot !== -1 && path.lastIndexOf('/') < dot ? path : path + extension;
 }
 
+/**
+ * `COM_CompareExtension` (`q_shared.c:118–134`): whether the name ends in the extension, in any
+ * case.
+ */
+export function compareExtension(path: string, extension: string): boolean {
+  return path.toLowerCase().endsWith(extension.toLowerCase());
+}
+
 /** A command as a line another command buffer reads back into the same words. */
 export function commandLine(argv: readonly (string | number)[]): string {
   return argv.map((arg) => `"${arg}"`).join(' ');

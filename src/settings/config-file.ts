@@ -187,15 +187,21 @@ export function keepFile(
 }
 
 /**
- * Hand the config to the player to save: export.
+ * Hand a file to the player to save, as a download: the config's export, and what the console
+ * writes in a build that keeps its home folder where the player can't open it.
  *
+ * @param name - The name the download is offered under.
  * @param text - The file.
  */
-export function exportConfigFile(text: string, document: Document = window.document): void {
+export function downloadFile(
+  name: string,
+  text: string,
+  document: Document = window.document
+): void {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = Q3CONFIG_CFG;
+  link.download = name;
   link.click();
   // Let the download take the file before the URL goes.
   setTimeout(() => URL.revokeObjectURL(url), 0);

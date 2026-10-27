@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -97,10 +97,34 @@ describe('homeCfgResponse', () => {
     }
   });
 
-  it('writes nothing', async () => {
-    expect(await homeCfgResponse('PUT', 'presets/cpm.cfg', home)).toMatchObject({
+  it('writes a cfg or a .txt, making its folders, and replaces one that is there', async () => {
+    expect(await homeCfgResponse('PUT', 'mine.cfg', home, 'seta a "1"\n')).toEqual({
+      status: 204,
+      headers: { 'Cache-Control': 'no-store' }
+    });
+    expect(readFileSync(join(home, 'mine.cfg'), 'utf8')).toBe('seta a "1"\n');
+    expect((await homeCfgResponse('PUT', 'sub%2Fdeeper/Dump.TXT', home, 'one\r\n\r\n')).status).toBe(204);
+    expect(readFileSync(join(home, 'sub', 'deeper', 'Dump.TXT'), 'utf8')).toBe('one\r\n\r\n');
+    expect((await homeCfgResponse('PUT', 'presets/cpm.cfg', home, 'replaced\n')).status).toBe(204);
+    expect((await homeCfgResponse('GET', 'presets/cpm.cfg', home)).body).toBe('replaced\n');
+    // Nothing is left beside the files.
+    expect(readdirSync(join(home, 'presets')).sort()).toEqual(['Mine.CFG', 'cpm.cfg', 'folder.cfg', 'notes.txt', 'old']);
+    // A .txt is written, and still not read.
+    expect((await homeCfgResponse('GET', 'sub/deeper/Dump.TXT', home)).status).toBe(404);
+  });
+
+  it('writes nothing but a cfg or a .txt in the folder', async () => {
+    for (const path of ['notes.md', 'presets/', '', '..%2Fsecret.cfg', '..%5Csecret.txt', '%2Fsecret.cfg', 'a%3Ab.cfg']) {
+      expect((await homeCfgResponse('PUT', path, home, 'x')).status, path).toBe(404);
+    }
+    expect(readFileSync(join(root, 'secret.cfg'), 'utf8')).toBe('outside');
+    expect(existsSync(join(home, 'notes.md'))).toBe(false);
+  });
+
+  it('answers no other method', async () => {
+    expect(await homeCfgResponse('DELETE', 'presets/cpm.cfg', home)).toMatchObject({
       status: 405,
-      headers: { Allow: 'GET, HEAD' }
+      headers: { Allow: 'GET, HEAD, PUT' }
     });
   });
 });

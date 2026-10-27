@@ -4,6 +4,7 @@ import { configCommands } from '../formats/q3config';
 import {
   CommandRouter,
   MAX_INSERT_DEPTH,
+  compareExtension,
   defaultExtension,
   type CommandRouterOptions
 } from './command-router';
@@ -65,7 +66,7 @@ function setup(
 
 /** A home folder holding these files, by path. */
 function home(files: Record<string, string>): HomeFolder {
-  return { read: async (path) => files[path], list: async () => [] };
+  return { read: async (path) => files[path], list: async () => [], write: async () => false };
 }
 
 describe('the router', () => {
@@ -267,6 +268,14 @@ describe('exec', () => {
     expect(defaultExtension('.hidden', '.cfg')).toBe('.hidden');
     expect(defaultExtension('a.b/c', '.cfg')).toBe('a.b/c.cfg');
     expect(defaultExtension('a/.b', '.cfg')).toBe('a/.b');
+  });
+
+  it("compares a name's extension in any case, as COM_CompareExtension does", () => {
+    expect(compareExtension('a.cfg', '.cfg')).toBe(true);
+    expect(compareExtension('sub/A.CFG', '.cfg')).toBe(true);
+    expect(compareExtension('.cfg', '.cfg')).toBe(true);
+    expect(compareExtension('cfg', '.cfg')).toBe(false);
+    expect(compareExtension('a.cfg.txt', '.cfg')).toBe(false);
   });
 
   it('says how it is used, given no file or more than one', async () => {

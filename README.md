@@ -185,9 +185,15 @@ warns of, such as a command nothing knows or a cheat-protected cvar. `con_notify
 `con_notifytime` set how many lines show and for how long, and `cl_noprint 1` keeps them clear.
 
 Quake 3's own console commands run from a bind or a cfg as they do in Quake 3: `echo`,
-`cmdlist`, `exec` and `execq`, `vstr`, `wait`, `cmd`, `clear`, `vid_restart`, and `quit`, which
-does what EXIT GAME does. A `wait` lets a script that runs itself go on, a frame at a time;
-without one it stops 16 deep, where Quake 3 would hang or overflow its command buffer.
+`cmdlist`, `exec` and `execq`, `vstr`, `wait`, `cmd`, `clear`, `vid_restart`, `condump`,
+`writeconfig`, and `quit`, which does what EXIT GAME does. A `wait` lets a script that runs itself
+go on, a frame at a time; without one it stops 16 deep, where Quake 3 would hang or overflow its
+command buffer.
+
+`writeconfig <name>` writes the config to `<name>.cfg` beside `q3config.cfg`, where `exec <name>`
+reads it back. `condump <name>` writes the console's text to `<name>.txt` there; a build in the
+browser keeps that folder in the browser's own storage, so it hands the file over as a download
+instead. A name with `..` in it is refused, as Quake 3 refuses it.
 
 ## Quake 3 assets
 
@@ -358,7 +364,8 @@ It reads the paks from the same folders as the dev server: the `baseq3` that `PC
 names, from the environment or `.env.local`, and the port's own `public/maps`. Its home folder is
 the one the dev server keeps `q3config.cfg` in, or `PCQ_FS_HOMEPATH` where that is set. It reads
 `q3config.cfg` there as it boots and never writes it, and `exec` finds cfgs there before the
-port's own presets.
+port's own presets. `writeconfig` writes a cfg there holding its archived cvars, and no binds, as
+Quake 3's dedicated server writes one.
 
 `dedicated` decides who can find it:
 

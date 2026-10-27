@@ -14,7 +14,8 @@ function home(files: Record<string, string> = {}): HomeFolder {
     list: async (dir) =>
       Object.keys(files)
         .filter((path) => path.startsWith(`${dir}/`))
-        .map((path) => path.slice(dir.length + 1))
+        .map((path) => path.slice(dir.length + 1)),
+    write: async () => false
   };
 }
 
@@ -92,6 +93,13 @@ describe('readCfg', () => {
     expect(await readCfg('presets/cpm.cfg', home())).toBe(shippedCfg('presets/cpm.cfg'));
     expect(await readCfg('autoexec.cfg', home({ 'autoexec.cfg': 'seta a 1' }))).toBe('seta a 1');
     expect(await readCfg('presets/mine.cfg', home())).toBeUndefined();
+  });
+
+  it('takes a backslash for a slash, a run of them for one, and drops a leading one, as the writes do', async () => {
+    const files = { 'sub/mine.cfg': 'seta a 1' };
+    expect(await readCfg('sub\\mine.cfg', home(files))).toBe('seta a 1');
+    expect(await readCfg('/sub//mine.cfg', home(files))).toBe('seta a 1');
+    expect(await readCfg('\\presets\\cpm.cfg', home())).toBe(shippedCfg('presets/cpm.cfg'));
   });
 });
 
