@@ -281,6 +281,27 @@ describe('GameConfig as it runs', () => {
   it("does not take a command it doesn't know", () => {
     expect(new GameConfig({ debugMode: true }).command(['weapon', '5'])).toBe(false);
   });
+
+  it('keeps a cvar set by seta, from the file or later, through a reload, and not one set by set alone', () => {
+    const config = new GameConfig({
+      config: 'seta sv_master1 "ws://localhost:27950"\nset sv_runMaster 1\n',
+      debugMode: true,
+      print: () => {}
+    });
+    config.command(['seta', 'sv_fps', '60']);
+    config.command(['set', 'cl_noprint', '1']);
+    const text = config.text();
+    expect(text).toContain('seta sv_master1 "ws://localhost:27950"\n');
+    expect(text).toContain('seta sv_fps "60"\n');
+    expect(text).not.toContain('sv_runMaster');
+    expect(text).not.toContain('cl_noprint');
+
+    const reloaded = new GameConfig({ config: text, debugMode: true, print: () => {} });
+    expect(reloaded.cvars.get('sv_master1')).toBe('ws://localhost:27950');
+    expect(reloaded.cvars.get('sv_fps')).toBe('60');
+    expect(reloaded.cvars.get('sv_runMaster')).toBe('0');
+    expect(reloaded.text()).toBe(text);
+  });
 });
 
 describe('GameConfig at the console', () => {

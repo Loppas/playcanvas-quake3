@@ -6,6 +6,14 @@ import { DEFAULT_SETTINGS, SETTINGS, SETTING_KEYS } from './registry';
 /** The file's string for a cvar. */
 const saved = (cvars: Cvars, name: string) => cvars.archived().find((cvar) => cvar.name === name)?.value;
 
+/** A store whose prints are collected; `printed()` takes what came since it was last asked. */
+function store() {
+  const lines: string[] = [];
+  const cvars = new Cvars({ debugMode: true, print: (text) => void lines.push(text) });
+  const printed = () => lines.splice(0).join('');
+  return { cvars, printed };
+}
+
 /**
  * A string a setting will take that is not its default, found by trying a few: enough to cover
  * every reader the registry has — flags, whole numbers, ranges, the renderer's and the backend's
@@ -262,7 +270,7 @@ describe('Cvars: setting a value', () => {
     const cvars = new Cvars();
     const save = vi.fn();
     cvars.onSave(save);
-    cvars.load('cg_crosshairRGB', '1 1 1 1');
+    cvars.load('cg_crosshairRGB', '1 1 1 1', true);
     cvars.load('cg_scratch', '5', false);
     cvars.set('xp_physics', '432', true);
     expect(cvars.string('CG_CROSSHAIRRGB')).toBe('1 1 1 1');
@@ -273,12 +281,12 @@ describe('Cvars: setting a value', () => {
     expect(save).toHaveBeenCalledOnce();
   });
 
-  it('keeps g_gametype and sv_maxclients out of the file, taking an old line once, as Q3 archives neither', () => {
+  it('keeps g_gametype and sv_maxclients out of the file, taking a set line once, as Q3 archives neither', () => {
     const cvars = new Cvars();
     const save = vi.fn();
     cvars.onSave(save);
-    cvars.load('g_gametype', '3');
-    cvars.load('sv_maxclients', '12');
+    cvars.load('g_gametype', '3', false);
+    cvars.load('sv_maxclients', '12', false);
     expect([cvars.settings.gametype, cvars.settings.maxClients]).toEqual([3, 12]);
     cvars.set('g_gametype', '4');
     cvars.set('sv_maxclients', '6');
@@ -288,6 +296,11 @@ describe('Cvars: setting a value', () => {
     expect(saved(cvars, 'sv_maxclients')).toBeUndefined();
     cvars.set('fraglimit', '10');
     expect(save).toHaveBeenCalledOnce();
+
+    // A seta line keeps either, as it keeps any cvar.
+    const kept = new Cvars();
+    kept.load('g_gametype', '3', true);
+    expect(saved(kept, 'g_gametype')).toBe('3');
   });
 
   it('stops announcing once a listener is let go', () => {
@@ -611,14 +624,6 @@ describe("Cvars: what a listen server's store elsewhere set", () => {
 });
 
 describe("Cvars: the console's set, and the player's own cvars", () => {
-  /** A store whose prints are collected; `printed()` takes what came since it was last asked. */
-  function store() {
-    const lines: string[] = [];
-    const cvars = new Cvars({ debugMode: true, print: (text) => void lines.push(text) });
-    const printed = () => lines.splice(0).join('');
-    return { cvars, printed };
-  }
-
   it("makes the player's own a cvar the console or a cfg makes, and no other", () => {
     const { cvars } = store();
     cvars.setFromConsole('typed', '1');
@@ -712,5 +717,97 @@ describe("Cvars: the console's set, and the player's own cvars", () => {
       .flatMap((line) => /^[S ][s ][U ][R ][I ][A ][L ][C ][? ] (\S+) "/.exec(line)?.[1] ?? []);
     expect(names.slice(0, 3)).toEqual(['dmflags', 'sv_customRule', 'pmove_AirControl']);
     expect(names.at(-1)).toBe(SETTINGS[SETTING_KEYS[0]].cvar);
+  });
+});
+
+describe('Cvars: what seta archives', () => {
+  const MASTER = 'ws://localhost:27950';
+
+  it('archives a setting the registry leaves out once seta sets it, from the file or the console', () => {
+    const { cvars, printed } = store();
+    cvars.load('sv_master1', MASTER, true);
+    cvars.load('sv_runMaster', '1');
+    cvars.setFromConsole('sv_fps', '60', true);
+    cvars.setFromConsole('cl_noprint', '1');
+    expect(saved(cvars, 'sv_master1')).toBe(MASTER);
+    expect(saved(cvars, 'sv_fps')).toBe('60');
+    expect(saved(cvars, 'sv_runMaster')).toBeUndefined();
+    expect(saved(cvars, 'cl_noprint')).toBeUndefined();
+    // `cvarlist` reads the flag the file is written from.
+    const first = (filter: string) => {
+      cvars.listCvars(filter);
+      return printed().split('\n')[0];
+    };
+    expect(first('sv_master1')).toBe(`     A    sv_master1 "${MASTER}"`);
+    expect(first('sv_runMaster')).toBe('          sv_runMaster "1"');
+  });
+
+  it('archives with the value the cvar holds, asking once for the file to be written', () => {
+    const cvars = new Cvars({ print: () => {} });
+    const save = vi.fn();
+    cvars.onSave(save);
+    cvars.setFromConsole('cl_noprint', '0', true);
+    expect(saved(cvars, 'cl_noprint')).toBe('0');
+    expect(save).toHaveBeenCalledOnce();
+    // A new value with the flag asks once too, and the same seta again asks nothing.
+    cvars.setFromConsole('sv_runMaster', '1', true);
+    cvars.setFromConsole('sv_runMaster', '1', true);
+    cvars.setFromConsole('xp_rule', '1', true);
+    cvars.setFromConsole('xp_rule', '1', true);
+    expect(save).toHaveBeenCalledTimes(3);
+  });
+
+  it('archives a cvar whose set it refuses, as Cvar_Set_f archives whatever its set did', () => {
+    const { cvars, printed } = store();
+    cvars.set('sv_cheats', '0');
+    expect(cvars.setFromConsole('r_znear', '5', true)).toBe(false);
+    expect(printed()).toBe('r_znear is cheat protected.\n');
+    expect(saved(cvars, 'r_znear')).toBe('4');
+  });
+
+  it('keeps the flag through reset and cvar_restart', () => {
+    const { cvars } = store();
+    cvars.setFromConsole('sv_master1', MASTER, true);
+    cvars.resetFromConsole('sv_master1');
+    expect(saved(cvars, 'sv_master1')).toBe(SETTINGS.master1.default);
+    cvars.setFromConsole('sv_master1', MASTER);
+    cvars.restart();
+    expect(saved(cvars, 'sv_master1')).toBe(SETTINGS.master1.default);
+  });
+
+  it('writes a later change to a setting seta archived, whoever makes it', () => {
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
+    cvars.setFromConsole('sv_master1', MASTER, true);
+    cvars.setFromConsole('r_znear', '5', true);
+    const save = vi.fn();
+    cvars.onSave(save);
+    cvars.set('sv_master1', 'ws://localhost:27951');
+    cvars.mirror('sv_master1', 'ws://localhost:27952');
+    expect(save).toHaveBeenCalledTimes(2);
+    // sv_cheats 0 puts the cheat back to its default, which the file then has.
+    cvars.set('sv_cheats', '0');
+    expect(save).toHaveBeenCalledTimes(3);
+    expect(saved(cvars, 'sv_master1')).toBe('ws://localhost:27952');
+    expect(saved(cvars, 'r_znear')).toBe('4');
+  });
+
+  it("takes seta's value in the tab alone for a setting the query string set", () => {
+    const cvars = new Cvars({ print: () => {} });
+    const save = vi.fn();
+    cvars.onSave(save);
+    cvars.applyUrl(`?sv_master1=${MASTER}`);
+    cvars.setFromConsole('sv_master1', 'ws://localhost:27951', true);
+    expect(cvars.get('sv_master1')).toBe('ws://localhost:27951');
+    expect(saved(cvars, 'sv_master1')).toBeUndefined();
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('archives no cvar a server made, since a server may set none the player made', () => {
+    const { cvars, printed } = store();
+    cvars.setServer('sv_customRule', '1');
+    expect(cvars.setFromConsole('sv_customRule', '2', true)).toBe(false);
+    expect(cvars.setFromConsole('sv_customRule', '1', true)).toBe(true);
+    expect(printed()).toBe('sv_customRule is read only.\n');
+    expect(saved(cvars, 'sv_customRule')).toBeUndefined();
   });
 });

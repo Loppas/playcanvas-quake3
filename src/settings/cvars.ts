@@ -28,7 +28,10 @@ const SERVERINFO = new Set(SERVERINFO_CVARS.map((name) => name.toLowerCase()));
 const SYSTEMINFO = new Set(SYSTEMINFO_CVARS.map((name) => name.toLowerCase()));
 const USERINFO = new Set(USERINFO_SETTINGS.map((key) => SETTINGS[key].cvar.toLowerCase()));
 
-/** One setting's strings: the file's, and this tab's if the query string set it. */
+/**
+ * One setting's strings, the file's and this tab's if the query string set it, and whether the file
+ * keeps it.
+ */
 interface Slot {
   /** What `q3config.cfg` holds for it: the file's string, the default's, or the last one set. */
   saved: string;
@@ -41,6 +44,8 @@ interface Slot {
    * apart from it, as Q3's `latchedString` waits beside `string`.
    */
   applied: string;
+  /** `CVAR_ARCHIVE`: the registry's, or added by `seta` (`Cvar_Set_f`, `cvar.c:873–879`). */
+  archive: boolean;
 }
 
 /** A cvar the port does not use, kept so the file keeps it. */
@@ -59,7 +64,7 @@ interface OtherCvar {
 }
 
 /** The flags an {@link OtherCvar} is made or set with. */
-type OtherFlag = 'archive' | 'server' | 'user';
+type OtherFlag = 'server' | 'user';
 
 /** A cvar as `cvarlist` lists it. */
 interface Listed {
@@ -119,9 +124,9 @@ function valueLine(name: string, value: string, reset: string | undefined): stri
  * The settings' values, from their three sources, in order: the query string, `q3config.cfg`,
  * then the default.
  *
- * Q3's cvars, cut down to what the port keeps. A setting is archived unless the registry says
- * otherwise: the file has each one with the string it was last set to (`Cvar_WriteVariables`,
- * `cvar.c:916–946`).
+ * Q3's cvars, cut down to what the port keeps. A setting is archived if the registry doesn't say
+ * otherwise or `seta` has set it: the file has each archived one with the string it was last set
+ * to (`Cvar_WriteVariables`, `cvar.c:916–946`).
  * - **The query string** sets any setting by its cvar name, in its own tab alone, and is never
  *   saved. A change to such a setting stays in the tab too, so a tab opened to
  *   compare never writes over the saved file.
@@ -162,7 +167,8 @@ export class Cvars implements CvarStore {
       this.slots.set(key, {
         saved: def.default,
         savedValue: DEFAULT_SETTINGS[key],
-        applied: def.default
+        applied: def.default,
+        archive: def.archive !== false
       });
     }
   }
@@ -177,20 +183,23 @@ export class Cvars implements CvarStore {
    * string says otherwise, or it is a cheat while `sv_cheats` is 0. A latched setting takes it too,
    * since this is the start.
    *
-   * @param archive - Whether a cvar the port does not use is written back: `seta` rather than `set`.
+   * @param archive - `seta` rather than `set`: the file keeps the cvar from then on. Nothing asks
+   *   for the file to be written, as Q3 clears `cvar_modifiedFlags` once its start has run the
+   *   file (`common.c:2748`).
    */
-  load(name: string, raw: string, archive = true): void {
+  load(name: string, raw: string, archive = false): void {
     const key = settingForCvar(name);
     if (!key) {
       if (this.others.get(name.toLowerCase())?.value !== raw) this.bump(name, raw);
-      this.keepOther(name, raw, { archive, user: true });
-      return;
+      this.keepOther(name, raw, { user: true });
+    } else {
+      const slot = this.slot(key);
+      if (slot.saved !== raw) this.bump(name, raw);
+      slot.saved = raw;
+      slot.savedValue = this.read(key, raw, SETTINGS[key].default);
+      this.settle(key);
     }
-    const slot = this.slot(key);
-    if (slot.saved !== raw) this.bump(name, raw);
-    slot.saved = raw;
-    slot.savedValue = this.read(key, raw, SETTINGS[key].default);
-    this.settle(key);
+    if (archive) this.archive(name);
   }
 
   /**
@@ -285,7 +294,7 @@ export class Cvars implements CvarStore {
    * `Cvar_Set`: set a cvar from a string, as a bind, the menu or the engine does
    * (`cvar.c:504–600`). A setting takes only a value it can use.
    *
-   * @param archive - `seta`: a cvar the port does not use is then written back.
+   * @param archive - `seta`: the file keeps the cvar from then on, whatever the set did.
    * @returns Whether the value was taken.
    */
   set(name: string, raw: string, archive = false): boolean {
@@ -300,7 +309,7 @@ export class Cvars implements CvarStore {
    * engine set without the latch's line, as Q3's menu and code do (`Cvar_SetSafe`,
    * `cvar.c:637–652`).
    *
-   * @param archive - `seta`: a cvar the port does not use is then written back.
+   * @param archive - `seta`: the file keeps the cvar from then on, whatever the set did.
    * @returns Whether the value was taken.
    */
   setFromConsole(name: string, raw: string, archive = false): boolean {
@@ -452,7 +461,7 @@ export class Cvars implements CvarStore {
       if (slot.saved === raw) return;
       slot.saved = raw;
       slot.savedValue = value;
-      if (def.archive !== false) this.announceSave();
+      if (slot.archive) this.announceSave();
     }
     this.bump(name, raw);
     if (!def.latched) this.settle(key);
@@ -498,7 +507,7 @@ export class Cvars implements CvarStore {
    * this tab's, then the other cvars `seta` kept.
    */
   archived(): ArchivedCvar[] {
-    const cvars = SETTING_KEYS.filter((key) => SETTINGS[key].archive !== false).map((key) => ({
+    const cvars = SETTING_KEYS.filter((key) => this.slot(key).archive).map((key) => ({
       name: SETTINGS[key].cvar,
       value: this.slot(key).saved
     }));
@@ -560,8 +569,18 @@ export class Cvars implements CvarStore {
     return this.slots.get(key)!;
   }
 
-  /** {@link set} and {@link setFromConsole}: `Cvar_Set2` forced, or not. */
+  /**
+   * {@link set} and {@link setFromConsole}: `Cvar_Set2` forced, or not, then `seta`'s flag,
+   * whatever the set did (`Cvar_Set_f`, `cvar.c:869–879`).
+   */
   private assign(name: string, raw: string, archive: boolean, console: boolean): boolean {
+    const taken = this.setString(name, raw, console);
+    if (archive && this.archive(name)) this.announceSave();
+    return taken;
+  }
+
+  /** `Cvar_Set2` forced, or not. */
+  private setString(name: string, raw: string, console: boolean): boolean {
     const key = settingForCvar(name);
     if (!key) {
       const lower = name.toLowerCase();
@@ -573,7 +592,7 @@ export class Cvars implements CvarStore {
         this.print(`${name} is read only.\n`);
         return false;
       }
-      this.setOther(name, raw, archive, console && before === undefined);
+      this.setOther(name, raw, console && before === undefined);
       // A server whose `sv_cheats` is 0 puts every cheat-flagged cvar back to its default, as the
       // client does when a systeminfo says so (`CL_SystemInfoChanged` → `Cvar_SetCheatState`).
       if (lower === 'sv_cheats' && atoi(raw) === 0) this.resetCheats();
@@ -603,7 +622,7 @@ export class Cvars implements CvarStore {
       if (slot.saved === raw) return true;
       slot.saved = raw;
       slot.savedValue = reading.value;
-      if (def.archive !== false) this.announceSave();
+      if (slot.archive) this.announceSave();
     }
     this.bump(name, raw);
     if (!def.latched) this.settle(key);
@@ -629,7 +648,7 @@ export class Cvars implements CvarStore {
     const settings = [...SETTING_KEYS].reverse().map((key) => {
       const def = SETTINGS[key];
       const flags = flagColumns(def.cvar, {
-        archive: def.archive !== false,
+        archive: this.slot(key).archive,
         latched: def.latched !== undefined,
         cheat: def.cheat
       });
@@ -677,7 +696,7 @@ export class Cvars implements CvarStore {
         slot.saved = raw;
         const reading = def.read(raw);
         slot.savedValue = 'value' in reading ? reading.value : undefined;
-        if (def.archive !== false) this.announceSave();
+        if (slot.archive) this.announceSave();
         this.bump(def.cvar, raw);
       }
       this.settle(key);
@@ -717,7 +736,7 @@ export class Cvars implements CvarStore {
   private keepOther(
     name: string,
     raw: string,
-    { archive = false, server = false, user = false }: Partial<Pick<OtherCvar, OtherFlag>>
+    { server = false, user = false }: Partial<Pick<OtherCvar, OtherFlag>>
   ): void {
     const lower = name.toLowerCase();
     const before = this.others.get(lower);
@@ -725,19 +744,41 @@ export class Cvars implements CvarStore {
       name: before?.name ?? name,
       value: raw,
       reset: before?.reset ?? raw,
-      archive: archive || before?.archive === true,
+      archive: before?.archive === true,
       server: server || before?.server === true,
       user: before?.user ?? user
     });
   }
 
   /** @param user - Whether a cvar made here is the player's own. */
-  private setOther(name: string, raw: string, archive: boolean, user: boolean): void {
+  private setOther(name: string, raw: string, user: boolean): void {
     const before = this.others.get(name.toLowerCase());
     if (before?.value !== raw) this.bump(name, raw);
-    this.keepOther(name, raw, { archive, user });
-    const archived = archive || before?.archive === true;
-    if (archived && (before?.value !== raw || !before.archive)) this.announceSave();
+    this.keepOther(name, raw, { user });
+    if (before?.archive === true && before.value !== raw) this.announceSave();
+  }
+
+  /**
+   * `seta`'s flag (`Cvar_Set_f`, `cvar.c:873–879`): the file keeps the cvar from now on. A setting
+   * the query string set is left out, as its value stays in the tab. So is a cvar a server made:
+   * the file's line would make it the player's at the next start, and {@link setServer} takes one
+   * of the player's only among the systeminfo's own, where Q3's client takes any
+   * (`cl_parse.c:411–428`).
+   *
+   * @returns Whether the flag is new, so the file wants writing.
+   */
+  private archive(name: string): boolean {
+    const key = settingForCvar(name);
+    if (key) {
+      const slot = this.slot(key);
+      if (slot.archive || slot.url) return false;
+      slot.archive = true;
+      return true;
+    }
+    const other = this.others.get(name.toLowerCase());
+    if (other === undefined || other.archive || other.server) return false;
+    other.archive = true;
+    return true;
   }
 
   private announceSave(): void {
