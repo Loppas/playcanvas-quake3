@@ -401,8 +401,8 @@ export interface SettingDef<T> {
    */
   latched?: 'reload' | 'server';
   /**
-   * `false` for one Q3 registers without `CVAR_ARCHIVE`, which `q3config.cfg` never holds: a line
-   * an older file has for it is read, then left out when the file is next written.
+   * `false` for one Q3 registers without `CVAR_ARCHIVE`, which `q3config.cfg` holds only once
+   * `seta` sets it: a `set` line for it is read, then left out when the file is next written.
    */
   archive?: boolean;
   /** `CVAR_NORESTART`: `cvar_restart` leaves it as it is. */
