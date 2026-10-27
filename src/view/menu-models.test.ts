@@ -15,7 +15,7 @@ const MODELS: readonly PlayerModelSkin[] = Array.from({ length: 20 }, (_, i) =>
 
 /** The Model page, opened over a page to go back to, with the player wearing `model`. */
 function opened(model = 'm0') {
-  const config = new GameConfig({ warn: () => {} });
+  const config = new GameConfig({ print: () => {} });
   config.cvars.set('model', model);
   const sounds: MenuSound[] = [];
   const menu = new Menu({ sound: (sound) => sounds.push(sound) });
@@ -130,7 +130,7 @@ describe('the Model page', () => {
   it('reads the models each time it opens, since they come after the menu', () => {
     let list: readonly PlayerModelSkin[] = [];
     const menu = new Menu();
-    const { page, open } = modelPage(menu, new GameConfig({ warn: () => {} }), () => list);
+    const { page, open } = modelPage(menu, new GameConfig({ print: () => {} }), () => list);
     open();
     expect(cells(page).every((cell) => cell.hidden)).toBe(true);
     menu.key(K.ESCAPE);

@@ -9,7 +9,7 @@ import type { HostMap } from './server/host';
 import { isHostChannel, type HostChannel } from './server/channel';
 import type { ClientInput, KeyMove } from './settings/client-input';
 import type { Cvars } from './settings/cvars';
-import { SETTINGS, type Settings } from './settings/registry';
+import { SETTINGS, USERINFO_SETTINGS, type Settings } from './settings/registry';
 import { STAT } from './sim/constants';
 import { EV, eventNumber, type Event } from './sim/events';
 import { HI_NUM_HOLDABLE, IT, ITEMS, NUM_ITEMS, PW, findItemForHoldable } from './sim/items';
@@ -72,30 +72,6 @@ const POWERUP_EVENTS: Readonly<Record<number, number>> = {
 
 /** No key held. */
 const STILL: KeyMove = { forwardmove: 0, rightmove: 0, upmove: 0 };
-
-/**
- * The settings that belong to the client rather than to the match, which travel as a Quake 3
- * userinfo string: `Cvar_InfoString(CVAR_USERINFO)` over the cvars flagged that way
- * (`cvar.c:948–962`). The match's own — god, the spawn armor, the grapple type — are cvars the
- * game module reads where it stands, and reach it by being in the same store.
- */
-const USERINFO: readonly (readonly [key: string, setting: keyof Settings])[] = [
-  ['name', 'name'],
-  ['model', 'model'],
-  ['headmodel', 'headModel'],
-  ['team_model', 'teamModel'],
-  ['team_headmodel', 'teamHeadModel'],
-  ['handicap', 'handicap'],
-  ['color1', 'color1'],
-  // The match runs the item's touch itself; this picks whether its event takes the predictable
-  // route, which is what lets cgame's own touch agree with it (`g_client.c:729–735`).
-  ['cg_predictItems', 'predictItems'],
-  ['rate', 'rate'],
-  // `snaps` is `CVAR_USERINFO` too, so a change to it alone reaches the server.
-  ['snaps', 'snaps'],
-  // Asks the server to print each rewind of the player's railgun shots, as unlagged's does.
-  ['cg_debugDelag', 'debugDelag']
-];
 
 /**
  * Horizontal speed at or below which the peak readout is considered reset: a player standing on
@@ -815,8 +791,9 @@ export class PlayerController {
   private buildUserinfo(): string {
     const warn = (message: string) => this.view.console.print(`${message}\n`);
     let info = '';
-    for (const [key, setting] of USERINFO) {
-      info = infoSetValueForKey(info, key, this.cvars.get(SETTINGS[setting].cvar), warn);
+    for (const setting of USERINFO_SETTINGS) {
+      const { cvar } = SETTINGS[setting];
+      info = infoSetValueForKey(info, cvar, this.cvars.get(cvar), warn);
     }
     return info;
   }

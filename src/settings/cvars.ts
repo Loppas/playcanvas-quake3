@@ -1,9 +1,17 @@
 import { DEBUG_MODE } from '../config';
 import { atoi } from '../formats/c-scan';
+import { comFilter } from '../formats/com-filter';
 import type { ArchivedCvar } from '../formats/q3config';
 import type { CvarStore } from '../net/cvar';
-import { isSysteminfoRecordKey, SYSTEMINFO_CVARS } from '../sim/rules';
-import { DEFAULT_SETTINGS, SETTINGS, SETTING_KEYS, settingForCvar, type Settings } from './registry';
+import { isSysteminfoRecordKey, SERVERINFO_CVARS, SYSTEMINFO_CVARS } from '../sim/rules';
+import {
+  DEFAULT_SETTINGS,
+  SETTINGS,
+  SETTING_KEYS,
+  settingForCvar,
+  USERINFO_SETTINGS,
+  type Settings
+} from './registry';
 
 type Key = keyof Settings;
 
@@ -15,6 +23,11 @@ const SERVER_CVARS = new Set(
   SYSTEMINFO_CVARS.filter((name) => !isSysteminfoRecordKey(name)).map((name) => name.toLowerCase())
 );
 
+/** The cvars each info string carries, lowercased: `cvarlist`'s `S`, `s` and `U`. */
+const SERVERINFO = new Set(SERVERINFO_CVARS.map((name) => name.toLowerCase()));
+const SYSTEMINFO = new Set(SYSTEMINFO_CVARS.map((name) => name.toLowerCase()));
+const USERINFO = new Set(USERINFO_SETTINGS.map((key) => SETTINGS[key].cvar.toLowerCase()));
+
 /** One setting's strings: the file's, and this tab's if the query string set it. */
 interface Slot {
   /** What `q3config.cfg` holds for it: the file's string, the default's, or the last one set. */
@@ -23,6 +36,11 @@ interface Slot {
   savedValue: unknown;
   /** The query string's, in force in this tab alone and never saved. */
   url?: { raw: string; value: unknown };
+  /**
+   * The string its value in force was read from. A setting a reload takes up holds a newer one
+   * apart from it, as Q3's `latchedString` waits beside `string`.
+   */
+  applied: string;
 }
 
 /** A cvar the port does not use, kept so the file keeps it. */
@@ -30,17 +48,71 @@ interface OtherCvar {
   /** Spelled as it was first given. */
   name: string;
   value: string;
+  /** The string it was made with, its default, as `Cvar_Get` keeps a `resetString`. */
+  reset: string;
   /** Set by `seta`, so written back (`Cvar_Set_f`, `cvar.c:873–879`). */
   archive: boolean;
   /** Sent by a server and never held here before: `CVAR_SERVER_CREATED | CVAR_ROM`. */
-  server?: boolean;
+  server: boolean;
+  /** Made by the console or a cfg, not by the engine, the game or a server: `CVAR_USER_CREATED`. */
+  user: boolean;
+}
+
+/** The flags an {@link OtherCvar} is made or set with. */
+type OtherFlag = 'archive' | 'server' | 'user';
+
+/** A cvar as `cvarlist` lists it. */
+interface Listed {
+  name: string;
+  value: string;
+  flags: string;
 }
 
 export interface CvarsOptions {
   /** `DEBUG_MODE`: a parameter, so a test can turn it off. */
   debugMode?: boolean;
-  /** Where a value that can't be used is reported. */
-  warn?: (message: string) => void;
+  /** Print to the console, as `Com_Printf` does: a refusal, a listing, a value it can't use. */
+  print?: (text: string) => void;
+}
+
+/** A column of `cvarlist`'s: its letter, or a space. */
+function column(on: boolean, letter: string): string {
+  return on ? letter : ' ';
+}
+
+/** A cvar's own flags, as `cvarlist` shows them. */
+interface OwnFlags {
+  readOnly?: boolean;
+  archive: boolean;
+  latched?: boolean;
+  cheat?: boolean;
+  user?: boolean;
+}
+
+/** `cvarlist`'s nine columns for a cvar: the info strings that carry it, then its own flags. */
+function flagColumns(name: string, own: OwnFlags): string {
+  const lower = name.toLowerCase();
+  return [
+    column(SERVERINFO.has(lower), 'S'),
+    column(SYSTEMINFO.has(lower), 's'),
+    column(USERINFO.has(lower), 'U'),
+    column(own.readOnly === true, 'R'),
+    // `CVAR_INIT`: none of the port's cvars is write protected.
+    ' ',
+    column(own.archive, 'A'),
+    column(own.latched === true, 'L'),
+    column(own.cheat === true, 'C'),
+    column(own.user === true, '?')
+  ].join('');
+}
+
+/** `Cvar_Print`'s first line: the value, and the default, which a read-only cvar leaves out. */
+function valueLine(name: string, value: string, reset: string | undefined): string {
+  let line = `"${name}" is:"${value}^7"`;
+  if (reset !== undefined) {
+    line += value.toLowerCase() === reset.toLowerCase() ? ', the default' : ` default:"${reset}^7"`;
+  }
+  return `${line}\n`;
 }
 
 /**
@@ -62,11 +134,12 @@ export interface CvarsOptions {
  *   value at once, as Q3 writes a latched string (`cvar.c:927–934`).
  * - **Any other cvar** the file sets with `seta` is kept and written back, as Q3 keeps one.
  *
- * DOM-free.
+ * The console sets a cvar through {@link setFromConsole}, the menu and the engine through
+ * {@link set}. DOM-free.
  */
 export class Cvars implements CvarStore {
   readonly debugMode: boolean;
-  private readonly warn: (message: string) => void;
+  private readonly print: (text: string) => void;
   private readonly values: Settings;
   private readonly slots = new Map<Key, Slot>();
   /** By the name in lower case. */
@@ -82,10 +155,15 @@ export class Cvars implements CvarStore {
 
   constructor(options: CvarsOptions = {}) {
     this.debugMode = options.debugMode ?? DEBUG_MODE;
-    this.warn = options.warn ?? console.warn;
+    this.print = options.print ?? ((text) => console.warn(text.trimEnd()));
     this.values = { ...DEFAULT_SETTINGS };
     for (const key of SETTING_KEYS) {
-      this.slots.set(key, { saved: SETTINGS[key].default, savedValue: DEFAULT_SETTINGS[key] });
+      const def = SETTINGS[key];
+      this.slots.set(key, {
+        saved: def.default,
+        savedValue: DEFAULT_SETTINGS[key],
+        applied: def.default
+      });
     }
   }
 
@@ -105,7 +183,7 @@ export class Cvars implements CvarStore {
     const key = settingForCvar(name);
     if (!key) {
       if (this.others.get(name.toLowerCase())?.value !== raw) this.bump(name, raw);
-      this.keepOther(name, raw, archive);
+      this.keepOther(name, raw, { archive, user: true });
       return;
     }
     const slot = this.slot(key);
@@ -125,7 +203,7 @@ export class Cvars implements CvarStore {
       const key = settingForCvar(name);
       if (!key) continue;
       if (this.isProtected(key)) {
-        this.warn(`${SETTINGS[key].cvar} is cheat protected.`);
+        this.print(`${SETTINGS[key].cvar} is cheat protected.\n`);
         continue;
       }
       const slot = this.slot(key);
@@ -195,52 +273,120 @@ export class Cvars implements CvarStore {
   }
 
   /**
-   * `Cvar_Set`: set a cvar from a string, as the console, a bind or the menu does
+   * A cvar's name as it was registered or first made, which is how `Cvar_Command` and `Cvar_Print`
+   * name it, or `undefined` for a cvar nothing has made.
+   */
+  nameOf(name: string): string | undefined {
+    const key = settingForCvar(name);
+    return key ? SETTINGS[key].cvar : this.others.get(name.toLowerCase())?.name;
+  }
+
+  /**
+   * `Cvar_Set`: set a cvar from a string, as a bind, the menu or the engine does
    * (`cvar.c:504–600`). A setting takes only a value it can use.
    *
    * @param archive - `seta`: a cvar the port does not use is then written back.
    * @returns Whether the value was taken.
    */
   set(name: string, raw: string, archive = false): boolean {
+    return this.assign(name, raw, archive, false);
+  }
+
+  /**
+   * `Cvar_Set2` unforced, as the console's commands set a cvar (`cvar.c:504–621`). It is
+   * {@link set}, but a value the cvar holds already changes nothing and says nothing, even where
+   * it would be refused; a latched setting says that it waits; and a cvar made here is the
+   * player's own (`CVAR_USER_CREATED`). Each line names the cvar as `name` does. The menu and the
+   * engine set without the latch's line, as Q3's menu and code do (`Cvar_SetSafe`,
+   * `cvar.c:637–652`).
+   *
+   * @param archive - `seta`: a cvar the port does not use is then written back.
+   * @returns Whether the value was taken.
+   */
+  setFromConsole(name: string, raw: string, archive = false): boolean {
+    return this.assign(name, raw, archive, true);
+  }
+
+  /**
+   * `Cvar_Print` (`cvar.c:475–497`): a cvar's value, and its default unless it is read only; then
+   * the value a reload will take up, where one waits. None of the port's cvars carries a
+   * description.
+   *
+   * @returns Whether there is such a cvar.
+   */
+  printCvar(name: string): boolean {
     const key = settingForCvar(name);
-    if (!key) {
-      // A cvar the server sent and the client never held is the server's, and read-only
-      // (`CVAR_ROM`, `cvar.c:558–564`) — the console's set is what it refuses.
-      if (this.others.get(name.toLowerCase())?.server === true) {
-        this.warn(`${name} is read only.`);
-        return false;
-      }
-      this.setOther(name, raw, archive);
-      // A server whose `sv_cheats` is 0 puts every cheat-flagged cvar back to its default, as the
-      // client does when a systeminfo says so (`CL_SystemInfoChanged` → `Cvar_SetCheatState`).
-      if (name.toLowerCase() === 'sv_cheats' && atoi(raw) === 0) this.resetCheats();
+    if (key) {
+      const def = SETTINGS[key];
+      const stored = this.string(name)!;
+      const current = this.current(key);
+      let text = valueLine(def.cvar, current, def.default);
+      if (current !== stored) text += `latched: "${stored}"\n`;
+      this.print(text);
       return true;
     }
-    const def = SETTINGS[key];
-    if (this.isProtected(key)) {
-      this.warn(`${def.cvar} is cheat protected.`);
-      return false;
-    }
-    const reading = def.read(raw);
-    if (!('value' in reading)) {
-      this.warn(`${def.cvar} "${raw}" ${reading.problem}; keeping ${this.string(def.cvar)}`);
-      return false;
-    }
-
-    const slot = this.slot(key);
-    if (slot.url) {
-      if (slot.url.raw === raw) return true;
-      slot.url = { raw, value: reading.value };
-    } else {
-      // An unchanged string changes nothing, and marks nothing for writing (`cvar.c:585–600`).
-      if (slot.saved === raw) return true;
-      slot.saved = raw;
-      slot.savedValue = reading.value;
-      if (def.archive !== false) this.announceSave();
-    }
-    this.bump(name, raw);
-    if (!def.latched) this.settle(key);
+    const other = this.others.get(name.toLowerCase());
+    if (!other) return false;
+    this.print(valueLine(other.name, other.value, other.server ? undefined : other.reset));
     return true;
+  }
+
+  /**
+   * `Cvar_List_f` (`cvar.c:953–1021`): each cvar `filter` matches (`Com_Filter`), newest first as
+   * Q3's list runs, after its flags in nine columns — `S` serverinfo, `s` systeminfo, `U`
+   * userinfo, `R` read only, `I` write protected, `A` archived, `L` latched, `C` cheat, and `?`
+   * the player's own — then how many cvars there are, filtered or not. Q3 counts its array's
+   * slots too, which is the same number until a cvar is unset.
+   */
+  listCvars(filter?: string): void {
+    const listed = this.listed();
+    let text = '';
+    for (const { name, value, flags } of listed) {
+      if (filter === undefined || comFilter(filter, name)) text += `${flags} ${name} "${value}"\n`;
+    }
+    this.print(`${text}\n${listed.length} total cvars\n${listed.length} cvar indexes\n`);
+  }
+
+  /**
+   * `Cvar_Unset` (`cvar.c:1115–1179`): remove a cvar the player made. It then reads as `''`
+   * wherever it is read, and a store elsewhere is told so.
+   *
+   * @returns Whether it was one the player made, and so is gone.
+   */
+  unset(name: string): boolean {
+    const lower = name.toLowerCase();
+    const other = this.others.get(lower);
+    if (other?.user !== true) return false;
+    this.bump(name, '');
+    this.others.delete(lower);
+    if (other.archive) this.announceSave();
+    return true;
+  }
+
+  /**
+   * `Cvar_Restart` (`cvar.c:1192–1229`), newest first as Q3 goes: every setting set back to its
+   * default as the console sets one, but those `cvar_restart` leaves alone, and the cvars the
+   * player made removed. A cvar the engine, the game or a server made is left as it is, since the
+   * port holds none of Q3's flags for it.
+   */
+  restart(): void {
+    for (const other of [...this.others.values()].reverse()) {
+      if (other.user) this.unset(other.name);
+    }
+    for (const key of [...SETTING_KEYS].reverse()) {
+      const def = SETTINGS[key];
+      if (def.noRestart !== true) this.setFromConsole(def.cvar, def.default);
+    }
+  }
+
+  /**
+   * `Cvar_Reset` (`cvar.c:700–702`): a cvar back to its default, as the console sets one. A cvar
+   * nothing has made stays unmade.
+   */
+  resetFromConsole(name: string): void {
+    const key = settingForCvar(name);
+    const reset = key ? SETTINGS[key].default : this.others.get(name.toLowerCase())?.reset;
+    if (reset !== undefined) this.setFromConsole(name, reset);
   }
 
   /**
@@ -263,7 +409,7 @@ export class Cvars implements CvarStore {
     if (before !== undefined && !before.server && !SERVER_CVARS.has(lower)) return false;
     // A cvar the store already held keeps its flags: a listen server's own stay writable by its
     // console, as Q3's `CVAR_SYSTEMINFO` cvars are (`cvar.c:558–570`).
-    this.keepOther(name, raw, false, before?.server ?? true);
+    this.keepOther(name, raw, { server: before?.server ?? true });
     if (before?.value !== raw) this.bump(name, raw);
     // The systeminfo's `sv_cheats` 0 is `Cvar_SetCheatState`'s call (`cl_parse.c:373–377`).
     if (lower === 'sv_cheats' && atoi(raw) === 0) this.resetCheats();
@@ -287,7 +433,7 @@ export class Cvars implements CvarStore {
     if (!key) {
       const lower = name.toLowerCase();
       const before = this.others.get(lower);
-      this.keepOther(name, raw, false, before === undefined && lower === 'sv_cheats');
+      this.keepOther(name, raw, { server: before === undefined && lower === 'sv_cheats' });
       if (before?.value !== raw) {
         this.bump(name, raw);
         if (before?.archive === true) this.announceSave();
@@ -321,25 +467,26 @@ export class Cvars implements CvarStore {
   }
 
   /**
-   * `toggle` (`Cvar_Toggle_f`, `cvar.c:808–842`): with no values, 1 if the cvar reads as 0 and 0
-   * otherwise; with several, the one after the current, or else the first.
+   * `toggle` (`Cvar_Toggle_f`, `cvar.c:808–842`), as the console sets a cvar: with no values, 1
+   * if the cvar reads as 0 and 0 otherwise; with several, the one after the current, or else the
+   * first.
    */
   toggle(name: string, values: readonly string[] = []): boolean {
     if (values.length === 0) {
       // `atof`: anything that isn't a number reads as 0.
       const current = Number.parseFloat(this.string(name) ?? '') || 0;
-      return this.set(name, current === 0 ? '1' : '0');
+      return this.setFromConsole(name, current === 0 ? '1' : '0');
     }
     if (values.length === 1) {
-      this.warn('toggle: nothing to toggle to');
+      this.print('toggle: nothing to toggle to\n');
       return false;
     }
     const current = this.string(name);
     const at = values.slice(0, -1).indexOf(current ?? '');
-    return this.set(name, values[at + 1]);
+    return this.setFromConsole(name, values[at + 1]);
   }
 
-  /** `reset` (`Cvar_Reset`, `cvar.c:700`): back to the default string. */
+  /** A setting back to its default string, as the menu's defaults put one, through {@link set}. */
   reset(name: string): boolean {
     const key = settingForCvar(name);
     if (!key) return false;
@@ -413,6 +560,84 @@ export class Cvars implements CvarStore {
     return this.slots.get(key)!;
   }
 
+  /** {@link set} and {@link setFromConsole}: `Cvar_Set2` forced, or not. */
+  private assign(name: string, raw: string, archive: boolean, console: boolean): boolean {
+    const key = settingForCvar(name);
+    if (!key) {
+      const lower = name.toLowerCase();
+      const before = this.others.get(lower);
+      // A cvar the server sent and the client never held is the server's, and read-only
+      // (`CVAR_ROM`, `cvar.c:558–564`) — the console's set is what it refuses.
+      if (before?.server === true) {
+        if (console && before.value === raw) return true;
+        this.print(`${name} is read only.\n`);
+        return false;
+      }
+      this.setOther(name, raw, archive, console && before === undefined);
+      // A server whose `sv_cheats` is 0 puts every cheat-flagged cvar back to its default, as the
+      // client does when a systeminfo says so (`CL_SystemInfoChanged` → `Cvar_SetCheatState`).
+      if (lower === 'sv_cheats' && atoi(raw) === 0) this.resetCheats();
+      return true;
+    }
+    const def = SETTINGS[key];
+    const slot = this.slot(key);
+    // Going back to the string in force calls off a reload's wait, without a word or a check
+    // (`cvar.c:540–551`).
+    const callingOff = console && def.latched === 'reload' && raw === slot.applied;
+    if (console && raw === this.string(name)) return true;
+    if (!callingOff && this.isProtected(key)) {
+      this.print(`${console ? name : def.cvar} is cheat protected.\n`);
+      return false;
+    }
+    const reading = def.read(raw);
+    if (!('value' in reading)) {
+      this.print(`${def.cvar} "${raw}" ${reading.problem}; keeping ${this.string(def.cvar)}\n`);
+      return false;
+    }
+
+    if (slot.url) {
+      if (slot.url.raw === raw) return true;
+      slot.url = { raw, value: reading.value };
+    } else {
+      // An unchanged string changes nothing, and marks nothing for writing (`cvar.c:585–600`).
+      if (slot.saved === raw) return true;
+      slot.saved = raw;
+      slot.savedValue = reading.value;
+      if (def.archive !== false) this.announceSave();
+    }
+    this.bump(name, raw);
+    if (!def.latched) this.settle(key);
+    else if (console && !callingOff) this.print(`${name} will be changed upon restarting.\n`);
+    return true;
+  }
+
+  /**
+   * A setting's string as `Cvar_Print` and `cvarlist` give it, Q3's `string`: for one a reload
+   * takes up, the one in force, and otherwise the one stored.
+   */
+  private current(key: Key): string {
+    const def = SETTINGS[key];
+    return def.latched === 'reload' ? this.slot(key).applied : this.string(def.cvar)!;
+  }
+
+  /** Every cvar, newest first, as `cvarlist` lists it: the others, then the settings. */
+  private listed(): Listed[] {
+    const others = [...this.others.values()].reverse().map((other) => {
+      const own = { readOnly: other.server, archive: other.archive, user: other.user };
+      return { name: other.name, value: other.value, flags: flagColumns(other.name, own) };
+    });
+    const settings = [...SETTING_KEYS].reverse().map((key) => {
+      const def = SETTINGS[key];
+      const flags = flagColumns(def.cvar, {
+        archive: def.archive !== false,
+        latched: def.latched !== undefined,
+        cheat: def.cheat
+      });
+      return { name: def.cvar, value: this.current(key), flags };
+    });
+    return [...others, ...settings];
+  }
+
   /** A cvar's name as the count is kept under: the setting's own spelling, or the name given. */
   private canonical(name: string): string {
     const key = settingForCvar(name);
@@ -463,7 +688,7 @@ export class Cvars implements CvarStore {
   private read(key: Key, raw: string, fallback: string): unknown {
     const reading = SETTINGS[key].read(raw);
     if ('value' in reading) return reading.value;
-    this.warn(`${SETTINGS[key].cvar} "${raw}" ${reading.problem}; using ${fallback}`);
+    this.print(`${SETTINGS[key].cvar} "${raw}" ${reading.problem}; using ${fallback}\n`);
     return undefined;
   }
 
@@ -473,26 +698,44 @@ export class Cvars implements CvarStore {
     const value = this.isProtected(key)
       ? DEFAULT_SETTINGS[key]
       : (slot.url?.value ?? slot.savedValue ?? DEFAULT_SETTINGS[key]);
+    slot.applied = this.isProtected(key)
+      ? SETTINGS[key].default
+      : slot.url && slot.url.value !== undefined
+        ? slot.url.raw
+        : slot.savedValue !== undefined
+          ? slot.saved
+          : SETTINGS[key].default;
     if (Object.is(value, this.values[key])) return;
     (this.values as Record<Key, unknown>)[key] = value;
     for (const listener of this.changeListeners) listener(key);
   }
 
-  private keepOther(name: string, raw: string, archive: boolean, server = false): void {
+  /**
+   * Hold a cvar the port does not use. A flag given is added to those it has; whether the player
+   * made it, and its default, are settled when it is first made.
+   */
+  private keepOther(
+    name: string,
+    raw: string,
+    { archive = false, server = false, user = false }: Partial<Pick<OtherCvar, OtherFlag>>
+  ): void {
     const lower = name.toLowerCase();
     const before = this.others.get(lower);
     this.others.set(lower, {
       name: before?.name ?? name,
       value: raw,
+      reset: before?.reset ?? raw,
       archive: archive || before?.archive === true,
-      server: server || before?.server === true
+      server: server || before?.server === true,
+      user: before?.user ?? user
     });
   }
 
-  private setOther(name: string, raw: string, archive: boolean): void {
+  /** @param user - Whether a cvar made here is the player's own. */
+  private setOther(name: string, raw: string, archive: boolean, user: boolean): void {
     const before = this.others.get(name.toLowerCase());
     if (before?.value !== raw) this.bump(name, raw);
-    this.keepOther(name, raw, archive);
+    this.keepOther(name, raw, { archive, user });
     const archived = archive || before?.archive === true;
     if (archived && (before?.value !== raw || !before.archive)) this.announceSave();
   }

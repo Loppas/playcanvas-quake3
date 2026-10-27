@@ -44,7 +44,7 @@ const DORM = '192.0.2.5:27961';
  */
 function browser(cvars: Record<string, string> = {}, favoritesFile = '') {
   let now = 1000;
-  const config = new GameConfig({ warn: () => {} });
+  const config = new GameConfig({ print: () => {} });
   for (const [name, value] of Object.entries(cvars)) config.cvars.set(name, value);
   const servers = new ServerLists({ cvars: config.cvars, now: () => now, print: () => {} });
   const printed: string[] = [];

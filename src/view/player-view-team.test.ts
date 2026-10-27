@@ -272,7 +272,7 @@ describe('the team page over a live match', () => {
   function menuOver(world: ViewWorld) {
     const menu = new Menu();
     const resumed = vi.fn();
-    const config = new GameConfig({ warn: () => {} });
+    const config = new GameConfig({ print: () => {} });
     const context: MenuContext = {
       menu,
       config,

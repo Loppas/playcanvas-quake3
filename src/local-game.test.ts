@@ -49,7 +49,7 @@ function slowMaps(known: readonly string[]) {
 }
 
 function start(maps: ServerMaps, clientLoader?: ClientLoader): LocalGame {
-  const cvars = new Cvars({ debugMode: true, warn: () => {} });
+  const cvars = new Cvars({ debugMode: true, print: () => {} });
   return new LocalGame({ cvars, map: flatMap('garage', 0), maps, clientLoader, random: () => 0 });
 }
 
@@ -142,7 +142,7 @@ describe('LocalGame: map <n>', () => {
 
   it('runs devmap through the same load, leaving the cheats on', async () => {
     const program = slowMaps(['backyard']);
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     const game = new LocalGame({
       cvars,
       map: flatMap('garage', 0),
@@ -313,7 +313,7 @@ describe("LocalGame: the client's own map", () => {
 describe('LocalGame: the pause', () => {
   /** A program in the world, its client playing, and the store its cvars are in. */
   function playing(): { game: LocalGame; cvars: Cvars } {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     const game = new LocalGame({ cvars, map: flatMap('garage', 0), random: () => 0 });
     for (let i = 0; i < 5 && game.connection.state !== CA.ACTIVE; i++) game.tick(still());
     return { game, cvars };
@@ -397,7 +397,7 @@ describe("LocalGame: the systeminfo's cvars", () => {
   it("takes a server's own key and refuses one that is the client's, warning as Q3 does", () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
-      const cvars = new Cvars({ debugMode: true, warn: () => {} });
+      const cvars = new Cvars({ debugMode: true, print: () => {} });
       const game = new LocalGame({ cvars, map: flatMap('garage', 0), random: () => 0 });
       for (let i = 0; i < 5 && game.connection.state !== CA.ACTIVE; i++) game.tick(still());
       const name = cvars.get('name');
@@ -418,7 +418,7 @@ describe("LocalGame: the systeminfo's cvars", () => {
   });
 
   it('predicts by the rules the systeminfo carries, and by id\'s for a rule it leaves out', () => {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     const game = new LocalGame({ cvars, map: flatMap('garage', 0), random: () => 0 });
     for (let i = 0; i < 5 && game.connection.state !== CA.ACTIVE; i++) game.tick(still());
     cvars.set('pmove_WalkAccel', '15');
@@ -456,7 +456,7 @@ describe('LocalGame: a command of the client\'s own', () => {
   });
 
   it("asks its own server's status over the loopback, for the page's client to print", () => {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     const game = new LocalGame({
       cvars,
       map: flatMap('garage', 0),
@@ -513,7 +513,7 @@ describe('LocalGame: the handshake', () => {
   });
 
   it("keeps a player's own snaps of 20, which the elsewhere default no longer is", () => {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     cvars.set('snaps', '20');
     const game = new LocalGame({ cvars, map: flatMap('garage', 0), random: () => 0 });
     game.tick(still());
@@ -522,7 +522,7 @@ describe('LocalGame: the handshake', () => {
   });
 
   it("keeps a snaps of the client's own over the local host's rate", () => {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     cvars.set('snaps', '50');
     const game = new LocalGame({ cvars, map: flatMap('garage', 0), random: () => 0 });
     game.tick(still());
@@ -553,7 +553,7 @@ describe('LocalGame: the handshake', () => {
   });
 
   it('finishes the handshake over frames when a latency knob holds it back', () => {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     cvars.set('cl_packetdelay', '50');
     const game = new LocalGame({ cvars, map: flatMap('garage', 0), random: () => 0 });
     expect(game.connection.state).toBe(CA.CHALLENGING);
@@ -567,7 +567,7 @@ describe('LocalGame: a silent server', () => {
   it('is left once nothing has come from it for cl_timeout, six frames running', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
-      const cvars = new Cvars({ debugMode: true, warn: () => {} });
+      const cvars = new Cvars({ debugMode: true, print: () => {} });
       const game = new LocalGame({ cvars, map: flatMap('garage', 0), random: () => 0 });
       // The host's answers held back past the client's timeout, so it reads as silent: the frames
       // carry the time the delay and the timeout are both measured on.
@@ -588,7 +588,7 @@ describe('LocalGame: a silent server', () => {
 describe("LocalGame: the client's clock", () => {
   /** A program, and the frames of a display at `hz`, each a whole number of milliseconds. */
   function display(hz: number, cvars: Record<string, string> = {}) {
-    const store = new Cvars({ debugMode: true, warn: () => {} });
+    const store = new Cvars({ debugMode: true, print: () => {} });
     for (const [name, value] of Object.entries(cvars)) store.set(name, value);
     const game = new LocalGame({ cvars: store, map: flatMap('garage', 0), random: () => 0 });
     let frames = 0;
@@ -716,7 +716,7 @@ describe('LocalGame: the frame each command was read under', () => {
   const frame = (cmd: NetUserCmd) => [cmd.drawnTime, cmd.drawnSnapTime, cmd.drawnNextSnapTime];
 
   it('carries the last drawn frame to the server as it was, to a 256th of a millisecond', () => {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     const game = new LocalGame({ cvars, map: flatMap('garage', 0), random: () => 0 });
     for (let i = 0; i < 10; i++) game.frame(PMOVE_MSEC, still());
 
@@ -735,7 +735,7 @@ describe('LocalGame: the frame each command was read under', () => {
   });
 
   it('carries no frame at all on the commands made before the view drew one', () => {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     const game = new LocalGame({ cvars, map: flatMap('garage', 0), random: () => 0 });
     game.frame(PMOVE_MSEC, still());
 
@@ -748,7 +748,7 @@ describe('LocalGame: the frame each command was read under', () => {
 describe('LocalGame: what the prediction reads', () => {
   /** A program over a store the test keeps, so it can set the cvars itself. */
   function program(): { game: LocalGame; cvars: Cvars } {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     const game = new LocalGame({ cvars, map: flatMap('garage', 0), random: () => 0 });
     return { game, cvars };
   }
@@ -781,7 +781,7 @@ describe('LocalGame: what the prediction reads', () => {
 
 describe('LocalGame: what the view draws others by', () => {
   function program(): { game: LocalGame; cvars: Cvars } {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     const game = new LocalGame({ cvars, map: flatMap('garage', 0), random: () => 0 });
     return { game, cvars };
   }
@@ -835,7 +835,7 @@ describe('LocalGame: a channel to a server that is not here', () => {
    */
   /** @param prepare - What to do to the program before the client first reaches it. */
   function elsewhere(prepare?: (program: ServerProgram) => void) {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     // The worker's timer, which the test drives: real time is the channel's to move, as a worker's
     // own loop does.
     let realtime = 0;
@@ -991,13 +991,13 @@ describe('LocalGame: a server elsewhere', () => {
   function elsewhere(prepare?: (cvars: Cvars) => void, clientLoader?: ClientLoader) {
     const network = new MemoryNetwork();
     const program = new ServerProgram({
-      cvars: new Cvars({ debugMode: true, warn: () => {} }),
+      cvars: new Cvars({ debugMode: true, print: () => {} }),
       map: flatMap('garage', 0),
       socket: network.socket('10.0.0.1'),
       random: () => 0,
       now: () => network.now
     });
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     prepare?.(cvars);
     const socket = network.socket('10.0.0.2');
     const net = new Net({ cvars, socket, now: () => network.now, print: () => {} });

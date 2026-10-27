@@ -1244,7 +1244,7 @@ describe("MenuScreen's fitted bars in q3_ui's placement", () => {
 
   /** The server browser as MULTIPLAYER opens it, nothing listed, over a config of its own. */
   const browser = () => {
-    const config = new GameConfig({ warn: () => {} });
+    const config = new GameConfig({ print: () => {} });
     const servers = new ServerLists({ cvars: config.cvars, now: () => 0, print: () => {} });
     const opened = serversMenu({
       menu,
@@ -1324,7 +1324,7 @@ describe("MenuScreen's fitted bars in q3_ui's placement", () => {
    * player of the name given.
    */
   const serverOptions = (gametype: number, name = 'UnnamedPlayer') => {
-    const config = new GameConfig({ warn: () => {} });
+    const config = new GameConfig({ print: () => {} });
     config.cvars.set('name', name);
     const startServer = startServerPage({
       menu,

@@ -394,15 +394,19 @@ export interface SettingDef<T> {
    */
   cheat?: boolean;
   /**
-   * Taken up at the next start rather than at once: `vid_restart` applies the renderer's settings,
-   * and a map load applies the match's two.
+   * Taken up later rather than at once: `'reload'` at the page's next start, as `vid_restart`
+   * applies the renderer's settings; `'server'` when the server takes it up, as a map load applies
+   * the match's two, the dedicated server's frame `dedicated`, and the network's opening
+   * `net_port`.
    */
-  latched?: boolean;
+  latched?: 'reload' | 'server';
   /**
    * `false` for one Q3 registers without `CVAR_ARCHIVE`, which `q3config.cfg` never holds: a line
    * an older file has for it is read, then left out when the file is next written.
    */
   archive?: boolean;
+  /** `CVAR_NORESTART`: `cvar_restart` leaves it as it is. */
+  noRestart?: boolean;
 }
 
 export type SettingDefs = { readonly [K in keyof Settings]: SettingDef<Settings[K]> };
@@ -487,25 +491,49 @@ export const SETTINGS: SettingDefs = {
 
   // System > Graphics, each waiting for `vid_restart`. ioq3 no longer registers `r_glDriver`,
   // where Q3 named its OpenGL library; the port names the backend there.
-  glDriver: { cvar: 'r_glDriver', default: 'webgpu', read: backend, section: 'graphics', latched: true },
-  renderer: { cvar: 'cl_renderer', default: 'opengl1', read: renderer, section: 'graphics', latched: true },
+  glDriver: {
+    cvar: 'r_glDriver',
+    default: 'webgpu',
+    read: backend,
+    section: 'graphics',
+    latched: 'reload'
+  },
+  renderer: {
+    cvar: 'cl_renderer',
+    default: 'opengl1',
+    read: renderer,
+    section: 'graphics',
+    latched: 'reload'
+  },
   overBrightBits: {
     cvar: 'r_overBrightBits',
     default: '1',
     read: wholeNumber({ min: 0, max: 2, clamp: true }),
     section: 'graphics',
-    latched: true
+    latched: 'reload'
   },
   // `opengl2`'s pair, with ioq3's defaults (`tr_init.c:1303–1304`).
-  normalMapping: { cvar: 'r_normalMapping', default: '1', read: flag, section: 'graphics', latched: true },
-  specularMapping: { cvar: 'r_specularMapping', default: '1', read: flag, section: 'graphics', latched: true },
+  normalMapping: {
+    cvar: 'r_normalMapping',
+    default: '1',
+    read: flag,
+    section: 'graphics',
+    latched: 'reload'
+  },
+  specularMapping: {
+    cvar: 'r_specularMapping',
+    default: '1',
+    read: flag,
+    section: 'graphics',
+    latched: 'reload'
+  },
   // `tr_init.c:1030-1033`, archived and latched.
   picmip: {
     cvar: 'r_picmip',
     default: '0',
     read: wholeNumber({ min: 0, max: 16, clamp: true }),
     section: 'graphics',
-    latched: true
+    latched: 'reload'
   },
 
   // System > Display: 89.2 is a 73° vertical. `CG_CalcFov` holds it to 1–160
@@ -645,13 +673,38 @@ export const SETTINGS: SettingDefs = {
     default: '0',
     read: wholeNumber({ min: 0, max: GT.MAX_GAME_TYPE - 1, expected: "one of the gametypes" }),
     section: 'server',
-    latched: true,
+    latched: 'server',
     archive: false
   },
-  fragLimit: { cvar: 'fraglimit', default: '20', read: wholeNumber(), section: 'server' },
-  timeLimit: { cvar: 'timelimit', default: '0', read: wholeNumber(), section: 'server' },
-  captureLimit: { cvar: 'capturelimit', default: '8', read: wholeNumber(), section: 'server' },
-  roundLimit: { cvar: 'roundlimit', default: '5', read: wholeNumber(), section: 'server' },
+  // The limits survive a `cvar_restart`, as baseq3's three do (`g_main.c:116–118`).
+  fragLimit: {
+    cvar: 'fraglimit',
+    default: '20',
+    read: wholeNumber(),
+    section: 'server',
+    noRestart: true
+  },
+  timeLimit: {
+    cvar: 'timelimit',
+    default: '0',
+    read: wholeNumber(),
+    section: 'server',
+    noRestart: true
+  },
+  captureLimit: {
+    cvar: 'capturelimit',
+    default: '8',
+    read: wholeNumber(),
+    section: 'server',
+    noRestart: true
+  },
+  roundLimit: {
+    cvar: 'roundlimit',
+    default: '5',
+    read: wholeNumber(),
+    section: 'server',
+    noRestart: true
+  },
   doWarmup: { cvar: 'g_doWarmup', default: '0', read: flag, section: 'server' },
   warmup: { cvar: 'g_warmup', default: '20', read: wholeNumber(), section: 'server' },
   forceRespawn: { cvar: 'g_forcerespawn', default: '20', read: wholeNumber(), section: 'server' },
@@ -661,7 +714,7 @@ export const SETTINGS: SettingDefs = {
     // `SV_BoundMaxClients` (`sv_init.c:589–603`) holds it rather than refusing it.
     read: wholeNumber({ min: 1, max: MAX_CLIENTS, clamp: true }),
     section: 'server',
-    latched: true,
+    latched: 'server',
     archive: false
   },
   // The server's frame and the move's step, which a server's systeminfo carries: Q3 registers
@@ -689,7 +742,7 @@ export const SETTINGS: SettingDefs = {
     default: '0',
     read: wholeNumber({ min: 0, max: 2, expected: '0, 1 or 2' }),
     section: null,
-    latched: true,
+    latched: 'server',
     archive: false
   },
   // `sv_hostname`, with Q3's default, and archived as Q3's is (`sv_init.c:640`).
@@ -713,7 +766,7 @@ export const SETTINGS: SettingDefs = {
     default: '27960',
     read: wholeNumber({ min: 0, max: 65535, expected: 'a port, 0 to 65535' }),
     section: null,
-    latched: true,
+    latched: 'server',
     archive: false
   },
   // The port's own, read once as the Node dedicated server starts.
@@ -835,7 +888,7 @@ export const SETTINGS: SettingDefs = {
     read: flag,
     section: null,
     cheat: true,
-    latched: true,
+    latched: 'reload',
     archive: false
   },
   // Latched and never archived (`tr_init.c:1064`). Q3 reads it whole, unclamped.
@@ -844,7 +897,7 @@ export const SETTINGS: SettingDefs = {
     default: '2',
     read: wholeNumber(),
     section: null,
-    latched: true,
+    latched: 'reload',
     archive: false
   },
   // Latched and archived, and never clamped (`tr_init.c:1052`).
@@ -853,7 +906,7 @@ export const SETTINGS: SettingDefs = {
     default: '4',
     read: decimal(),
     section: null,
-    latched: true
+    latched: 'reload'
   },
   // Each archived and latched (`tr_init.c:1022, 1024`).
   multitexture: {
@@ -861,14 +914,14 @@ export const SETTINGS: SettingDefs = {
     default: '1',
     read: flag,
     section: null,
-    latched: true
+    latched: 'reload'
   },
   textureEnvAdd: {
     cvar: 'r_ext_texture_env_add',
     default: '1',
     read: flag,
     section: null,
-    latched: true
+    latched: 'reload'
   },
   // Archived and latched (`tr_init.c:1034`).
   detailTextures: {
@@ -876,7 +929,7 @@ export const SETTINGS: SettingDefs = {
     default: '1',
     read: flag,
     section: null,
-    latched: true
+    latched: 'reload'
   },
   // A cheat, archived, and read at each draw (`tr_init.c:1071`). Q3 takes any number, unclamped.
   lodCurveError: {
@@ -1037,6 +1090,30 @@ export const SETTINGS: SettingDefs = {
 
 /** The settings' keys, in the order the file lists them. */
 export const SETTING_KEYS = Object.keys(SETTINGS) as (keyof Settings)[];
+
+/**
+ * The settings that belong to the client rather than to the match, which travel as a Quake 3
+ * userinfo string: `Cvar_InfoString(CVAR_USERINFO)` over the cvars flagged that way
+ * (`cvar.c:948–962`). The match's own — god, the spawn armor, the grapple type — are cvars the
+ * game module reads where it stands, and reach it by being in the same store.
+ */
+export const USERINFO_SETTINGS: readonly (keyof Settings)[] = [
+  'name',
+  'model',
+  'headModel',
+  'teamModel',
+  'teamHeadModel',
+  'handicap',
+  'color1',
+  // The match runs the item's touch itself; this picks whether its event takes the predictable
+  // route, which is what lets cgame's own touch agree with it (`g_client.c:729–735`).
+  'predictItems',
+  'rate',
+  // `snaps` is `CVAR_USERINFO` too, so a change to it alone reaches the server.
+  'snaps',
+  // Asks the server to print each rewind of the player's railgun shots, as unlagged's does.
+  'debugDelag'
+];
 
 const KEY_BY_CVAR = new Map(SETTING_KEYS.map((key) => [SETTINGS[key].cvar.toLowerCase(), key]));
 

@@ -566,6 +566,54 @@ export const HITSCAN_RULES = [
 /** The rules in {@link HITSCAN_RULES}, as a record. */
 export type HitscanRules = Pick<Rules, (typeof HITSCAN_RULES)[number]>;
 
+/**
+ * The serverinfo cvars the port has, which `CS_SERVERINFO` carries and `getstatus` answers with
+ * (`CVAR_SERVERINFO`: `common.c:2794–2797`, `sv_init.c:633–648`, `g_main.c:99–183`). A client
+ * reads `mapname` from it to know what map it is on (`cl_cgame.c:723–725`).
+ *
+ * Q3's are in the order it makes them, the engine's and then the game module's, so the string
+ * starts as Q3's does, and SERVER INFO's sixteen rows are Q3's. The port's own follow.
+ */
+export const SERVERINFO_CVARS = [
+  // The build, and which game and wire it speaks, for a server browser.
+  'version',
+  'com_gamename',
+  'com_protocol',
+  'dmflags',
+  'fraglimit',
+  'timelimit',
+  'g_gametype',
+  'mapname',
+  'sv_hostname',
+  'sv_maxclients',
+  'sv_minRate',
+  'sv_maxRate',
+  'sv_floodProtect',
+  'capturelimit',
+  'g_needpass',
+  'roundlimit',
+  'g_gamepreset',
+  // The shotgun's pattern, which a client draws a blast by.
+  'g_pellets_sg',
+  'g_spread_sg',
+  'g_pattern_sg',
+  // The other hitscan numbers, which a client draws its own shots by before the server answers.
+  ...HITSCAN_RULES,
+  // How a client draws the plasma, and the BFG's impact.
+  'g_plasmaSize',
+  'g_plasmaMarkSize',
+  'g_splashradius_bfg',
+  // The ammo a client warns under, by weapon.
+  'g_lowAmmo_mg',
+  'g_lowAmmo_sg',
+  'g_lowAmmo_gl',
+  'g_lowAmmo_rl',
+  'g_lowAmmo_lg',
+  'g_lowAmmo_rg',
+  'g_lowAmmo_pg',
+  'g_lowAmmo_bfg'
+] as const;
+
 /** A rule's value from its cvar's string. */
 function parse(cvar: Pick<RuleCvar, 'read'>, text: string): number {
   return cvar.read === 'integer' ? atoi(text) : atof(text);

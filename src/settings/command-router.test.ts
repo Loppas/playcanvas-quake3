@@ -22,7 +22,7 @@ function setup(
   files: Record<string, string> = {},
   read = (path: string): Promise<string | undefined> => Promise.resolve(files[path])
 ) {
-  const config = new GameConfig({ debugMode: true, warn: () => {} });
+  const config = new GameConfig({ debugMode: true, print: () => {} });
   const log: string[] = [];
   const printed: string[] = [];
   const asked: string[] = [];

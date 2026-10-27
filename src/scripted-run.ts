@@ -269,7 +269,7 @@ export function vq3Config(): GameConfig {
   const text = shippedCfg(VQ3);
   if (text === undefined) throw new Error(`scripted run: the port ships no ${VQ3}`);
   const refused: string[] = [];
-  const config = new GameConfig({ warn: (message) => refused.push(message) });
+  const config = new GameConfig({ print: (text) => refused.push(text.trimEnd()) });
   config.exec(text);
   for (const [command, name, value] of configCommands(text)) {
     if (command === 'seta' && config.cvars.get(name) !== value) {

@@ -88,7 +88,7 @@ export class ViewWorld {
   constructor(options: ViewWorldOptions = {}) {
     const origin = options.origin ?? vec3(0, 0, 24);
     // Debug mode on, because `pcq_god` is a cheat and a store without it refuses to set one.
-    this.cvars = new Cvars({ debugMode: true, warn: () => {} });
+    this.cvars = new Cvars({ debugMode: true, print: () => {} });
     // The testing loadout, because the tests that drive this world fire guns the map would
     // otherwise hand out; a test of the loadout itself overrides it.
     this.cvars.set('pcq_spawnWeapons', '1');

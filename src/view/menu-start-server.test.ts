@@ -88,7 +88,7 @@ const SORTED = [
 
 /** The main menu, with SINGLE PLAYER chosen, over a config of its own. */
 function opened(context: Partial<StartServerContext> = {}) {
-  const config = new GameConfig({ warn: () => {} });
+  const config = new GameConfig({ print: () => {} });
   const sounds: MenuSound[] = [];
   const menu = new Menu({ sound: (sound) => sounds.push(sound) });
   const command = vi.fn();
@@ -151,7 +151,7 @@ describe('Start Server', () => {
   });
 
   it('opens on Free For All whatever g_gametype holds', () => {
-    const config = new GameConfig({ warn: () => {} });
+    const config = new GameConfig({ print: () => {} });
     config.cvars.set('g_gametype', String(GT.CTF));
     const menu = new Menu();
     startServerPage({
@@ -751,7 +751,7 @@ describe('Server Options', () => {
  * by its place in the list, with NEXT pressed.
  */
 function created(gametype = 0) {
-  const config = new GameConfig({ warn: () => {} });
+  const config = new GameConfig({ print: () => {} });
   const menu = new Menu();
   const command = vi.fn();
   const startServer = startServerPage({

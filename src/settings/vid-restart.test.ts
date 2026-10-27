@@ -25,7 +25,7 @@ describe('restartAddress', () => {
 
 describe('vidRestart', () => {
   it('waits for the file to be written, then reloads at the address', async () => {
-    const config = new GameConfig({ search: '?cl_renderer=opengl2', warn: () => {} });
+    const config = new GameConfig({ search: '?cl_renderer=opengl2', print: () => {} });
     config.command(['cl_renderer', 'opengl1']);
     const order: string[] = [];
     let save = () => {};

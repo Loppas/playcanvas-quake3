@@ -63,7 +63,7 @@ const config = new GameConfig({
   config: saved,
   search: window.location.search,
   shell,
-  warn: (message) => print(`${message}\n`)
+  print
 });
 const keeper = keepFile(config, stores, saved);
 // The home folder the other cfgs are read from, kept where the config is.

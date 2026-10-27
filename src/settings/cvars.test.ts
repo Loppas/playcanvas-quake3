@@ -45,7 +45,7 @@ describe('Cvars: what waits for vid_restart', () => {
     cvars.set('r_overBrightBits', '0');
     expect(cvars.waiting()).toEqual(['overBrightBits']);
 
-    const plain = new Cvars({ debugMode: false, warn: () => {} });
+    const plain = new Cvars({ debugMode: false, print: () => {} });
     plain.set('r_glDriver', 'webgl2');
     expect(plain.waiting()).toEqual(['glDriver']);
   });
@@ -142,23 +142,23 @@ describe('Cvars: where a value comes from', () => {
   });
 
   it("falls back from a query string it can't use to the saved value, and says so", () => {
-    const warn = vi.fn();
-    const cvars = new Cvars({ warn });
+    const print = vi.fn();
+    const cvars = new Cvars({ print });
     cvars.load('r_overBrightBits', '0');
     cvars.applyUrl('?r_overBrightBits=lots&g_allowGrapple=4');
     expect(cvars.settings).toMatchObject({ overBrightBits: 0, allowGrapple: 1 });
-    expect(warn.mock.calls.map(([message]) => message)).toEqual([
-      'r_overBrightBits "lots" is not a whole number; using 0',
-      'g_allowGrapple "4" is not 0, 1, 2 or 3; using 1'
+    expect(print.mock.calls.map(([text]) => text)).toEqual([
+      'r_overBrightBits "lots" is not a whole number; using 0\n',
+      'g_allowGrapple "4" is not 0, 1, 2 or 3; using 1\n'
     ]);
   });
 
   it("falls back from a saved value it can't use to the default, and keeps the string, as Q3 does", () => {
-    const warn = vi.fn();
-    const cvars = new Cvars({ warn });
+    const print = vi.fn();
+    const cvars = new Cvars({ print });
     cvars.load('cg_draw2D', 'yes');
     expect(cvars.settings.draw2D).toBe(true);
-    expect(warn).toHaveBeenCalledWith('cg_draw2D "yes" is not a whole number; using 1');
+    expect(print).toHaveBeenCalledWith('cg_draw2D "yes" is not a whole number; using 1\n');
     expect(saved(cvars, 'cg_draw2D')).toBe('yes');
   });
 
@@ -189,13 +189,13 @@ describe('Cvars: setting a value', () => {
   });
 
   it("refuses a value it can't use, and keeps the one it has", () => {
-    const warn = vi.fn();
-    const cvars = new Cvars({ warn });
+    const print = vi.fn();
+    const cvars = new Cvars({ print });
     const save = vi.fn();
     cvars.onSave(save);
     expect(cvars.set('cg_speedometer', '9')).toBe(false);
     expect(cvars.settings.speedometer).toBe(0);
-    expect(warn).toHaveBeenCalledWith('cg_speedometer "9" is not 0, 1, 2 or 3; keeping 0');
+    expect(print).toHaveBeenCalledWith('cg_speedometer "9" is not 0, 1, 2 or 3; keeping 0\n');
     expect(save).not.toHaveBeenCalled();
   });
 
@@ -301,14 +301,14 @@ describe('Cvars: setting a value', () => {
 
 describe('Cvars with a server whose sv_cheats is 0', () => {
   it('puts every cheat setting at its default, whatever the file or the query string says', () => {
-    const warn = vi.fn();
-    const cvars = new Cvars({ debugMode: true, warn });
+    const print = vi.fn();
+    const cvars = new Cvars({ debugMode: true, print });
     cvars.set('sv_cheats', '0');
     cvars.load('pcq_god', '1');
     cvars.load('cg_thirdPerson', '1');
     cvars.applyUrl('?pcq_drawCollision=1');
     expect(cvars.settings).toEqual(DEFAULT_SETTINGS);
-    expect(warn).toHaveBeenCalledWith('pcq_drawCollision is cheat protected.');
+    expect(print).toHaveBeenCalledWith('pcq_drawCollision is cheat protected.\n');
   });
 
   it("takes every setting there is from the tab's address, the cheat ones included", () => {
@@ -316,8 +316,8 @@ describe('Cvars with a server whose sv_cheats is 0', () => {
     // the game the match plays to the renderer's own. This sweeps the registry rather than
     // naming settings, so a new one is covered the day it is added. `sv_cheats` is 1 until a
     // server says otherwise, so the cheat-flagged ones are open.
-    const warn = vi.fn();
-    const cvars = new Cvars({ debugMode: true, warn });
+    const print = vi.fn();
+    const cvars = new Cvars({ debugMode: true, print });
     const search = SETTING_KEYS.map((key) => `${SETTINGS[key].cvar}=${urlValue(key)}`).join('&');
 
     cvars.applyUrl(`?${search}`);
@@ -330,7 +330,7 @@ describe('Cvars with a server whose sv_cheats is 0', () => {
       // In force at once, latched or not: the address is read before the game is built.
       expect(cvars.settings[key], cvar).toEqual('value' in reading ? reading.value : undefined);
     }
-    expect(warn).not.toHaveBeenCalled();
+    expect(print).not.toHaveBeenCalled();
     // And none of it reaches `q3config.cfg`, which is what makes a tab safe to test in: the
     // file still holds every default.
     for (const key of SETTING_KEYS) {
@@ -340,15 +340,15 @@ describe('Cvars with a server whose sv_cheats is 0', () => {
   });
 
   it('refuses a new cheat value, as Q3 refuses a `CVAR_CHEAT` without `sv_cheats`', () => {
-    const warn = vi.fn();
-    const cvars = new Cvars({ debugMode: true, warn });
+    const print = vi.fn();
+    const cvars = new Cvars({ debugMode: true, print });
     cvars.set('sv_cheats', '0');
     expect(cvars.toggle('pcq_drawCollision')).toBe(false);
     expect(cvars.settings.drawCollision).toBe(false);
     // The packet delays are Q3's `CVAR_CHEAT` too (`common.c:2775–2776`).
     expect(cvars.set('cl_packetdelay', '100')).toBe(false);
     expect(cvars.get('cl_packetdelay')).toBe('0');
-    expect(warn).toHaveBeenCalledWith('pcq_drawCollision is cheat protected.');
+    expect(print).toHaveBeenCalledWith('pcq_drawCollision is cheat protected.\n');
   });
 
   it("writes the reset's defaults back to the file, as `Cvar_SetCheatState` does", () => {
@@ -374,8 +374,8 @@ describe('Cvars with a server whose sv_cheats is 0', () => {
 
 describe("Cvars: what a server's systeminfo may set", () => {
   it("takes Quake 3's own systeminfo cvars, a listen server's among them", () => {
-    const warn = vi.fn();
-    const cvars = new Cvars({ debugMode: true, warn });
+    const print = vi.fn();
+    const cvars = new Cvars({ debugMode: true, print });
     // A listen server's game module has registered its cvars in the one store already.
     cvars.set('pmove_msec', '8');
 
@@ -384,11 +384,11 @@ describe("Cvars: what a server's systeminfo may set", () => {
     // The server's own cvar stays the console's to set, as Q3's `CVAR_SYSTEMINFO` ones are.
     expect(cvars.set('pmove_msec', '11')).toBe(true);
     expect(cvars.setServer('sv_cheats', '1')).toBe(true);
-    expect(warn).not.toHaveBeenCalled();
+    expect(print).not.toHaveBeenCalled();
   });
 
   it("refuses a cvar that is the client's own", () => {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     cvars.load('name', 'Sarge');
 
     expect(cvars.setServer('name', 'Grunt')).toBe(false);
@@ -410,27 +410,27 @@ describe("Cvars: what a server's systeminfo may set", () => {
   });
 
   it('creates a key it has never held read-only, and the server may change it after', () => {
-    const warn = vi.fn();
-    const cvars = new Cvars({ debugMode: true, warn });
+    const print = vi.fn();
+    const cvars = new Cvars({ debugMode: true, print });
 
     expect(cvars.setServer('sv_customRule', '1')).toBe(true);
     expect(cvars.get('sv_customRule')).toBe('1');
     // `CVAR_ROM`: the console may not set it, and says Q3's words.
     expect(cvars.set('sv_customRule', '2')).toBe(false);
     expect(cvars.get('sv_customRule')).toBe('1');
-    expect(warn).toHaveBeenCalledWith('sv_customRule is read only.');
+    expect(print).toHaveBeenCalledWith('sv_customRule is read only.\n');
     // The server's own update is `Cvar_SetSafe`, which the read-only flag does not stop.
     expect(cvars.setServer('sv_customRule', '3')).toBe(true);
     expect(cvars.get('sv_customRule')).toBe('3');
   });
 
   it("leaves a listen server's move step the console's to set after a systeminfo", () => {
-    const warn = vi.fn();
-    const cvars = new Cvars({ debugMode: true, warn });
+    const print = vi.fn();
+    const cvars = new Cvars({ debugMode: true, print });
     expect(cvars.setServer('pmove_msec', '8')).toBe(true);
 
     expect(cvars.set('pmove_msec', '16')).toBe(true);
-    expect(warn).not.toHaveBeenCalled();
+    expect(print).not.toHaveBeenCalled();
     // A server elsewhere sets it as any systeminfo does, and it stays so after it, as in Q3's one
     // store.
     expect(cvars.setServer('pmove_msec', '11')).toBe(true);
@@ -451,7 +451,7 @@ describe("Cvars: what a server's systeminfo may set", () => {
 
 describe('Cvars: what a store elsewhere is given', () => {
   it('lists every cvar it holds, as `get` answers it: the settings, then the others', () => {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     cvars.set('fraglimit', '10');
     cvars.set('s_volume', '0.500000');
     // A cvar that is no setting of the port's: the host's own pause flag.
@@ -468,7 +468,7 @@ describe('Cvars: what a store elsewhere is given', () => {
   });
 
   it('tells every cvar whose value changed, whoever set it, and only when it did', () => {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     const heard: [string, string][] = [];
     const stop = cvars.onCvarChange((name, value) => heard.push([name, value]));
 
@@ -502,7 +502,7 @@ describe('Cvars: what a store elsewhere is given', () => {
 
 describe("Cvars: what a listen server's store elsewhere set", () => {
   it('holds a cvar as it is held there, with the spelling and the archive it has here', () => {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     cvars.set('g_localTeamPref', 'red');
     cvars.set('My_Cvar', 'a', true);
     const saves = vi.fn();
@@ -529,8 +529,8 @@ describe("Cvars: what a listen server's store elsewhere set", () => {
   });
 
   it("makes one it never held as that store's game or server registered it", () => {
-    const warn = vi.fn();
-    const cvars = new Cvars({ debugMode: true, warn });
+    const print = vi.fn();
+    const cvars = new Cvars({ debugMode: true, print });
 
     // A rule the game registered stays the console's, though the systeminfo carries it.
     cvars.mirror('pmove_AirControl', '0');
@@ -540,7 +540,7 @@ describe("Cvars: what a listen server's store elsewhere set", () => {
     // `sv_cheats` is the server's, read-only.
     cvars.mirror('sv_cheats', '1');
     expect(cvars.set('sv_cheats', '0')).toBe(false);
-    expect(warn).toHaveBeenCalledWith('sv_cheats is read only.');
+    expect(print).toHaveBeenCalledWith('sv_cheats is read only.\n');
     // The server's own writes still reach it, by its systeminfo or its store.
     expect(cvars.setServer('sv_cheats', '1')).toBe(true);
     cvars.mirror('sv_cheats', '0');
@@ -552,15 +552,15 @@ describe("Cvars: what a listen server's store elsewhere set", () => {
     expect(cvars.archived().some(({ name }) => name === 'nextmap')).toBe(false);
 
     // One this store held first keeps the flags it had.
-    const held = new Cvars({ debugMode: true, warn: () => {} });
+    const held = new Cvars({ debugMode: true, print: () => {} });
     held.set('sv_cheats', '1');
     held.mirror('sv_cheats', '0');
     expect(held.set('sv_cheats', '1')).toBe(true);
   });
 
   it("resets the cheats on the server's sv_cheats 0, and refuses none of its resets", () => {
-    const warn = vi.fn();
-    const cvars = new Cvars({ debugMode: true, warn });
+    const print = vi.fn();
+    const cvars = new Cvars({ debugMode: true, print });
     cvars.load('pcq_god', '1');
 
     cvars.mirror('sv_cheats', '0');
@@ -571,11 +571,11 @@ describe("Cvars: what a listen server's store elsewhere set", () => {
     cvars.mirror('cg_thirdPerson', '1');
     expect(cvars.get('cg_thirdPerson')).toBe('1');
     expect(cvars.settings.thirdPerson).toBe(false);
-    expect(warn).not.toHaveBeenCalled();
+    expect(print).not.toHaveBeenCalled();
   });
 
   it("keeps a setting the tab's address set in the tab, and a latched one for its start", () => {
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     cvars.applyUrl('?fraglimit=5');
     const saves = vi.fn();
     cvars.onSave(saves);
@@ -601,11 +601,116 @@ describe("Cvars: what a listen server's store elsewhere set", () => {
   });
 
   it("holds a string a setting can't use, unused, without a second warning", () => {
-    const warn = vi.fn();
-    const cvars = new Cvars({ debugMode: true, warn });
+    const print = vi.fn();
+    const cvars = new Cvars({ debugMode: true, print });
     cvars.mirror('fraglimit', 'lots');
     expect(cvars.get('fraglimit')).toBe('lots');
     expect(cvars.settings.fragLimit).toBe(DEFAULT_SETTINGS.fragLimit);
-    expect(warn).not.toHaveBeenCalled();
+    expect(print).not.toHaveBeenCalled();
+  });
+});
+
+describe("Cvars: the console's set, and the player's own cvars", () => {
+  /** A store whose prints are collected; `printed()` takes what came since it was last asked. */
+  function store() {
+    const lines: string[] = [];
+    const cvars = new Cvars({ debugMode: true, print: (text) => void lines.push(text) });
+    const printed = () => lines.splice(0).join('');
+    return { cvars, printed };
+  }
+
+  it("makes the player's own a cvar the console or a cfg makes, and no other", () => {
+    const { cvars } = store();
+    cvars.setFromConsole('typed', '1');
+    cvars.load('from_cfg', '1');
+    cvars.set('engine_made', '1');
+    cvars.mirror('game_made', '1');
+    cvars.setServer('server_sent', '1');
+    expect(cvars.unset('typed')).toBe(true);
+    expect(cvars.unset('from_cfg')).toBe(true);
+    expect(cvars.unset('engine_made')).toBe(false);
+    expect(cvars.unset('game_made')).toBe(false);
+    expect(cvars.unset('server_sent')).toBe(false);
+    expect(cvars.unset('sensitivity')).toBe(false);
+    expect(cvars.nameOf('typed')).toBeUndefined();
+    expect(cvars.nameOf('ENGINE_MADE')).toBe('engine_made');
+  });
+
+  it('keeps the player\'s mark, and the first string as the default, when something else sets it', () => {
+    const { cvars, printed } = store();
+    cvars.setFromConsole('Mine', 'first');
+    cvars.set('mine', 'second');
+    cvars.mirror('MINE', 'third');
+    cvars.printCvar('mine');
+    expect(printed()).toBe('"Mine" is:"third^7" default:"first^7"\n');
+    expect(cvars.unset('mine')).toBe(true);
+  });
+
+  it('tells whoever hears every change that an unset cvar reads as nothing, and writes the file', () => {
+    const { cvars } = store();
+    cvars.setFromConsole('kept', 'yes', true);
+    const changes = vi.fn();
+    const save = vi.fn();
+    cvars.onCvarChange(changes);
+    cvars.onSave(save);
+    cvars.unset('KEPT');
+    expect(changes).toHaveBeenCalledWith('kept', '');
+    expect(save).toHaveBeenCalledOnce();
+    expect(cvars.get('kept')).toBe('');
+    expect(cvars.archived().map(({ name }) => name)).not.toContain('kept');
+  });
+
+  it('leaves the cvars the engine, the game or a server made when it restarts', () => {
+    const { cvars } = store();
+    cvars.set('mapname', 'q3dm17');
+    cvars.mirror('sv_cheats', '1');
+    cvars.setFromConsole('mine', '1');
+    cvars.setFromConsole('cg_fov', '110');
+    cvars.restart();
+    expect(cvars.get('mapname')).toBe('q3dm17');
+    expect(cvars.get('sv_cheats')).toBe('1');
+    expect(cvars.nameOf('mine')).toBeUndefined();
+    expect(cvars.get('cg_fov')).toBe(SETTINGS.fov.default);
+  });
+
+  it('says a value waits for the map the server takes it up at, though it holds none apart', () => {
+    const { cvars, printed } = store();
+    expect(cvars.setFromConsole('g_gametype', '3')).toBe(true);
+    expect(printed()).toBe('g_gametype will be changed upon restarting.\n');
+    // The store cannot know when the server takes it up, so it prints the value it holds.
+    cvars.printCvar('g_gametype');
+    expect(printed()).toBe('"g_gametype" is:"3^7" default:"0^7"\n');
+    expect(cvars.get('g_gametype')).toBe('3');
+  });
+
+  it("sets for the menu and the engine without the latch's line", () => {
+    const { cvars, printed } = store();
+    expect(cvars.set('r_picmip', '2')).toBe(true);
+    expect(printed()).toBe('');
+    cvars.printCvar('r_picmip');
+    expect(printed()).toBe('"r_picmip" is:"0^7", the default\nlatched: "2"\n');
+  });
+
+  it("lists each cvar's flags from what the port does with it", () => {
+    const { cvars, printed } = store();
+    cvars.mirror('pmove_AirControl', '1');
+    cvars.setServer('sv_customRule', '1');
+    cvars.setFromConsole('dmflags', '8', true);
+    const first = (filter: string) => {
+      cvars.listCvars(filter);
+      return printed().split('\n')[0];
+    };
+    expect(first('pmove_AirControl')).toBe(' s        pmove_AirControl "1"');
+    expect(first('sv_customRule')).toBe('   R      sv_customRule "1"');
+    // In both info strings: the serverinfo has it as Q3's does, and the prediction reads it.
+    expect(first('dmflags')).toBe('Ss   A  ? dmflags "8"');
+    expect(first('g_gametype')).toBe('S     L   g_gametype "0"');
+    // The settings come last, the first registered the last listed.
+    cvars.listCvars();
+    const names = printed()
+      .split('\n')
+      .flatMap((line) => /^[S ][s ][U ][R ][I ][A ][L ][C ][? ] (\S+) "/.exec(line)?.[1] ?? []);
+    expect(names.slice(0, 3)).toEqual(['dmflags', 'sv_customRule', 'pmove_AirControl']);
+    expect(names.at(-1)).toBe(SETTINGS[SETTING_KEYS[0]].cvar);
   });
 });

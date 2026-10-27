@@ -78,7 +78,11 @@ try {
   ]);
 
   const home = diskHome(fsHomepath(ROOT, MODE));
-  const config = new GameConfig({ config: await home.read(Q3CONFIG_CFG), debugMode: DEBUG_MODE });
+  const config = new GameConfig({
+    config: await home.read(Q3CONFIG_CFG),
+    debugMode: DEBUG_MODE,
+    print
+  });
   const server = await startDedicatedServer({
     config,
     fs,
