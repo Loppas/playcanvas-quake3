@@ -1,10 +1,10 @@
 import { DEBUG_MODE } from '../config';
-import { stringToKey } from '../formats/q3-keys';
+import { keyToString, stringToKey } from '../formats/q3-keys';
 import { configCommands, writeConfig } from '../formats/q3config';
 import { BindTable, bindWarning, defaultBinds } from './binds';
 import { type CommandTable, unknownCommand } from './command-router';
 import { Cvars } from './cvars';
-import { SETTINGS, SETTING_KEYS, settingForCvar } from './registry';
+import { SETTINGS, SETTING_KEYS } from './registry';
 
 /**
  * The settings' commands, as `CL_InitKeyCommands` and `Cvar_Init` register them
@@ -14,12 +14,17 @@ const CONFIG_COMMANDS = [
   'bind',
   'unbind',
   'unbindall',
+  'bindlist',
+  'print',
   'toggle',
   'set',
   'sets',
   'setu',
   'seta',
-  'reset'
+  'reset',
+  'unset',
+  'cvarlist',
+  'cvar_restart'
 ] as const;
 
 export interface GameConfigOptions {
@@ -29,8 +34,8 @@ export interface GameConfigOptions {
   search?: string;
   /** `DEBUG_MODE`: a parameter, so a test can turn it off. */
   debugMode?: boolean;
-  /** Where a line or a value that can't be used is reported. */
-  warn?: (message: string) => void;
+  /** Print to the console, as `Com_Printf` does: what the commands print, and their refusals. */
+  print?: (text: string) => void;
   /** In the desktop shell, which owns its menu, so no bind warns of a key the browser keeps. */
   shell?: boolean;
 }
@@ -47,13 +52,13 @@ export class GameConfig {
   readonly binds: BindTable;
   /** In the desktop shell, where no bind warns of a key the browser keeps. */
   readonly shell: boolean;
-  private readonly warn: (message: string) => void;
+  private readonly print: (text: string) => void;
 
   constructor(options: GameConfigOptions = {}) {
     const debugMode = options.debugMode ?? DEBUG_MODE;
-    this.warn = options.warn ?? console.warn;
+    this.print = options.print ?? ((text) => console.warn(text.trimEnd()));
     this.shell = options.shell ?? false;
-    this.cvars = new Cvars({ debugMode, warn: this.warn });
+    this.cvars = new Cvars({ debugMode, print: this.print });
     this.binds = new BindTable(defaultBinds(debugMode));
     this.run(options.config ?? '', true);
     this.cvars.applyUrl(options.search ?? '');
@@ -83,8 +88,8 @@ export class GameConfig {
   }
 
   /**
-   * Run one of the commands a config or the console holds: `bind`, `unbind`, `unbindall`,
-   * `set` and `seta` and their kin, `toggle`, `reset`, or a cvar's name and a value.
+   * Run one of the commands a config or the console holds: the binds' and the cvars' own, or a
+   * cvar's name and a value.
    *
    * @returns Whether it was one of those.
    */
@@ -132,65 +137,140 @@ export class GameConfig {
   private bind(key: number, command: string, loading: boolean): void {
     this.binds.set(key, command);
     const warning = loading ? null : bindWarning(key, this.shell);
-    if (warning) this.warn(warning);
+    if (warning) this.print(`${warning}\n`);
   }
 
   private run(text: string, loading: boolean): void {
     for (const argv of configCommands(text)) {
-      if (!this.runCommand(argv, loading)) this.warn(unknownCommand(argv[0]));
+      if (!this.runCommand(argv, loading)) this.print(`${unknownCommand(argv[0])}\n`);
     }
   }
 
   /**
+   * Each usage line names the command as it was typed, as `Cmd_Argv(0)` does.
+   *
    * @param loading - At start, a cvar is loaded from the file rather than set, so a latched one
    *   takes it now.
    */
   private runCommand(argv: readonly string[], loading: boolean): boolean {
     const [name, ...args] = argv;
-    switch (name.toLowerCase()) {
+    const command = name.toLowerCase();
+    switch (command) {
       case 'unbindall':
         this.binds.clear();
         return true;
       case 'bind':
-      case 'unbind': {
-        // `Key_Bind_f` and `Key_Unbind_f` (`cl_keys.c:969–1047`). A key alone only prints its bind.
-        if (args.length === 0) return true;
-        const key = stringToKey(args[0]);
-        if (key === -1) this.warn(`"${args[0]}" isn't a valid key`);
-        else if (name.toLowerCase() === 'unbind') this.binds.set(key, '');
-        else if (args.length > 1) this.bind(key, args.slice(1).join(' '), loading);
+        this.bindKey(args, loading);
         return true;
-      }
+      case 'unbind':
+        this.unbindKey(args);
+        return true;
+      case 'bindlist':
+        // `Key_Bindlist_f` (`cl_keys.c:1077–1085`).
+        for (const [key, bound] of this.binds.entries()) {
+          this.print(`${keyToString(key)} "${bound}"\n`);
+        }
+        return true;
       case 'set':
       case 'seta':
       case 'sets':
       case 'setu':
-        // `Cvar_Set_f` (`cvar.c:852–893`): a name alone only prints its value.
-        if (args.length >= 2) {
-          this.setCvar(args[0], args.slice(1).join(' '), name.toLowerCase() === 'seta', loading);
-        }
+        // `Cvar_Set_f` (`cvar.c:852–893`): a name alone prints the cvar, as `print` does.
+        if (args.length === 0) this.print(`usage: ${name} <variable> <value>\n`);
+        else if (args.length === 1) this.printCvar(args[0]);
+        else this.setCvar(args[0], args.slice(1).join(' '), command === 'seta', loading);
+        return true;
+      case 'print':
+        // `Cvar_Print_f` (`cvar.c:779–798`).
+        if (args.length === 1) this.printCvar(args[0]);
+        else this.print('usage: print <variable>\n');
         return true;
       case 'toggle':
+        // `Cvar_Toggle_f` (`cvar.c:808–842`).
         if (args.length > 0) this.cvars.toggle(args[0], args.slice(1));
+        else this.print('usage: toggle <variable> [value1, value2, ...]\n');
         return true;
       case 'reset':
-        if (args.length === 1) this.cvars.reset(args[0]);
+        // `Cvar_Reset_f` (`cvar.c:900–906`).
+        if (args.length === 1) this.cvars.resetFromConsole(args[0]);
+        else this.print('usage: reset <variable>\n');
+        return true;
+      case 'unset':
+        this.unset(name, args);
+        return true;
+      case 'cvarlist':
+        // `Cvar_List_f` (`cvar.c:953–962`): the word after it filters, and any more are ignored.
+        this.cvars.listCvars(args[0]);
+        return true;
+      case 'cvar_restart':
+        this.cvars.restart();
         return true;
       default:
         return this.cvarByName(argv, loading);
     }
   }
 
-  /** {@link cvarCommand}, loading the value instead while the saved file is read at start. */
+  /** `Key_Bind_f` (`cl_keys.c:1009–1047`): a key alone prints what it is bound to. */
+  private bindKey(args: readonly string[], loading: boolean): void {
+    if (args.length === 0) {
+      this.print('bind <key> [command] : attach a command to a key\n');
+      return;
+    }
+    const key = stringToKey(args[0]);
+    if (key === -1) {
+      this.print(`"${args[0]}" isn't a valid key\n`);
+    } else if (args.length > 1) {
+      this.bind(key, args.slice(1).join(' '), loading);
+    } else {
+      const named = keyToString(key);
+      const bound = this.binds.get(key);
+      this.print(bound ? `"${named}" = "${bound}"\n` : `"${named}" is not bound\n`);
+    }
+  }
+
+  /** `Key_Unbind_f` (`cl_keys.c:969–987`). */
+  private unbindKey(args: readonly string[]): void {
+    if (args.length !== 1) {
+      this.print('unbind <key> : remove commands from a key\n');
+      return;
+    }
+    const key = stringToKey(args[0]);
+    if (key === -1) this.print(`"${args[0]}" isn't a valid key\n`);
+    else this.binds.set(key, '');
+  }
+
+  /** `Cvar_Print_f`'s print (`cvar.c:792–797`). */
+  private printCvar(name: string): void {
+    if (!this.cvars.printCvar(name)) this.print(`Cvar ${name} does not exist.\n`);
+  }
+
+  /** `Cvar_Unset_f` (`cvar.c:1160–1179`): a cvar nothing has made says nothing. */
+  private unset(command: string, args: readonly string[]): void {
+    if (args.length !== 1) {
+      this.print(`Usage: ${command} <varname>\n`);
+      return;
+    }
+    const held = this.cvars.nameOf(args[0]);
+    if (held !== undefined && !this.cvars.unset(args[0])) {
+      this.print(`Error: ${command}: Variable ${held} is not user created.\n`);
+    }
+  }
+
+  /**
+   * {@link cvarCommand}, loading the value instead while the saved file is read at start. The cvar
+   * is named as it was made, not as it was typed.
+   */
   private cvarByName(argv: readonly string[], loading: boolean): boolean {
-    const [name, ...args] = argv;
-    if (!settingForCvar(name) && this.cvars.string(name) === undefined) return false;
-    if (args.length > 0) this.setCvar(name, args.join(' '), false, loading);
+    const [typed, ...args] = argv;
+    const name = this.cvars.nameOf(typed);
+    if (name === undefined) return false;
+    if (args.length === 0) this.cvars.printCvar(name);
+    else this.setCvar(name, args.join(' '), false, loading);
     return true;
   }
 
   private setCvar(name: string, value: string, archive: boolean, loading: boolean): void {
     if (loading) this.cvars.load(name, value, archive);
-    else this.cvars.set(name, value, archive);
+    else this.cvars.setFromConsole(name, value, archive);
   }
 }

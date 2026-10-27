@@ -11,7 +11,7 @@ const key = (char: string) => char.charCodeAt(0);
 
 /** The Controls page, open over a config of its own, with the sounds it plays from here. */
 function controls(options: GameConfigOptions = {}) {
-  const config = new GameConfig({ warn: () => {}, ...options });
+  const config = new GameConfig({ print: () => {}, ...options });
   const sounds: MenuSound[] = [];
   const menu = new Menu({ sound: (sound) => sounds.push(sound) });
   menu.open(controlsPage(menu, config));

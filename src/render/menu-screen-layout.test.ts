@@ -47,7 +47,7 @@ describe('the in-game menu on screen', () => {
     app = test.app;
     menu = new Menu();
     screen = new MenuScreen(app, test.camera, menu, { font: null });
-    const config = new GameConfig({ warn: () => {} });
+    const config = new GameConfig({ print: () => {} });
     const done = actions();
     const models = () => [
       { model: 'sarge', skin: 'default' },

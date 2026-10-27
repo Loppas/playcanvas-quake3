@@ -173,7 +173,7 @@ describe("where cgame's lines are read from", () => {
   it.each([false, true])(
     'gives the lines its gamestate will before a server in this page starts (DEBUG_MODE %s)',
     (debugMode) => {
-      const cvars = new Cvars({ debugMode, warn: () => {} });
+      const cvars = new Cvars({ debugMode, print: () => {} });
       cvars.set('g_gametype', String(GT.TEAM));
       cvars.set('timelimit', '15');
       cvars.set('fraglimit', '30');

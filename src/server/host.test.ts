@@ -1237,8 +1237,8 @@ describe('the host', () => {
       cvars.set('xp_unlagged', '0');
       cvars.set('sv_fps', '40');
       host.runFrame(8);
-      const warn = vi.fn();
-      const client = new Cvars({ debugMode: true, warn });
+      const print = vi.fn();
+      const client = new Cvars({ debugMode: true, print });
       const connected = new ClientConnection(client);
       connectLocal(host, connected);
       expect(connected.rules).toMatchObject({
@@ -1253,12 +1253,12 @@ describe('the host', () => {
       expect(client.archived()).toContainEqual({ name: 'pmove_JumpVelocity', value: '290' });
       expect(client.archived().map((cvar) => cvar.name)).not.toContain('pmove_WalkAccel');
       // The grapple style, the rewind and the frame rate the player set stay the player's.
-      const own = new Cvars({ debugMode: true, warn: () => {} });
+      const own = new Cvars({ debugMode: true, print: () => {} });
       for (const name of ['g_allowGrapple', 'xp_unlagged', 'sv_fps']) {
         expect(client.get(name)).toBe(own.get(name));
       }
       expect(client.archived()).not.toContainEqual({ name: 'g_allowGrapple', value: '3' });
-      expect(warn).not.toHaveBeenCalled();
+      expect(print).not.toHaveBeenCalled();
       expect(connected.rules.pmove_JumpVelocity).toBe(275);
     });
 
@@ -1266,7 +1266,7 @@ describe('the host', () => {
       const { host } = makeHost({ debugMode: false });
       // Let the spawn's `sv_cheats` change reach the systeminfo, as Q3's cvar change does.
       host.runFrame(8);
-      const client = new Cvars({ debugMode: true, warn: () => {} });
+      const client = new Cvars({ debugMode: true, print: () => {} });
       client.set('pcq_god', '1');
       const connected = new ClientConnection(client);
       connectLocal(host, connected);

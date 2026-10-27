@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { K } from '../formats/q3-keys';
 import type { CommandFunction } from './command-router';
 import { GameConfig } from './game-config';
-import { DEFAULT_SETTINGS } from './registry';
+import { DEFAULT_SETTINGS, SETTING_KEYS } from './registry';
 
 /** A printable key's number. */
 const key = (char: string) => char.charCodeAt(0);
@@ -141,7 +141,7 @@ describe('GameConfig: Defaults', () => {
   it('binds every key as a fresh config does and sets every setting back, keeping other cvars', () => {
     const config = new GameConfig({
       config: 'seta cg_fov "110"\nbind x "+attack"\nunbind w\nseta r_mode "4"\n',
-      warn: () => {}
+      print: () => {}
     });
     config.restoreDefaults();
     expect(config.text()).toBe(
@@ -156,7 +156,7 @@ describe('GameConfig: Defaults', () => {
     const config = new GameConfig({
       config: 'seta pcq_god "1"\nseta cg_fov "110"\nseta cl_renderer "opengl2"\n',
       debugMode: false,
-      warn: () => {}
+      print: () => {}
     });
     config.restoreDefaults();
     expect(config.text()).toContain('seta pcq_god "1"');
@@ -236,11 +236,11 @@ describe('GameConfig at start', () => {
   });
 
   it("reports a line it can't run, and a key Q3 doesn't know", () => {
-    const warn = vi.fn();
-    new GameConfig({ config: 'vstr go\nbind NOPE +attack', debugMode: true, warn });
-    expect(warn.mock.calls.map(([message]) => message)).toEqual([
-      'Unknown command "vstr^7"',
-      '"NOPE" isn\'t a valid key'
+    const print = vi.fn();
+    new GameConfig({ config: 'vstr go\nbind NOPE +attack', debugMode: true, print });
+    expect(print.mock.calls.map(([text]) => text)).toEqual([
+      'Unknown command "vstr^7"\n',
+      '"NOPE" isn\'t a valid key\n'
     ]);
   });
 });
@@ -266,15 +266,15 @@ describe('GameConfig as it runs', () => {
   });
 
   it('warns of a Ctrl or Meta bind made as it runs, but not of one the file had, nor in the shell', () => {
-    const warn = vi.fn();
-    const config = new GameConfig({ config: 'bind CTRL "+attack"', debugMode: true, warn });
-    expect(warn).not.toHaveBeenCalled();
+    const print = vi.fn();
+    const config = new GameConfig({ config: 'bind CTRL "+attack"', debugMode: true, print });
+    expect(print).not.toHaveBeenCalled();
     config.command(['bind', 'WINDOWS', '+attack']);
-    expect(warn).toHaveBeenCalledOnce();
-    expect(warn.mock.calls[0][0]).toMatch(/^WINDOWS: /);
+    expect(print).toHaveBeenCalledOnce();
+    expect(print.mock.calls[0][0]).toMatch(/^WINDOWS: /);
 
     const shell = vi.fn();
-    new GameConfig({ debugMode: true, shell: true, warn: shell }).command(['bind', 'CTRL', '+attack']);
+    new GameConfig({ debugMode: true, shell: true, print: shell }).command(['bind', 'CTRL', '+attack']);
     expect(shell).not.toHaveBeenCalled();
   });
 
@@ -289,7 +289,22 @@ describe('GameConfig at the console', () => {
     const table = new Map<string, CommandFunction>();
     config.addCommands({ add: (name, run) => void table.set(name, run) });
     expect([...table.keys()].sort()).toEqual(
-      ['bind', 'reset', 'set', 'seta', 'sets', 'setu', 'toggle', 'unbind', 'unbindall'].sort()
+      [
+        'bind',
+        'bindlist',
+        'cvar_restart',
+        'cvarlist',
+        'print',
+        'reset',
+        'set',
+        'seta',
+        'sets',
+        'setu',
+        'toggle',
+        'unbind',
+        'unbindall',
+        'unset'
+      ].sort()
     );
 
     const run = (...argv: string[]) => table.get(argv[0])!(argv);
@@ -340,8 +355,8 @@ describe('GameConfig without DEBUG_MODE', () => {
     debugging.command(['cl_renderer', 'opengl2']);
     const text = debugging.text();
 
-    const warn = vi.fn();
-    const config = new GameConfig({ config: text, debugMode: false, warn });
+    const print = vi.fn();
+    const config = new GameConfig({ config: text, debugMode: false, print });
     // A server with `sv_cheats` 0 puts the cheat settings back, as a systeminfo does, so the file's
     // `pcq_god 1` and `cg_thirdPerson 1` do not take force. The renderer is no cheat setting, and a
     // written value stands, as it does in Q3.
@@ -350,9 +365,221 @@ describe('GameConfig without DEBUG_MODE', () => {
     // C is still bound, as the file has it, but the toggle it runs is refused.
     config.command(['toggle', 'pcq_drawCollision']);
     expect(config.cvars.settings.drawCollision).toBe(false);
-    expect(warn).toHaveBeenCalledWith('pcq_drawCollision is cheat protected.');
+    expect(print).toHaveBeenCalledWith('pcq_drawCollision is cheat protected.\n');
     // The reset writes its defaults back, as `Cvar_SetCheatState` does.
     expect(config.text()).toContain('seta pcq_god "0"');
     expect(config.text()).toContain('seta cg_thirdPerson "0"');
+  });
+});
+
+/**
+ * A console over a config: `run` types a line, as its words, and gives what it printed, marked
+ * where the config took no such command. Each expectation below is what ioquake3 printed to its
+ * `qconsole.log` for the same line, run with a throwaway home folder; where a value is the port's
+ * own default, the line is ioquake3's with it.
+ */
+function consoleOver(options: { config?: string } = {}) {
+  const printed: string[] = [];
+  const config = new GameConfig({
+    debugMode: true,
+    print: (text) => void printed.push(text),
+    ...options
+  });
+  const run = (...argv: string[]) => {
+    printed.length = 0;
+    const known = config.command(argv);
+    return known ? printed.join('') : `(unknown) ${printed.join('')}`;
+  };
+  return { config, run };
+}
+
+describe("GameConfig's prints, as ioquake3's", () => {
+  it('prints each usage line, naming the command as it was typed', () => {
+    const { run } = consoleOver();
+    expect(run('set')).toBe('usage: set <variable> <value>\n');
+    expect(run('SET')).toBe('usage: SET <variable> <value>\n');
+    expect(run('seta')).toBe('usage: seta <variable> <value>\n');
+    expect(run('sets')).toBe('usage: sets <variable> <value>\n');
+    expect(run('setu')).toBe('usage: setu <variable> <value>\n');
+    expect(run('print')).toBe('usage: print <variable>\n');
+    expect(run('print', 'a', 'b')).toBe('usage: print <variable>\n');
+    expect(run('toggle')).toBe('usage: toggle <variable> [value1, value2, ...]\n');
+    expect(run('reset')).toBe('usage: reset <variable>\n');
+    expect(run('reset', 'a', 'b')).toBe('usage: reset <variable>\n');
+    expect(run('unset')).toBe('Usage: unset <varname>\n');
+    expect(run('UNSET')).toBe('Usage: UNSET <varname>\n');
+    expect(run('unset', 'a', 'b')).toBe('Usage: unset <varname>\n');
+    expect(run('bind')).toBe('bind <key> [command] : attach a command to a key\n');
+    expect(run('unbind')).toBe('unbind <key> : remove commands from a key\n');
+    expect(run('unbind', 'a', 'b')).toBe('unbind <key> : remove commands from a key\n');
+  });
+
+  it('prints a cvar by its name, by `set` and by `print`, as it was made, and its default', () => {
+    const { run } = consoleOver();
+    expect(run('set', 'nosuch')).toBe('Cvar nosuch does not exist.\n');
+    expect(run('print', 'nosuch')).toBe('Cvar nosuch does not exist.\n');
+    // ioquake3's default is 5, the port's 6.8.
+    expect(run('print', 'sensitivity')).toBe('"sensitivity" is:"6.8^7", the default\n');
+    expect(run('sensitivity')).toBe('"sensitivity" is:"6.8^7", the default\n');
+    expect(run('SENSITIVITY')).toBe('"sensitivity" is:"6.8^7", the default\n');
+    run('set', 'sensitivity', '7');
+    expect(run('sensitivity')).toBe('"sensitivity" is:"7^7" default:"6.8^7"\n');
+    // The default is a string, not a number.
+    run('set', 'sensitivity', '6.80');
+    expect(run('sensitivity')).toBe('"sensitivity" is:"6.80^7" default:"6.8^7"\n');
+  });
+
+  it('keeps a cvar the player made with the string it was made with, as its default', () => {
+    const { run } = consoleOver();
+    expect(run('set', 'foo', 'bar')).toBe('');
+    expect(run('foo')).toBe('"foo" is:"bar^7", the default\n');
+    run('set', 'foo', 'baz');
+    expect(run('foo')).toBe('"foo" is:"baz^7" default:"bar^7"\n');
+    // A cvar's name sets it to the rest of the line.
+    run('FOO', 'Baz', 'qux');
+    expect(run('print', 'foo')).toBe('"foo" is:"Baz qux^7" default:"bar^7"\n');
+    expect(run('reset', 'foo')).toBe('');
+    expect(run('foo')).toBe('"foo" is:"bar^7", the default\n');
+    // The default is told without regard to case, as `Q_stricmp` tells it.
+    run('set', 'foo', 'BAR');
+    expect(run('foo')).toBe('"foo" is:"BAR^7", the default\n');
+
+    expect(run('toggle', 'foot')).toBe('');
+    expect(run('foot')).toBe('"foot" is:"1^7", the default\n');
+    expect(run('toggle', 'foot', 'x')).toBe('toggle: nothing to toggle to\n');
+    run('toggle', 'foot', '1', '2', '3');
+    expect(run('foot')).toBe('"foot" is:"2^7" default:"1^7"\n');
+    // A cvar `toggle` made is the player's too.
+    expect(run('unset', 'foot')).toBe('');
+    expect(run('foot')).toBe('(unknown) ');
+  });
+
+  it('refuses a read-only cvar, quietly where the value is the one it holds', () => {
+    const { config, run } = consoleOver();
+    // As a listen server's store makes it: `CVAR_ROM`, as Q3's own is.
+    config.cvars.mirror('sv_cheats', '1');
+    expect(run('set', 'sv_cheats', '0')).toBe('sv_cheats is read only.\n');
+    expect(run('SET', 'SV_CHEATS', '0')).toBe('SV_CHEATS is read only.\n');
+    expect(run('SV_CHEATS', '0')).toBe('sv_cheats is read only.\n');
+    expect(run('sv_cheats')).toBe('"sv_cheats" is:"1^7"\n');
+    expect(run('set', 'sv_cheats', '1')).toBe('');
+  });
+
+  it('holds a latched value for the reload, saying so once for each new one', () => {
+    const { run } = consoleOver();
+    expect(run('r_fullbright')).toBe('"r_fullbright" is:"0^7", the default\n');
+    expect(run('set', 'r_fullbright', '1')).toBe('r_fullbright will be changed upon restarting.\n');
+    expect(run('r_fullbright')).toBe('"r_fullbright" is:"0^7", the default\nlatched: "1"\n');
+
+    // ioquake3's default is 1, the port's 0.
+    expect(run('set', 'r_picmip', '2')).toBe('r_picmip will be changed upon restarting.\n');
+    expect(run('set', 'r_picmip', '2')).toBe('');
+    expect(run('r_picmip')).toBe('"r_picmip" is:"0^7", the default\nlatched: "2"\n');
+    expect(run('set', 'r_picmip', '3')).toBe('r_picmip will be changed upon restarting.\n');
+    expect(run('r_picmip')).toBe('"r_picmip" is:"0^7", the default\nlatched: "3"\n');
+    // Back to the value in force calls the wait off, without a word.
+    expect(run('set', 'r_picmip', '0')).toBe('');
+    expect(run('r_picmip')).toBe('"r_picmip" is:"0^7", the default\n');
+    expect(run('R_PICMIP', '4')).toBe('r_picmip will be changed upon restarting.\n');
+    expect(run('r_picmip')).toBe('"r_picmip" is:"0^7", the default\nlatched: "4"\n');
+  });
+
+  it('refuses a cheat while sv_cheats is 0, before it would latch, naming it as the line did', () => {
+    const { config, run } = consoleOver();
+    config.cvars.setServer('sv_cheats', '0');
+    expect(run('sv_cheats')).toBe('"sv_cheats" is:"0^7"\n');
+    expect(run('r_novis', '0')).toBe('');
+    expect(run('r_novis', '1')).toBe('r_novis is cheat protected.\n');
+    expect(run('set', 'r_novis', '1')).toBe('r_novis is cheat protected.\n');
+    expect(run('SET', 'R_NOVIS', '1')).toBe('R_NOVIS is cheat protected.\n');
+    expect(run('R_NOVIS', '1')).toBe('r_novis is cheat protected.\n');
+    expect(run('r_fullbright', '1')).toBe('r_fullbright is cheat protected.\n');
+  });
+
+  it('removes a cvar the player made, and no other', () => {
+    const { config, run } = consoleOver();
+    config.cvars.mirror('sv_cheats', '1');
+    run('set', 'foo', 'bar');
+    expect(run('unset', 'foo')).toBe('');
+    expect(run('foo')).toBe('(unknown) ');
+    expect(run('unset', 'sensitivity')).toBe('Error: unset: Variable sensitivity is not user created.\n');
+    expect(run('UNSET', 'SENSITIVITY')).toBe('Error: UNSET: Variable sensitivity is not user created.\n');
+    expect(run('unset', 'nosuch')).toBe('');
+    expect(run('unset', 'sv_cheats')).toBe('Error: unset: Variable sv_cheats is not user created.\n');
+  });
+
+  it('prints a bind and lists them, naming each key as Key_KeynumToString does', () => {
+    const { run } = consoleOver();
+    run('unbindall');
+    run('bind', 'w', '+forward');
+    expect(run('bind', 'W')).toBe('"w" = "+forward"\n');
+    expect(run('bind', 'x')).toBe('"x" is not bound\n');
+    expect(run('bind', 'nosuch')).toBe('"nosuch" isn\'t a valid key\n');
+    run('bind', 'MOUSE1', '+attack');
+    run('bind', '0x7f', 'weird');
+    run('bind', '0x10', 'hexy');
+    run('bind', 'e', 'say hello there');
+    expect(run('bind', 'e')).toBe('"e" = "say hello there"\n');
+    run('bind', 'r', 'say', 'hello', 'there');
+    expect(run('bind', 'r')).toBe('"r" = "say hello there"\n');
+    expect(run('bindlist')).toBe(
+      [
+        '0x10 "hexy"',
+        'e "say hello there"',
+        'r "say hello there"',
+        'w "+forward"',
+        'BACKSPACE "weird"',
+        'MOUSE1 "+attack"',
+        ''
+      ].join('\n')
+    );
+    run('unbind', 'w');
+    expect(run('bind', 'w')).toBe('"w" is not bound\n');
+    expect(run('unbind', 'nosuch')).toBe('"nosuch" isn\'t a valid key\n');
+  });
+
+  it('lists the cvars a filter matches, newest first, after their flags, then counts them all', () => {
+    const { config, run } = consoleOver();
+    config.cvars.mirror('sv_cheats', '1');
+    run('set', 'zz_a', '1');
+    run('seta', 'zz_b', '2');
+    // Every setting, and the three cvars made here.
+    const count = SETTING_KEYS.length + 3;
+    const footer = `\n${count} total cvars\n${count} cvar indexes\n`;
+    expect(run('cvarlist', 'zz_*')).toBe(`     A  ? zz_b "2"\n        ? zz_a "1"\n${footer}`);
+    expect(run('cvarlist', 'ZZ_?')).toBe(`     A  ? zz_b "2"\n        ? zz_a "1"\n${footer}`);
+    expect(run('cvarlist', 'zz_[a-a]')).toBe(`        ? zz_a "1"\n${footer}`);
+    expect(run('cvarlist', 'sens')).toBe(`     A    sensitivity "6.8"\n${footer}`);
+    expect(run('cvarlist', 'sv_cheats')).toBe(` s R      sv_cheats "1"\n${footer}`);
+    expect(run('cvarlist', 'r_picmip')).toBe(`     AL   r_picmip "0"\n${footer}`);
+    expect(run('cvarlist', 'name')).toBe(`  U  A    name "UnnamedPlayer"\n${footer}`);
+    expect(run('cvarlist', 'snaps')).toBe(`  U  A    snaps "125"\n${footer}`);
+    expect(run('cvarlist', 'r_fullbright')).toBe(`      LC  r_fullbright "0"\n${footer}`);
+    expect(run('cvarlist', 'fraglimit')).toBe(`S    A    fraglimit "20"\n${footer}`);
+    expect(run('cvarlist', 'nonexistent_xyz')).toBe(footer);
+    // A latched value waiting is not the one listed.
+    run('set', 'r_fullbright', '1');
+    expect(run('cvarlist', 'r_fullbright')).toBe(`      LC  r_fullbright "0"\n${footer}`);
+  });
+
+  it("restarts the cvars: the player's own gone, the settings at their defaults but the limits", () => {
+    const { run } = consoleOver({ config: 'seta r_picmip "2"' });
+    run('set', 'foo', 'bar');
+    run('seta', 'fooa', '1');
+    run('set', 'foo', 'baz');
+    const before = SETTING_KEYS.length + 2;
+    expect(run('cvarlist', 'foo*')).toBe(
+      `     A  ? fooa "1"\n        ? foo "baz"\n\n${before} total cvars\n${before} cvar indexes\n`
+    );
+    run('set', 'fraglimit', '5');
+    // ioquake3's default is 1, the port's 0.
+    expect(run('r_picmip')).toBe('"r_picmip" is:"2^7" default:"0^7"\n');
+    expect(run('cvar_restart')).toBe('r_picmip will be changed upon restarting.\n');
+    expect(run('foo')).toBe('(unknown) ');
+    expect(run('fooa')).toBe('(unknown) ');
+    expect(run('r_picmip')).toBe('"r_picmip" is:"2^7" default:"0^7"\nlatched: "0"\n');
+    expect(run('fraglimit')).toBe('"fraglimit" is:"5^7" default:"20^7"\n');
+    const after = SETTING_KEYS.length;
+    expect(run('cvarlist', 'foo*')).toBe(`\n${after} total cvars\n${after} cvar indexes\n`);
   });
 });

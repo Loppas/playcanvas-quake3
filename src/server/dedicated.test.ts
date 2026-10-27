@@ -103,7 +103,7 @@ async function start(
 ) {
   const lines: string[] = [];
   const warnings: string[] = [];
-  const config = new GameConfig({ debugMode: true, warn: (message) => warnings.push(message) });
+  const config = new GameConfig({ debugMode: true, print: (text) => warnings.push(text) });
   const { socket } = options;
   const server = await startDedicatedServer({
     config,

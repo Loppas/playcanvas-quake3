@@ -12,7 +12,7 @@ export function routedInput(
   binds?: Iterable<readonly [number, string]>,
   cgame: (argv: readonly string[]) => boolean = () => false
 ) {
-  const config = new GameConfig({ debugMode: true, warn: () => {} });
+  const config = new GameConfig({ debugMode: true, print: () => {} });
   if (binds) {
     config.binds.clear();
     for (const [key, command] of binds) config.binds.set(key, command);

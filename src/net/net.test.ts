@@ -394,7 +394,7 @@ describe('the latency knobs', () => {
   });
 
   it('are registered, net_dropsim empty as NET_GetCvars has it, so the console sets each', () => {
-    const config = new GameConfig({ debugMode: true, warn: () => {} });
+    const config = new GameConfig({ debugMode: true, print: () => {} });
     expect(config.command(['net_dropsim', '5'])).toBe(false);
 
     new Net({ cvars: config.cvars });

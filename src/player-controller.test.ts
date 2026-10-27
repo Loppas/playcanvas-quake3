@@ -191,7 +191,7 @@ function controlled(
   localEntities?: LocalEntities,
   pointContents?: PointContentsFn
 ) {
-  const cvars = new Cvars({ debugMode: true, warn: () => {} });
+  const cvars = new Cvars({ debugMode: true, print: () => {} });
   for (const [name, value] of Object.entries(cvarValues)) cvars.set(name, value);
   const { input } = routedInput(defaultBinds());
   input.active = true;

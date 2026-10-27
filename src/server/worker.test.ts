@@ -167,7 +167,7 @@ function page(
   peers?: WorkerChannelOptions['peers'],
   data: (name: string) => HostMapData = mapData
 ) {
-  const cvars = new Cvars({ debugMode: true, warn: () => {} });
+  const cvars = new Cvars({ debugMode: true, print: () => {} });
   setup(cvars);
   const asked: string[] = [];
   const printed: string[] = [];
@@ -854,7 +854,7 @@ describe('the page hosting players elsewhere', () => {
     const rig = await hosting();
     const now = () => rig.wire.clock();
     const peer = fakePeer(rig.master, rig.rtc.create, '198.51.100.4', { dials: true, now });
-    const cvars = new Cvars({ debugMode: true, warn: () => {} });
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
     const net = new Net({ cvars, socket: peer.socket, now, print: () => {} });
     await settle();
     const game = new LocalGame({
@@ -906,7 +906,7 @@ describe('the page hosting players elsewhere', () => {
 describe('the page on a server elsewhere, then hosting its own', () => {
   it("predicts by each server's rules, and keeps the player's in its store and file", async () => {
     // A q3config.cfg that VQ3's preset saved, and the page's one store read from it.
-    const vq3 = new GameConfig({ debugMode: true, warn: () => {} });
+    const vq3 = new GameConfig({ debugMode: true, print: () => {} });
     vq3.exec(shippedCfg('presets/vq3.cfg')!);
     const saved = vq3.text();
     // What the store warns of, and the warnings printed, a refused systeminfo key's among them.
@@ -915,7 +915,7 @@ describe('the page on a server elsewhere, then hosting its own', () => {
     const print = (text: string) => {
       if (text.startsWith('WARNING')) warnings.push(text);
     };
-    const config = new GameConfig({ config: saved, debugMode: true, warn });
+    const config = new GameConfig({ config: saved, debugMode: true, print: warn });
     const held = () => SYSTEMINFO_RULES.map((name) => config.cvars.get(name));
     const own = held();
     /** The file's lines for what the systeminfo's record takes. */
@@ -926,7 +926,7 @@ describe('the page on a server elsewhere, then hosting its own', () => {
 
     // A dedicated server elsewhere running CPM, with no hook, the preset run before its map.
     const network = new MemoryNetwork();
-    const remote = new GameConfig({ debugMode: true, warn: () => {} });
+    const remote = new GameConfig({ debugMode: true, print: () => {} });
     remote.exec(shippedCfg('presets/cpm.cfg')!);
     remote.cvars.set('g_allowGrapple', '0');
     const now = () => network.now;

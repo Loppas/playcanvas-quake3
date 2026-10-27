@@ -9,7 +9,7 @@ import { AS, MAX_OTHER_SERVERS, ServerLists } from './server-lists';
 /** A client's favourites over lists of their own, and what they print. */
 function favorites(text = '') {
   const printed: string[] = [];
-  const cvars = new Cvars({ debugMode: true, warn: () => {} });
+  const cvars = new Cvars({ debugMode: true, print: () => {} });
   const servers = new ServerLists({ cvars, now: () => 0, print: () => {} });
   const list = new Favorites({ servers, print: (line) => printed.push(line) });
   list.load(text);

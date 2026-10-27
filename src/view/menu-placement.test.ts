@@ -37,7 +37,7 @@ const FORWARD_BUTTON = { ...FORWARD_CORNER, y: 434, height: 28 };
 /** Setup, opened as a player would open it, with a pair of models on offer. */
 function setup(): Menu {
   const menu = new Menu();
-  const config = new GameConfig({ warn: () => {} });
+  const config = new GameConfig({ print: () => {} });
   const actions = { vidRestart: vi.fn(), exportConfig: vi.fn(), importConfig: vi.fn() };
   const models = () => [
     { model: 'sarge', skin: 'default' },
@@ -307,7 +307,7 @@ describe("Start Server and Server Options in q3_ui's placement", () => {
   /** Start Server over six maps, opened as SINGLE PLAYER opens it. */
   const startServer = () => {
     const menu = new Menu();
-    const config = new GameConfig({ warn: () => {} });
+    const config = new GameConfig({ print: () => {} });
     const arenas = Array.from({ length: 6 }, (_, i) => `\\type\\ffa\\map\\dm${i + 1}`);
     const opened = startServerPage({
       menu,
@@ -387,7 +387,7 @@ describe("Start Server and Server Options in q3_ui's placement", () => {
   /** Server Options for team deathmatch, over twenty bots, placed. */
   const teamOptions = () => {
     const menu = new Menu();
-    const config = new GameConfig({ warn: () => {} });
+    const config = new GameConfig({ print: () => {} });
     const bots = Array.from({ length: 20 }, (_, i) => ({ name: `bot${String(i).padStart(2, '0')}`, model: 'sarge' }));
     const opened = startServerPage({
       menu,
@@ -466,7 +466,7 @@ describe("ARENA SERVERS and SPECIFY SERVER in q3_ui's placement", () => {
   /** The browser, opened from MULTIPLAYER, and its placement. */
   const browser = () => {
     const menu = new Menu();
-    const config = new GameConfig({ warn: () => {} });
+    const config = new GameConfig({ print: () => {} });
     const servers = new ServerLists({ cvars: config.cvars, now: () => 0, print: () => {} });
     const opened = serversMenu({
       menu,

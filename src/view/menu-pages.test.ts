@@ -59,7 +59,7 @@ function opened(
   running = true,
   launchVsync?: boolean
 ) {
-  const config = new GameConfig({ warn: () => {}, ...options });
+  const config = new GameConfig({ print: () => {}, ...options });
   const menu = new Menu();
   const done = actions();
   const match: { gametype: number } = { gametype: playing };
@@ -194,7 +194,7 @@ describe('the in-game menu', () => {
   });
 
   it('greys START while no match is played, as over a map\'s preview', () => {
-    const config = new GameConfig({ warn: () => {} });
+    const config = new GameConfig({ print: () => {} });
     const menu = new Menu();
     let playing = false;
     const context: MenuContext = {
@@ -259,7 +259,7 @@ describe('the in-game menu', () => {
   });
 
   it("looks for Remove bots' bots through the match's slots, which a skirmish may make more than the cvar's", () => {
-    const config = new GameConfig({ warn: () => {} });
+    const config = new GameConfig({ print: () => {} });
     const menu = new Menu();
     const context: MenuContext = {
       menu,
@@ -287,7 +287,7 @@ describe('the in-game menu', () => {
  * @param debug - A config to hand the page, with `DEBUG_MODE` on or off; with none, it has none.
  */
 function mainMenu(debug?: { debugMode: boolean }) {
-  const config = new GameConfig({ warn: () => {}, ...debug });
+  const config = new GameConfig({ print: () => {}, ...debug });
   const sounds: MenuSound[] = [];
   const closed = vi.fn();
   const menu = new Menu({ sound: (sound) => sounds.push(sound), closed });
@@ -616,7 +616,7 @@ describe('persistence', () => {
     press(menu, 'walk forward', K.ENTER);
     menu.key('i'.charCodeAt(0));
 
-    const reloaded = new GameConfig({ config: config.text(), warn: () => {} });
+    const reloaded = new GameConfig({ config: config.text(), print: () => {} });
     expect(reloaded.cvars.settings.drawFPS).toBe(true);
     expect(reloaded.binds.get('i'.charCodeAt(0))).toBe('+forward');
     expect(reloaded.text()).toBe(config.text());
