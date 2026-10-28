@@ -306,12 +306,14 @@ export class PlayerController {
   /**
    * The network half of a frame alone: the match's frame with nothing held, and the view left as
    * it was. There is no world to draw while a server elsewhere is being reached, and a hidden page
-   * draws nothing, but the server still hears from the client, as a minimised Quake 3 runs on.
+   * draws nothing, but the server still hears from the client, as a minimised Quake 3 runs on. A
+   * catcher's talk button goes with it, as with every command, so a player whose menu is up behind
+   * another tab is still talking.
    *
    * @param msec - The real time since the last frame.
    */
   networkFrame(msec: number): void {
-    const keys = { buttons: 0, weapon: this.selected };
+    const keys = { buttons: this.input.talkButton(), weapon: this.selected };
     this.game.frame(msec, buildUserCmd(STILL, this.angles, keys));
   }
 

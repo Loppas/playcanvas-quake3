@@ -15,7 +15,7 @@ import {
 } from './player-controller';
 import { CS } from './server/host';
 import { defaultBinds } from './settings/binds';
-import type { ClientInput } from './settings/client-input';
+import { KEYCATCH, type ClientInput } from './settings/client-input';
 import { Cvars } from './settings/cvars';
 import { routedInput } from './settings/input-test-fixtures';
 import { createFlatWorldTrace } from './sim/box-world';
@@ -23,7 +23,9 @@ import { damage } from './sim/combat';
 import {
   BUTTON_AFFIRMATIVE,
   BUTTON_ATTACK,
+  BUTTON_TALK,
   CONTENTS,
+  EF_TALK,
   MOD,
   PITCH_LIMIT_DEGREES,
   STAT
@@ -179,7 +181,7 @@ const camera = { setPosition: () => {}, lookAt: () => {} } as unknown as Entity;
 
 /**
  * A player over flat ground, the cvars they are playing under, and their keys, as if the mouse
- * were captured.
+ * were captured, with the console those keys' commands run through.
  *
  * The settings the *match* reads - god, the spawn armor, the grapple type - reach it by being
  * in this store, and are tested where the game module reads them. What is tested here is what
@@ -193,7 +195,7 @@ function controlled(
 ) {
   const cvars = new Cvars({ debugMode: true, print: () => {} });
   for (const [name, value] of Object.entries(cvarValues)) cvars.set(name, value);
-  const { input } = routedInput(defaultBinds());
+  const { input, router } = routedInput(defaultBinds());
   input.active = true;
   // A spawn stands the player nine units above the point itself, so the point goes that far
   // below where they are wanted.
@@ -210,7 +212,7 @@ function controlled(
     localEntities,
     pointContents
   );
-  return { cvars, input, controller };
+  return { cvars, input, router, controller };
 }
 
 /**
@@ -589,6 +591,37 @@ describe('the network frame', () => {
       upmove: 0,
       weapon: controller.weaponSelect
     });
+  });
+
+  it('sends the talk button with a catcher up, and still nothing held', () => {
+    const { input, router, controller } = controlled();
+    controller.update(1 / 60);
+    router.execute(['+attack']);
+    input.setCatcher(KEYCATCH.UI);
+    const frame = vi.spyOn(controller.game, 'frame');
+    controller.networkFrame(16);
+    expect(frame.mock.calls[0][1].buttons).toBe(BUTTON_TALK);
+  });
+});
+
+describe('the talk button', () => {
+  it('holds a player whose menu is up still under the balloon, and lets them go as it closes', () => {
+    const { input, router, controller } = controlled();
+    const { game, clientNum } = controller.game;
+    const ps = () => game.level.clients[clientNum].ps;
+    for (let frame = 0; frame < 30; frame++) controller.update(1 / 60);
+    // Typed at the console, it names no key, so the menu opening lets nothing go.
+    router.execute(['+forward']);
+    input.setCatcher(KEYCATCH.UI);
+    const before = { ...ps().origin };
+    for (let frame = 0; frame < 10; frame++) controller.update(1 / 60);
+    expect(ps().eFlags & EF_TALK).toBe(EF_TALK);
+    expect(ps().origin).toEqual(before);
+
+    input.setCatcher(0);
+    for (let frame = 0; frame < 10; frame++) controller.update(1 / 60);
+    expect(ps().eFlags & EF_TALK).toBe(0);
+    expect(ps().origin.y).toBeGreaterThan(before.y);
   });
 });
 

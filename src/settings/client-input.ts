@@ -1,6 +1,7 @@
 import { atoi } from '../formats/c-scan';
 import { K } from '../formats/q3-keys';
 import { tokenize } from '../formats/q3config';
+import { BUTTON_TALK } from '../sim/constants';
 import type { BindTable } from './binds';
 import type { CommandTable } from './command-router';
 
@@ -309,7 +310,8 @@ export class ClientInput {
    * `CL_CmdButtons` (`cl_input.c:525–549`): the button half of a user command.
    *
    * Bit `i` is `+button<i>`, down if it is held or was pressed since the last frame, so a click
-   * shorter than a frame still fires once. Reading it takes those presses.
+   * shorter than a frame still fires once. Reading it takes those presses. The {@link talkButton}
+   * goes with them.
    *
    * Every button rides in one number rather than being asked for by name, because that number is
    * what a user command carries: the game module reads the bits, and what the key was called is
@@ -322,7 +324,16 @@ export class ClientInput {
       if (button.active || button.wasPressed) buttons |= 1 << i;
       button.wasPressed = false;
     }
-    return buttons;
+    return buttons | this.talkButton();
+  }
+
+  /**
+   * `BUTTON_TALK` while any catcher is up, else nothing (`cl_input.c:540–542`): the player is
+   * typing or in a menu, so Pmove holds them still and the others see a balloon over them. Every
+   * user command carries it, whatever else it holds.
+   */
+  talkButton(): number {
+    return this.catching ? BUTTON_TALK : 0;
   }
 
   /** The weapon commands since the frame last took them, which cgame runs at the frame. */

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { K } from './formats/q3-keys';
 import { KeyInput } from './key-input';
-import { BUTTON_ATTACK } from './sim/constants';
+import { BUTTON_ATTACK, BUTTON_TALK } from './sim/constants';
 import { KEYCATCH, type ClientInput } from './settings/client-input';
 import { routedInput } from './settings/input-test-fixtures';
 
@@ -300,7 +300,7 @@ describe('the menu', () => {
     click(2);
     expect(pressed()).toEqual([K.MOUSE1, K.MOUSE2]);
     expect(requestPointerLock).not.toHaveBeenCalled();
-    expect(input.cmdButtons()).toBe(0);
+    expect(input.cmdButtons()).toBe(BUTTON_TALK);
   });
 
   it('passes over the Escape that let the mouse go, in case a browser hands that on too', () => {
