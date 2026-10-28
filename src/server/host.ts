@@ -333,6 +333,9 @@ const UDPIP_HEADER_SIZE = 28;
 /** `HEARTBEAT_MSEC` (`sv_main.c:244`): how often a server heartbeats when nothing asks it to. */
 const HEARTBEAT_MSEC = 300 * 1000;
 
+/** `MAX_CVAR_VALUE_STRING` (`q_shared.h:941`), its NUL included. */
+const MAX_CVAR_VALUE_STRING = 256;
+
 /**
  * The frames a map load and a restart run before the clients come back (`sv_init.c:498`,
  * `sv_ccmds.c:303`), and each one's length, which is Quake 3's own frame whatever `sv_fps` is.
@@ -2347,7 +2350,8 @@ export class Host {
 
   /**
    * `SV_ExecuteClientCommand` (`sv_client.c:1573–1597`): the handful of commands the server answers
-   * itself (`ucmds`), then the game module's, which only a client with a gamestate may send.
+   * itself (`ucmds`), then the game module's, which only a client with a gamestate may send, and
+   * whose arguments are cleaned before the game module reads them.
    *
    * @param clientOk - False for a command flood protection holds back from the game module.
    */
@@ -2374,7 +2378,7 @@ export class Host {
 
     if (!clientOk) return;
     if (this.state === SS.GAME && (client.state === CS.ACTIVE || client.state === CS.PRIMED)) {
-      this.game.clientCommand(clientNum, text);
+      this.game.clientCommand(clientNum, argsSanitize(argv));
     }
   }
 
@@ -2811,6 +2815,17 @@ function isSameClient(client: HostClient, from: NetAdr, qport: number): boolean 
   return (
     compareBaseAdr(from, netchan.remoteAddress) &&
     (netchan.qport === qport || from.port === netchan.remoteAddress.port)
+  );
+}
+
+/**
+ * `Cmd_Args_Sanitize` (`cmd.c:469–485`): each argument after the name cut to
+ * `MAX_CVAR_VALUE_STRING` less its NUL, with its line breaks and semicolons made spaces, so that a
+ * game module handing an argument on to a command buffer can't run a second command with it.
+ */
+function argsSanitize(argv: readonly string[]): string[] {
+  return argv.map((arg, i) =>
+    i === 0 ? arg : arg.slice(0, MAX_CVAR_VALUE_STRING - 1).replaceAll(/[\n\r;]/g, ' ')
   );
 }
 
