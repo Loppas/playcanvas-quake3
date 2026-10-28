@@ -283,3 +283,48 @@ describe('ConsoleBuffer.clear', () => {
     expect(last(buffer, 1)).toEqual([{ text: '   d', colors: '7777', time: 2000 }]);
   });
 });
+
+describe('ConsoleBuffer.x', () => {
+  it('is where on the line being written the next character goes', () => {
+    const buffer = sized(10);
+    expect(buffer.x).toBe(0);
+    buffer.print('^1abc', 1000);
+    expect(buffer.x).toBe(3);
+    // A word that won't fit starts the next line.
+    buffer.print(' defghij', 1000);
+    expect(buffer.x).toBe(7);
+    buffer.print('\n', 1000);
+    expect(buffer.x).toBe(0);
+    buffer.print('ab\rc', 1000);
+    expect(buffer.x).toBe(1);
+  });
+});
+
+describe('ConsoleBuffer.revision', () => {
+  it('moves at a print, a resize, a clear and every scroll', () => {
+    const buffer = sized(10);
+    const moves = (step: () => void) => {
+      const before = buffer.revision;
+      step();
+      return buffer.revision !== before;
+    };
+    expect(moves(() => buffer.print('one\ntwo\n', 1000))).toBe(true);
+    expect(moves(() => buffer.print('', 1000))).toBe(true);
+    expect(moves(() => buffer.pageUp())).toBe(true);
+    expect(moves(() => buffer.pageDown())).toBe(true);
+    expect(moves(() => buffer.top())).toBe(true);
+    expect(moves(() => buffer.bottom())).toBe(true);
+    expect(moves(() => buffer.clear())).toBe(true);
+    expect(moves(() => buffer.resize(12))).toBe(true);
+    expect(moves(() => buffer.resize(0))).toBe(true);
+  });
+
+  it('holds still at a resize to the same width, and at clearing the notify lines', () => {
+    const buffer = sized(10);
+    buffer.print('one\n', 1000);
+    const before = buffer.revision;
+    buffer.resize(10);
+    buffer.clearNotify();
+    expect(buffer.revision).toBe(before);
+  });
+});

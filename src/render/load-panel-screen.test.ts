@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppBase, Entity } from 'playcanvas';
 
 import { ConnectScreen, LoadScreen, LoadScreens } from '../load-screen';
@@ -164,6 +164,14 @@ describe('LoadPanelScreen', () => {
     expect(app.scene.layers.getLayerByName('load-panel')).toBeFalsy();
     new LoadScreen(screens, 'q3dm17');
     expect(() => app.render()).not.toThrow();
+  });
+
+  it('leaves the fonts it was given to whoever made them', () => {
+    const font = squareFont(app, 0.7);
+    const destroyed = vi.spyOn(font, 'destroy');
+    drawn(font);
+    panel.destroy();
+    expect(destroyed).not.toHaveBeenCalled();
   });
 });
 

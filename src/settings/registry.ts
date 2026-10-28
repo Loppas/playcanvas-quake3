@@ -145,6 +145,10 @@ export interface Settings {
   notifyLines: number;
   /** `cl_conXOffset`: the notify lines' indent from the left, in the screen's pixels. */
   conXOffset: number;
+  /** `scr_conspeed`: how fast the console drops and lifts, in screens a second. */
+  conSpeed: number;
+  /** `con_scale`: the console's and the notify lines' characters, 1–4 times 8 by 16 pixels. */
+  conScale: number;
   /**
    * `g_gametype`: 0 free-for-all, 1 tournament, 3 team deathmatch, 4 capture the flag, 8 clan
    * arena.
@@ -661,6 +665,14 @@ export const SETTINGS: SettingDefs = {
     read: wholeNumber(),
     section: null,
     archive: false
+  },
+  // `cl_console.c:371–374`: `con_scale` is held to 1–4, as `Cvar_CheckRange` holds it.
+  conSpeed: { cvar: 'scr_conspeed', default: '3', read: decimal(), section: null },
+  conScale: {
+    cvar: 'con_scale',
+    default: '1',
+    read: decimal({ min: 1, max: 4, clamp: true }),
+    section: null
   },
 
   // Server options. The match's own, with Q3's defaults (`gameCvarTable`, `g_main.c:105–132`):

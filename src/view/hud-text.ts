@@ -13,6 +13,19 @@ export const SMALLCHAR_HEIGHT = 16;
 export const GIANT_WIDTH = 32;
 export const GIANT_HEIGHT = 48;
 
+/**
+ * `g_smallchar_width` and `g_smallchar_height` (`cl_console.c:289–293`): the console's character,
+ * in the screen's own pixels, under `con_scale`. The console's text, its width in characters and
+ * the notify lines all take it, so they are scaled together.
+ */
+export function smallCharWidth(conScale: number): number {
+  return Math.trunc(SMALLCHAR_WIDTH * conScale);
+}
+
+export function smallCharHeight(conScale: number): number {
+  return Math.trunc(SMALLCHAR_HEIGHT * conScale);
+}
+
 /** `CG_DrawStringExt`'s drop shadow: black, 2 right and 2 down (`cg_drawtools.c:175–191`). */
 export const SHADOW_OFFSET = 2;
 

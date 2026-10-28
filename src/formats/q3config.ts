@@ -13,7 +13,7 @@ export { commandLines, configCommands, tokenize } from '../../scripts/q3-command
  */
 
 /** `PRODUCT_NAME`, which heads the file (`q_shared.h:43`): here, the port's own name. */
-const PRODUCT_NAME = 'playcanvas-quake3';
+export const PRODUCT_NAME = 'playcanvas-quake3';
 
 /** An archived cvar, as `Cvar_WriteVariables` writes it. */
 export interface ArchivedCvar {

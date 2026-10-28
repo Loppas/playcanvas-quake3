@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { ConsoleBuffer } from './console-buffer';
 import { notifyRows, type NotifyRow, type NotifySettings } from './notify-lines';
 
-/** `con_notifylines`, `con_notifytime` and `cl_conXOffset` at ioquake3's defaults. */
-const DEFAULTS: NotifySettings = { notifyLines: 3, notifyTime: 3, conXOffset: 0 };
+/** `con_notifylines`, `con_notifytime`, `cl_conXOffset` and `con_scale` at ioquake3's defaults. */
+const DEFAULTS: NotifySettings = { notifyLines: 3, notifyTime: 3, conXOffset: 0, conScale: 1 };
 
 /** The text of a row, the spaces it does not draw put back from where its characters are. */
 function text(row: NotifyRow): string {
@@ -92,6 +92,17 @@ describe('notifyRows', () => {
     expect(shown(buffer, 2000)).toEqual(['one']);
     buffer.print('three\n', 3000);
     expect(shown(buffer, 3000)).toEqual(['one', 'three']);
+  });
+
+  it("draws the console's characters, which con_scale makes larger", () => {
+    const buffer = printed(20, ['ab\n', 1000], ['cd\n', 1000]);
+    const rows = notifyRows(buffer, { ...DEFAULTS, conScale: 2 }, 1000, false);
+    expect(rows.map((row) => [row.y, row.charWidth, row.charHeight])).toEqual([
+      [0, 16, 32],
+      [32, 16, 32]
+    ]);
+    expect(rows[0].glyphs.map((glyph) => glyph.x)).toEqual([16, 32]);
+    expect(notifyRows(buffer, DEFAULTS, 1000, false)[0]).toMatchObject({ charWidth: 8, charHeight: 16 });
   });
 
   it('starts cl_conXOffset pixels in, either way', () => {

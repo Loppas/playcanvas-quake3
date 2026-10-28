@@ -259,9 +259,9 @@ export class PlayerController {
    * @param cvars - Every setting, as one store: the match's, the client's and the console's, which
    *   in Quake 3 are one set of values and are here too.
    * @param program - Where `map <n>` finds other maps and reads them, the client's own load at
-   *   each gamestate, and the bot files `addbot` finds its bots in. A worker's program reads its
-   *   own; what the page keeps is the client's load. Or the server elsewhere that `connect` found,
-   *   which the channel's way out reaches.
+   *   each gamestate, what it does as a map starts, and the bot files `addbot` finds its bots in.
+   *   A worker's program reads its own; what the page keeps is the client's. Or the server
+   *   elsewhere that `connect` found, which the channel's way out reaches.
    * @param localEntities - The pool the client's local entities take their places in.
    * @param pointContents - What a point is inside of the world, as {@link trace} traces it:
    *   whichever map is loaded.
@@ -274,7 +274,7 @@ export class PlayerController {
     trace: TraceFn,
     server: HostMap | HostChannel,
     cvars: Cvars,
-    program: Pick<LocalGameOptions, 'maps' | 'clientLoader' | 'botFiles' | 'connect'> = {},
+    program: Pick<LocalGameOptions, 'maps' | 'clientLoader' | 'mapLoading' | 'botFiles' | 'connect'> = {},
     localEntities = new LocalEntities(),
     pointContents: PointContentsFn = NO_CONTENTS,
     inlineModels: InlineModels = NO_INLINE_MODELS

@@ -43,13 +43,13 @@ export class ConsoleBuffer {
   private readonly text = new Uint16Array(CON_TEXTSIZE);
   /** `con.times`: when each of the last lines was written, or 0 for none to show. */
   private readonly times = new Array<number>(NUM_CON_TIMES).fill(0);
-  /** `con.x`: where on the line being written the next character goes. */
-  private x = 0;
+  private column = 0;
   private currentLine = 0;
   private displayLine = 0;
   /** -1 until the first resize, as `CL_ConsolePrint` sets it before its first (`:471`). */
   private width = -1;
   private lines = 0;
+  private changes = 0;
 
   /** The buffer as Q3 first makes it, before there is a screen: blank, 78 wide. */
   constructor() {
@@ -74,6 +74,19 @@ export class ConsoleBuffer {
   /** `con.totallines`: the lines the ring holds at this width. */
   get totalLines(): number {
     return this.lines;
+  }
+
+  /** `con.x`: where on the line being written the next character goes. */
+  get x(): number {
+    return this.column;
+  }
+
+  /**
+   * A count that moves whenever what the console draws from the buffer may have changed: a print,
+   * a resize, a clear or a scroll. The notify lines' times aren't counted.
+   */
+  get revision(): number {
+    return this.changes;
   }
 
   /**
@@ -104,7 +117,7 @@ export class ConsoleBuffer {
 
       let length = 0;
       while (length < this.width && !endsWord(text, i + length)) length++;
-      if (length !== this.width && this.x + length >= this.width) {
+      if (length !== this.width && this.column + length >= this.width) {
         this.linefeed(skipNotify, realTime);
       }
 
@@ -113,16 +126,17 @@ export class ConsoleBuffer {
       if (c === 10) {
         this.linefeed(skipNotify, realTime);
       } else if (c === 13) {
-        this.x = 0;
+        this.column = 0;
       } else {
         // A narrowed console leaves `x` where it was, so this can land past the line's end
         // (`Con_CheckResize` keeps it, `:284–346`).
-        this.text[(this.currentLine % this.lines) * this.width + this.x] = (color << 8) | c;
-        this.x++;
-        if (this.x >= this.width) this.linefeed(skipNotify, realTime);
+        this.text[(this.currentLine % this.lines) * this.width + this.column] = (color << 8) | c;
+        this.column++;
+        if (this.column >= this.width) this.linefeed(skipNotify, realTime);
       }
     }
 
+    this.changes++;
     if (skipNotify) {
       this.times[(this.currentLine + NUM_CON_TIMES - 1) % NUM_CON_TIMES] = 0;
     } else {
@@ -163,6 +177,7 @@ export class ConsoleBuffer {
 
     this.currentLine = this.lines - 1;
     this.displayLine = this.currentLine;
+    this.changes++;
   }
 
   /** The cells of line `index`, a view onto the ring rather than a copy. */
@@ -216,12 +231,14 @@ export class ConsoleBuffer {
     if (this.currentLine - this.displayLine >= this.lines) {
       this.displayLine = this.currentLine - this.lines + 1;
     }
+    this.changes++;
   }
 
   /** `Con_PageDown` (`:837–842`): the view on two lines, as far as the bottom. */
   pageDown(): void {
     this.displayLine += 2;
     if (this.displayLine > this.currentLine) this.displayLine = this.currentLine;
+    this.changes++;
   }
 
   /**
@@ -234,11 +251,13 @@ export class ConsoleBuffer {
     if (this.currentLine - this.displayLine >= this.lines) {
       this.displayLine = this.currentLine - this.lines + 1;
     }
+    this.changes++;
   }
 
   /** `Con_Bottom` (`:851–853`): the view back on the line being written. */
   bottom(): void {
     this.displayLine = this.currentLine;
+    this.changes++;
   }
 
   /**
@@ -247,7 +266,7 @@ export class ConsoleBuffer {
    */
   private linefeed(skipNotify: boolean, realTime: number): void {
     this.times[this.currentLine % NUM_CON_TIMES] = skipNotify ? 0 : realTime;
-    this.x = 0;
+    this.column = 0;
     if (this.displayLine === this.currentLine) this.displayLine++;
     this.currentLine++;
     const start = (this.currentLine % this.lines) * this.width;

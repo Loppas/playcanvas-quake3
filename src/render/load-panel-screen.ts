@@ -119,10 +119,11 @@ export function cutLine(font: MenuFont, text: string, width: number, size: numbe
 
 export interface LoadPanelScreenOptions {
   /**
-   * The lines' font and the title's, the page's monospace face by default. `null` draws the text
+   * The lines' font, the page's monospace face, which stays the caller's. `null` draws the text
    * with none, for a device with no canvas to draw a font on: each line still carries its string.
    */
-  font?: MenuFont | null;
+  font: MenuFont | null;
+  /** The title's, the face's bold by default, made and taken away with the panel. */
   titleFont?: MenuFont | null;
   /** The clock the bar eases by, in milliseconds. */
   now?: () => number;
@@ -140,6 +141,7 @@ export class LoadPanelScreen {
   private readonly screens: LoadScreens;
   private readonly font: MenuFont | null;
   private readonly titleFont: MenuFont | null;
+  private readonly ownsTitleFont: boolean;
   private readonly now: () => number;
   private readonly layer: Layer;
   private readonly camera: Entity;
@@ -169,10 +171,11 @@ export class LoadPanelScreen {
    * @param screens - The screens up, of which it draws the top.
    * @param eye - The camera the world is seen through; the panel draws after the menu's.
    */
-  constructor(app: AppBase, screens: LoadScreens, eye: Entity, options: LoadPanelScreenOptions = {}) {
+  constructor(app: AppBase, screens: LoadScreens, eye: Entity, options: LoadPanelScreenOptions) {
     this.app = app;
     this.screens = screens;
-    this.font = options.font === undefined ? createMenuFont(app, { face: MONO_FACE }) : options.font;
+    this.font = options.font;
+    this.ownsTitleFont = options.titleFont === undefined;
     this.titleFont =
       options.titleFont === undefined ? createMenuFont(app, { face: MONO_FACE, weight: '600' }) : options.titleFont;
     this.now = options.now ?? (() => performance.now());
@@ -350,7 +353,7 @@ export class LoadPanelScreen {
     return font ? cutLine(font, text, this.width, size) : text;
   }
 
-  /** Take the screen, its camera, its layer and its fonts away. */
+  /** Take the screen, its camera, its layer and its title's font away. */
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
@@ -359,8 +362,7 @@ export class LoadPanelScreen {
     this.camera.destroy();
     this.app.scene.layers.remove(this.layer);
     this.disc.destroy();
-    this.font?.destroy();
-    this.titleFont?.destroy();
+    if (this.ownsTitleFont) this.titleFont?.destroy();
   }
 
   private setText(entity: Entity, text: string): void {

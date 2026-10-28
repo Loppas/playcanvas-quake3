@@ -129,6 +129,11 @@ export interface LocalGameOptions {
    * out: the page's own socket. Without one the client connects to the server in this page.
    */
   connect?: { server: string; address: NetAdr };
+  /**
+   * The rest of `CL_MapLoading` (`cl_main.c:1281–1317`), past the connection's part: what the
+   * client does each time the server in this page starts a map.
+   */
+  mapLoading?: () => void;
   /** The client's own settings, as a Quake 3 info string: its name, its model, its handicap. */
   userinfo?: string;
   /** `random()`, for a caller that wants the spawn choice pinned. */
@@ -208,7 +213,11 @@ export class LocalGame {
         now: () => this.connection.clock.realtime
       });
     }
-    this.channel.onMapLoad(() => this.connection.mapLoading(this.channel.net));
+    const mapLoading = () => {
+      this.connection.mapLoading(this.channel.net);
+      options.mapLoading?.();
+    };
+    this.channel.onMapLoad(mapLoading);
     this.connection.userinfo = this.withClientCvars(options.userinfo ?? '');
     // A server elsewhere answers as the network carries it, so the handshake is the frames'.
     if (connect) {
@@ -219,7 +228,7 @@ export class LocalGame {
     // `CL_MapLoading`: the client connects to the server, which answers at once. The `connect`
     // brings the `connectResponse`, and the first packet the gamestate. A latency knob set this
     // early holds them back, and the frames finish the job.
-    this.connection.mapLoading(this.channel.net);
+    mapLoading();
     this.channel.readPackets();
     this.receive();
     this.connection.sendCmd(createNetUserCmd());

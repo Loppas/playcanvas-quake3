@@ -39,8 +39,6 @@ import {
   BIGCHAR_WIDTH,
   CHARSET_CELLS,
   SHADOW_OFFSET,
-  SMALLCHAR_HEIGHT,
-  SMALLCHAR_WIDTH,
   stringGlyphs,
   type Glyph
 } from './hud-text';
@@ -192,7 +190,8 @@ export function drawHud(
 /**
  * Write `Con_DrawNotify`'s characters (`cl_console.c:577–623`): each in its own colour, with no
  * shadow. They are laid out in the canvas's own pixels, as `SCR_DrawSmallChar` draws them, so they
- * are the same size on any screen; here they are put on Q3's grid, from the left edge.
+ * are the same size on any screen, the size `con_scale` makes them; here they are put on Q3's grid,
+ * from the left edge.
  *
  * @param rows - The lines, in the canvas's own pixels.
  * @param scale - Pixels to a unit of Q3's grid.
@@ -204,9 +203,9 @@ export function drawNotify(
   out: PicWriter
 ): void {
   const draw: Draw = { art, out };
-  const w = SMALLCHAR_WIDTH / scale;
-  const h = SMALLCHAR_HEIGHT / scale;
   for (const row of rows) {
+    const w = row.charWidth / scale;
+    const h = row.charHeight / scale;
     for (const glyph of row.glyphs) {
       const [r, g, b] = COLOR_TABLE[glyph.color];
       set[0] = r;

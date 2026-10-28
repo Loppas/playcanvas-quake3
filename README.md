@@ -186,10 +186,17 @@ warns of, such as a command nothing knows or a cheat-protected cvar. `con_notify
 
 Quake 3's own console commands run from a bind or a cfg as they do in Quake 3: `echo`,
 `cmdlist`, `exec` and `execq`, `vstr`, `wait`, `cmd`, `clear`, `vid_restart`, `condump`,
-`writeconfig`, `togglemenu`, and `quit`, which does what EXIT GAME does. A `wait` lets a script
-that runs itself go on, a frame at a time; without one it stops 16 deep, where Quake 3 would hang
-or overflow its command buffer. `togglemenu` is an Escape pressed and let go, so a key bound to it
-opens the menu, and goes back a page while the menu is up, as Escape does.
+`writeconfig`, `togglemenu`, `toggleconsole`, and `quit`, which does what EXIT GAME does. A `wait`
+lets a script that runs itself go on, a frame at a time; without one it stops 16 deep, where Quake 3
+would hang or overflow its command buffer. `togglemenu` is an Escape pressed and let go, so a key
+bound to it opens the menu, and goes back a page while the menu is up, as Escape does.
+
+`toggleconsole` drops Quake 3's console over the top half of the screen: the console's text from
+the bottom up, in the colours it was printed in, with the port's version in the corner. Nothing
+binds it by default; `bind <key> toggleconsole` puts it on a key. As in Quake 3, a bound key doesn't
+lift it again while it is down: Escape does, and opens the menu as it goes. The notify lines hide
+while it shows. `scr_conspeed` sets how fast it slides, and `con_scale` how large its characters
+are, the notify lines' with them. There is nothing to type into on it yet.
 
 `writeconfig <name>` writes the config to `<name>.cfg` beside `q3config.cfg`, where `exec <name>`
 reads it back. `condump <name>` writes the console's text to `<name>.txt` there; a build in the

@@ -82,6 +82,8 @@ const FRESH = [
   'seta cg_projectileNudge "0"',
   'seta con_notifytime "3"',
   'seta con_notifylines "3"',
+  'seta scr_conspeed "3"',
+  'seta con_scale "1"',
   'seta fraglimit "20"',
   'seta timelimit "0"',
   'seta capturelimit "8"',
