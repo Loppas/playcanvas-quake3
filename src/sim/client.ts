@@ -101,8 +101,8 @@ export interface PlayerTeamState {
 /**
  * A team state as `ClientConnect` leaves one.
  *
- * Quake 3's `location` is left out with `Team_GetLocation` (`g_team.c:897–966`), which needs
- * `target_location` entities no splat map carries.
+ * Quake 3's `location` is left out: `CheckTeamStatus` keeps it for the team overlay
+ * (`g_team.c:1122–1157`), which the port doesn't draw.
  */
 export function createPlayerTeamState(): PlayerTeamState {
   return {
