@@ -187,7 +187,8 @@ never the built `dist/`.
 | `window.pcqFlyer` | the fly camera | `start({ origin, angles })` places it and `view()` reads it, in Q3's frame and angles: a preview's camera, or a match's while it flies |
 | `window.pcqError` | `() => string \| null` | the message a dropped match left for the main menu's error screen, until a key clears it |
 | `window.pcqAssets` | the asset library | what actually came out of the paks |
-| `window.pcqLoading` | the load screen | timing the load steps |
+| `window.pcqLoading` | the boot's load screen | timing the load steps |
+| `window.pcqScreens` | the load and connect screens up | `top` is the one drawn, `null` once the last has gone: what a check waits on before it plays, with `pcqController.inWorld`. The panel's parts are entities named `load-*` under `pcq.app.root` |
 | `window.pcEngine` | the app's own `playcanvas` module | must be this one — Vite pre-bundles playcanvas, so a fresh dynamic import yields different classes whose entities have no app |
 
 ### Driving it

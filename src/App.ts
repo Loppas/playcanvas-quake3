@@ -47,7 +47,7 @@ import { readOctree, splatMapFiles, wholeBuffer } from './formats/splat-map';
 import { frameCap, paceFrames, unpacedWake, vsyncInForce } from './frame-pacer';
 import { BspGameMap, GameMap, loadSplat } from './game-map';
 import { KeyInput } from './key-input';
-import { downloaded, type ConnectScreen, type LoadScreen, type LoadStep } from './load-screen';
+import { ConnectScreen, downloaded, LoadScreen, type LoadScreens, type LoadStep } from './load-screen';
 import { MAX_REMOTE_FRAME_MSEC, type ClientLoader } from './local-game';
 import { ClientStatic } from './net/client-static';
 import { Favorites } from './net/favorites';
@@ -76,6 +76,7 @@ import { HudScreen } from './render/hud-screen';
 import { HyperspaceScreen } from './render/hyperspace-screen';
 import { SceneDraws } from './render/scene-draws';
 import { Levelshots } from './render/levelshots';
+import { LoadPanelScreen } from './render/load-panel-screen';
 import { MenuIcons } from './render/menu-icons';
 import { MenuScreen } from './render/menu-screen';
 import { guardMeshInstanceStorage } from './render/mesh-instance-storage';
@@ -315,8 +316,13 @@ export interface SetupOptions {
    */
   launchVsync?: boolean;
   /**
-   * The load screen, which shows each step as it comes in, and is the app's to take away: once the
-   * game has started, or, for a boot that starts a map, once the player is in its world.
+   * The load and connect screens up, which the app draws the top of from its first frame, and
+   * puts a map change's and a connect's screens on.
+   */
+  screens: LoadScreens;
+  /**
+   * The boot's load screen, which shows each step as it comes in, and is the app's to take away:
+   * once the game has started, or, for a boot that starts a map, once the player is in its world.
    */
   loading: Pick<LoadScreen, 'step' | 'close' | 'showServer' | 'showInformation'>;
   /**
@@ -324,17 +330,7 @@ export interface SetupOptions {
    * main menu.
    */
   map?: string;
-  /** A load screen for a map change, over the game, titled with the map's name. */
-  loadScreen: (title: string) => MapLoadScreen;
-  /**
-   * The connect screen, from a `connect` until its server's map loads, titled with the server as
-   * it was named.
-   */
-  connectScreen: (server: string) => Pick<ConnectScreen, 'show' | 'close'>;
 }
-
-/** What App does with a map's load screen. */
-type MapLoadScreen = Pick<LoadScreen, 'step' | 'close' | 'showServer' | 'showInformation'>;
 
 /**
  * What the menu does beyond the game: `vid_restart`, export and import, and EXIT GAME, which the
@@ -470,6 +466,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     toneMapping: TONEMAP_LINEAR
   });
   app.root.addChild(camera);
+  // The load and connect screens, drawn from the first frame: the boot's is up already.
+  const loadPanel = new LoadPanelScreen(app, setup.screens, camera);
   /** The screen's aspect, which an automatic aspect ratio resolves against. */
   const screenAspect = () => {
     const { width, height } = app.graphicsDevice;
@@ -513,6 +511,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     window.removeEventListener('resize', resize);
     detachOverlayToggle();
     destroyDriver();
+    loadPanel.destroy();
   });
 
   // Start before loading: the SOG handler finishes its work (codebook prep, texture uploads)
@@ -996,7 +995,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
         enteringGamestate = null;
       } else {
         closeEntering();
-        const own = setup.loadScreen(name);
+        const own = new LoadScreen(setup.screens, name);
         closeConnectScreen();
         if (playing) {
           const { game } = playing;
@@ -1082,7 +1081,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
    * gamestate then loads under.
    */
   const buildMatch = async (name: string, boot: MatchSteps | null): Promise<void> => {
-    const screen = boot ? null : setup.loadScreen(name);
+    const screen = boot ? null : new LoadScreen(setup.screens, name);
     const shown = screen ?? setup.loading;
     const loads = boot ?? matchSteps(screen!, mapFile(name));
     // `CL_MapLoading`'s name for the server in this process (`cl_main.c:1307`).
@@ -1140,7 +1139,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
    * shows.
    */
   const buildPreview = async (name: string, boot: MatchSteps | null): Promise<void> => {
-    const screen = boot ? null : setup.loadScreen(name);
+    const screen = boot ? null : new LoadScreen(setup.screens, name);
     const shown = screen ?? setup.loading;
     const path = bspPath(name);
     const step = boot ? boot.map.map : screen!.step(path, MAP_WEIGHT);
@@ -1484,7 +1483,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     // `Con_Close` and `Key_SetCatcher( 0 )`.
     consoleText.clearNotify();
     menu.forceOff();
-    connectScreen = setup.connectScreen(server);
+    connectScreen = new ConnectScreen(setup.screens, server);
   };
   /**
    * `CL_Connect_f`, once the server is found or isn't: the match on it, or the main menu. A
@@ -2370,7 +2369,9 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     // A client that has left its server, with none in this page, is at the main menu with no word
     // why: its connection timed out (`CL_CheckTimeout`).
     if (controller?.game.remote && controller.game.connection.state === CA.DISCONNECTED) leave();
-    if (keys) keys.playing = controller !== null || mapPreview !== null;
+    // A load or connect screen stands in the way of a click, which takes no mouse under it; a mouse
+    // already taken is kept.
+    if (keys) keys.playing = (controller !== null || mapPreview !== null) && (setup.screens.top === null || keys.captured);
     if (hud) hud.shown = controller !== null && connectScreen === null;
     // Under a load screen no cgame runs, and the match waits.
     if (controller && began && !loadingMap) matchFrame(controller, dt);

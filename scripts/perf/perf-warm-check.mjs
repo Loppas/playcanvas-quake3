@@ -213,7 +213,7 @@ function pageNaming() {
     const now = performance.now();
     const world = window.pcqController?.inWorld === true;
     if (world !== inWorld) check.world.push({ t: now, inWorld: (inWorld = world) });
-    const shown = document.querySelector('.load-screen') !== null;
+    const shown = (window.pcqScreens?.top ?? null) !== null;
     if (shown !== screen) check.screen.push({ t: now, shown: (screen = shown) });
     requestAnimationFrame(watch);
   };
@@ -623,7 +623,7 @@ try {
   result.engine = servedEngine(server);
   result.app = await installAppProbe(page);
   await page.waitForFunction(
-    () => window.__check.world.some((w) => w.inWorld) && document.querySelector('.load-screen') === null,
+    () => window.__check.world.some((w) => w.inWorld) && window.pcqScreens?.top === null,
     null,
     { timeout: 300000, polling: 100 }
   );
@@ -807,7 +807,7 @@ try {
       (n) =>
         window.__check.warmRenders.length > n &&
         window.pcqController?.inWorld === true &&
-        document.querySelector('.load-screen') === null,
+        window.pcqScreens?.top === null,
       renders,
       { timeout: 180000, polling: 100 }
     );

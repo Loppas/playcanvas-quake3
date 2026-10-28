@@ -37,9 +37,9 @@ export function exitGame(
     const screen = document.createElement('div');
     screen.className = 'end-screen';
     screen.innerHTML = `
-      <div class="load-panel">
-        <h1 class="load-title">EXIT GAME</h1>
-        <p class="load-text">The game has stopped. You can close this tab.</p>
+      <div class="end-panel">
+        <h1 class="end-title">EXIT GAME</h1>
+        <p class="end-text">The game has stopped. You can close this tab.</p>
       </div>
     `;
     host.appendChild(screen);

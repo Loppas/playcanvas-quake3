@@ -399,7 +399,7 @@ try {
   // The player in the world, its load screen gone: on a cold profile the GPU process compiles the
   // load's warm-up first, for seconds, and the frames wait on it.
   await page.waitForFunction(
-    () => window.pcqController?.inWorld === true && document.querySelector('.load-screen') === null,
+    () => window.pcqController?.inWorld === true && window.pcqScreens?.top === null,
     null,
     { timeout: 300000, polling: 100 }
   );

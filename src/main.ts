@@ -4,7 +4,7 @@ import { assetActivity, assetProgress, bootAssets, describeAssetStatus } from '.
 import { GAME_NAME } from './config';
 import { exitGame } from './exit-game';
 import { Decoder } from './formats/decoder';
-import { ConnectScreen, LoadScreen } from './load-screen';
+import { LoadScreen, LoadScreens } from './load-screen';
 import type { PakFileSystem } from './pak/vfs';
 import { inflateWith } from './pak/zip';
 import { decodeTgasWith } from './render/md3-mesh';
@@ -106,7 +106,7 @@ const renderer = [
 const root = document.querySelector<HTMLDivElement>('#root')!;
 root.innerHTML = `
   <canvas id="application-canvas"></canvas>
-  <div id="hud" class="hud"></div>
+  <div id="hud" class="hud" hidden></div>
 `;
 
 const hud = document.getElementById('hud')!;
@@ -119,13 +119,16 @@ const canvas = document.getElementById('application-canvas') as HTMLCanvasElemen
 const firstMap = new URLSearchParams(window.location.search).get('map') || undefined;
 
 // Nothing plays until everything is in: the map's name, or the game's, over a bar, which a drop
-// screen covers while it asks for the game data. The app takes it away once its game has started,
-// and a boot that fails takes it away here.
-const loading = new LoadScreen(root, firstMap ?? GAME_NAME);
+// screen covers while it asks for the game data. It is kept from here, and drawn once the app is
+// up. The app takes it away once its game has started, and a boot that fails takes it away here.
+const screens = new LoadScreens();
+const loading = new LoadScreen(screens, firstMap ?? GAME_NAME);
 const gameData = loading.step('game data', GAME_DATA_WEIGHT);
 if (import.meta.env.DEV) {
-  // Dev-only, like `pcqConfig`: the load screen, so a smoke check can time its steps.
+  // Dev-only, like `pcqConfig`: the load screen, so a smoke check can time its steps, and the
+  // screens up, so a check can wait for the last to go.
   (window as unknown as { pcqLoading: unknown }).pcqLoading = loading;
+  (window as unknown as { pcqScreens: unknown }).pcqScreens = screens;
 }
 
 // Quake assets: the install read in place, else what the browser kept, else the drop screen.
@@ -179,10 +182,9 @@ try {
     favorites: { saved: savedFavorites, stores: favoriteStores },
     host,
     launchVsync: launch?.vsync,
+    screens,
     loading,
-    map: firstMap,
-    loadScreen: (title) => new LoadScreen(root, title),
-    connectScreen: (server) => new ConnectScreen(root, server)
+    map: firstMap
   });
   const { app, deviceType, viewpos } = handle;
   quitGame = () => handle.quit();
@@ -200,10 +202,10 @@ try {
       frames = 0;
       elapsed = 0;
     }
-    // `pcq_drawStatusLine`, live. A failure's message is not the status line, and shows
-    // whatever it says.
+    // `pcq_drawStatusLine`, live, under no load or connect screen. A failure's message is not the
+    // status line, and shows whatever it says.
     if (failure !== null) return;
-    hud.hidden = !settings.drawStatusLine;
+    hud.hidden = !settings.drawStatusLine || screens.top !== null;
     if (hud.hidden) return;
     // Where the view is, as `viewpos` would print it, for placing a map's entities, and what
     // the map draws; neither while no match runs. It reads out the game alone; the keys are the

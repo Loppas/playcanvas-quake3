@@ -429,17 +429,22 @@ try {
     while (sampling.on) {
       const sample = await b
         .evaluate(() => {
-          const panel = document.querySelector('.load-screen .load-panel');
-          if (!panel) return null;
+          const root = window.pcq.app.root;
+          if (!root.findByName('load-panel-screen')?.enabled) return null;
+          const h = window.pcq.app.graphicsDevice.canvas.clientHeight;
           const box = (e) => {
-            const r = e.getBoundingClientRect();
-            return [r.x, r.y, r.width, r.height].map(Math.round);
+            const xs = e.element.screenCorners.map((v) => v.x);
+            const ys = e.element.screenCorners.map((v) => h - v.y);
+            const [x, y] = [Math.min(...xs), Math.min(...ys)];
+            return [x, y, Math.max(...xs) - x, Math.max(...ys) - y].map(Math.round);
           };
-          const parts = [...panel.children].map((part) => ({
-            name: part.className,
-            box: box(part)
-          }));
-          return { panel: box(panel), parts };
+          // Down the panel, cgame's lines last, which may grow at their foot.
+          const names = ['load-title', 'load-server', 'load-track', 'load-line', 'load-detail', 'load-info-0'];
+          const parts = names
+            .map((name) => root.findByName(name))
+            .filter((part) => part?.enabled)
+            .map((part) => ({ name: part.name, box: box(part) }));
+          return { panel: box(root.findByName('load-panel')), parts };
         })
         .catch(() => null);
       if (sample) samples.push(sample);
