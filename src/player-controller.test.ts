@@ -26,6 +26,7 @@ import {
   BUTTON_TALK,
   CONTENTS,
   EF_TALK,
+  GT,
   MOD,
   PITCH_LIMIT_DEGREES,
   STAT
@@ -300,6 +301,33 @@ describe('the settings, read each frame', () => {
     };
     expect(plums('1')).toEqual(['gfx/2d/numbers/minus_32b', 'gfx/2d/numbers/one_32b']);
     expect(plums('0')).toEqual([]);
+  });
+
+  it('keeps team lines by cg_teamChatHeight and Time, and mutes chat by cg_teamChatsOnly', () => {
+    /** What a red player's own say and say_team come back as, under these cvars. */
+    const chat = (values: Record<string, string>) => {
+      const { controller } = controlled({ g_gametype: String(GT.TEAM), ...values });
+      const printed: string[] = [];
+      controller.console = { print: (text) => printed.push(text), clearNotify: () => {} };
+      controller.update(1 / 60);
+      const { game, clientNum } = controller.game;
+      game.clientCommand(clientNum, ['team', 'red']);
+      for (let frame = 0; frame < 10; frame++) controller.update(1 / 60);
+      game.clientCommand(clientNum, ['say', 'to all']);
+      game.clientCommand(clientNum, ['say_team', 'to red']);
+      for (let frame = 0; frame < 10; frame++) controller.update(1 / 60);
+      return {
+        said: printed.filter((text) => / \^[25]to /.test(text)).map((text) => text.slice(-9)),
+        kept: controller.teamChat.pos
+      };
+    };
+    expect(chat({ cg_teamChatHeight: '4' })).toEqual({
+      said: ['^2to all\n', '^5to red\n'],
+      kept: 1
+    });
+    expect(chat({ cg_teamChatHeight: '4', cg_teamChatTime: '0' })).toMatchObject({ kept: 0 });
+    expect(chat({ cg_teamChatHeight: '0' })).toMatchObject({ kept: 0 });
+    expect(chat({ cg_teamChatsOnly: '1' })).toEqual({ said: ['^5to red\n'], kept: 0 });
   });
 
   it('holds each plum among the local entities it is given', () => {

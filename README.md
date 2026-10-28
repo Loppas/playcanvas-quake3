@@ -73,8 +73,8 @@ The game plays against bots, on Quake 3's maps and the port's own:
   dedicated server; and a master to find them by.
 - **The desktop shell:** an Electron window that reads your install where it sits.
 
-Not yet: a console and chat; bot AI, so a bot stands where it spawned; recording demos; votes; and
-the single-player ladder and Team Arena's modes.
+Not yet: typing at the console, or a line to type chat on; bot AI, so a bot stands where it
+spawned; recording demos; votes; and the single-player ladder and Team Arena's modes.
 
 ## Requirements
 
@@ -202,6 +202,13 @@ are, the notify lines' with them. There is nothing to type into on it yet.
 reads it back. `condump <name>` writes the console's text to `<name>.txt` there; a build in the
 browser keeps that folder in the browser's own storage, so it hands the file over as a download
 instead. A name with `..` in it is refused, as Quake 3 refuses it.
+
+Chat runs from a bind or a cfg, as Quake 3's game takes it: `bind h "say hello"` says it to
+everyone, `say_team` to your team, and `tell <player> <text>` to one player. Each line plays the
+talk sound and shows on the notify lines in its colours, a team line with where its speaker is.
+`cg_teamChatsOnly 1` keeps a team game to team chat. `cg_teamChatHeight` shows up to 8 team lines
+over a band above the status bar, each for `cg_teamChatTime` milliseconds; at its default of 0
+the band stays hidden. There is no line to type chat on yet.
 
 ## Quake 3 assets
 

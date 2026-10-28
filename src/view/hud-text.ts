@@ -5,11 +5,13 @@ import { colorIndex, isColorCode } from '../formats/color-codes';
  * (`CG_DrawChar`, `CG_DrawStringExt`; `cg_drawtools.c:122–215`). Engine-free.
  */
 
-/** Q3's character sizes on the virtual screen (`q_shared.h:380–384`). */
+/** Q3's character sizes on the virtual screen (`q_shared.h:377–387`). */
 export const BIGCHAR_WIDTH = 16;
 export const BIGCHAR_HEIGHT = 16;
 export const SMALLCHAR_WIDTH = 8;
 export const SMALLCHAR_HEIGHT = 16;
+export const TINYCHAR_WIDTH = 8;
+export const TINYCHAR_HEIGHT = 8;
 export const GIANT_WIDTH = 32;
 export const GIANT_HEIGHT = 48;
 

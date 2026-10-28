@@ -9,7 +9,7 @@ const LAGOMETER = { x: 592, y: 432, w: 48, h: 48 };
 
 describe('screenRect', () => {
   it("is Q3's own stretch at 4:3, whatever the anchor", () => {
-    for (const anchor of ['left', 'centre', 'right'] as const) {
+    for (const anchor of ['left', 'centre', 'right', 'stretch'] as const) {
       expect(screenRect(HEAD, anchor, 1024, 768)).toEqual({ x: 456, y: 672, w: 96, h: 96 });
     }
   });
@@ -29,5 +29,15 @@ describe('screenRect', () => {
     expect(head.x + head.w / 2).toBe(1280 - 5 * 2.25);
     expect(screenRect(AMMO, 'left', 2560, 1080).x).toBe(4.5);
     expect(screenRect(LAGOMETER, 'right', 2560, 1080).x).toBe(2560 - 48 * 2.25);
+  });
+
+  it('stretches a band across the whole width, as Q3 does, its height scaled by the height', () => {
+    const BAND = { x: 0, y: 404, w: 640, h: 16 };
+    expect(screenRect(BAND, 'stretch', 1920, 1080)).toEqual({ x: 0, y: 909, w: 1920, h: 36 });
+    expect(screenRect(BAND, 'stretch', 2560, 1080)).toEqual({ x: 0, y: 909, w: 2560, h: 36 });
+    expect(screenRect({ ...BAND, x: 320, w: 320 }, 'stretch', 1920, 1080)).toMatchObject({
+      x: 960,
+      w: 960
+    });
   });
 });

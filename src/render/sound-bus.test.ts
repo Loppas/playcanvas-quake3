@@ -222,6 +222,21 @@ describe('SoundBus volumes', () => {
     bus.destroy();
   });
 
+  it('plays the talk sound and a beep on CHAN_LOCAL_SOUND, a voice on CHAN_ANNOUNCER', async () => {
+    const cues = [
+      ['talk', 'sound/player/talk.wav', CHAN.LOCAL_SOUND],
+      ['hit', 'sound/feedback/hit.wav', CHAN.LOCAL_SOUND],
+      ['excellent', 'sound/feedback/excellent.wav', CHAN.ANNOUNCER]
+    ] as const;
+    for (const [cue, path, channel] of cues) {
+      const { bus, context } = await opened([path]);
+      bus.playAnnouncer(cue);
+      expect(context.sources, cue).toHaveLength(1);
+      expect(bus.mixer.channels.find((ch) => ch.sfx)?.entchannel, cue).toBe(channel);
+      bus.destroy();
+    }
+  });
+
   it("hears the player's own sound from inside, and from the body past 48 units", async () => {
     const land: PlayerSound[] = [{ type: 'shared', path: 'sound/player/land1.wav' }];
     const { bus, context } = await opened(['sound/player/land1.wav']);

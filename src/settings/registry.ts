@@ -149,6 +149,12 @@ export interface Settings {
   conSpeed: number;
   /** `con_scale`: the console's and the notify lines' characters, 1–4 times 8 by 16 pixels. */
   conScale: number;
+  /** `cg_teamChatsOnly`: in a team game, only team chat is shown and heard. */
+  teamChatsOnly: boolean;
+  /** `cg_teamChatHeight`: how many lines the team chat box shows, up to 8; 0 hides it. */
+  teamChatHeight: number;
+  /** `cg_teamChatTime`: how long a line stays in the team chat box, in milliseconds. */
+  teamChatTime: number;
   /**
    * `g_gametype`: 0 free-for-all, 1 tournament, 3 team deathmatch, 4 capture the flag, 8 clan
    * arena.
@@ -674,6 +680,15 @@ export const SETTINGS: SettingDefs = {
     read: decimal({ min: 1, max: 4, clamp: true }),
     section: null
   },
+  // cgame's chat, with ioquake3's defaults, archived (`cg_main.c:265–266, 278`), on no page.
+  teamChatsOnly: { cvar: 'cg_teamChatsOnly', default: '0', read: flag, section: null },
+  teamChatHeight: {
+    cvar: 'cg_teamChatHeight',
+    default: '0',
+    read: wholeNumber(),
+    section: null
+  },
+  teamChatTime: { cvar: 'cg_teamChatTime', default: '3000', read: wholeNumber(), section: null },
 
   // Server options. The match's own, with Q3's defaults (`gameCvarTable`, `g_main.c:105–132`):
   // `g_gametype` and `sv_maxclients` latch, because a match is built around them and cannot take

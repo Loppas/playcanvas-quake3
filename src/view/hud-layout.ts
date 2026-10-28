@@ -5,7 +5,8 @@
  * (`CG_AdjustFrom640`, `cg_drawtools.c:33–45`), so on a wide screen everything comes out wider.
  * The port scales both axes by the height, `H / 480`, so a glyph keeps its shape, and anchors each
  * element where its group sits on Q3's screen: the ammo slot to the left edge, the right-hand items
- * to the right edge, and the rest to the middle. At 4:3 the three agree, and the HUD is Q3's.
+ * to the right edge, and the rest to the middle. A band Q3 draws edge to edge is laid across the
+ * whole width instead, as Q3 lays everything. At 4:3 they all agree, and the HUD is Q3's.
  *
  * Engine-free: the render layer places the HUD's pictures and each 3D icon's view by it.
  */
@@ -14,8 +15,11 @@
 export const SCREEN_WIDTH = 640;
 export const SCREEN_HEIGHT = 480;
 
-/** Which edge of the screen an element keeps its distance from, or the middle. */
-export type HudAnchor = 'left' | 'centre' | 'right';
+/**
+ * Which edge of the screen an element keeps its distance from, or the middle; or `stretch`, across
+ * the screen's whole width as Q3 stretches it (`CG_AdjustFrom640`), for a band drawn edge to edge.
+ */
+export type HudAnchor = 'left' | 'centre' | 'right' | 'stretch';
 
 /** A rectangle on Q3's grid, or in pixels: y down from the top, as Q3 measures it. */
 export interface HudRect {
@@ -36,7 +40,16 @@ export function hudScale(height: number): number {
  */
 export function anchorOrigin(anchor: HudAnchor, width: number, height: number): number {
   const spare = width - SCREEN_WIDTH * hudScale(height);
-  return anchor === 'left' ? 0 : anchor === 'right' ? spare : spare / 2;
+  if (anchor === 'left' || anchor === 'stretch') return 0;
+  return anchor === 'right' ? spare : spare / 2;
+}
+
+/**
+ * Pixels to a unit of Q3's grid across a screen of `width` × `height` pixels, for a group kept to
+ * `anchor`: the height's scale, or the width's for `stretch`. Down the screen it is the height's.
+ */
+export function anchorScale(anchor: HudAnchor, width: number, height: number): number {
+  return anchor === 'stretch' ? width / SCREEN_WIDTH : hudScale(height);
 }
 
 /**
@@ -51,6 +64,7 @@ export function screenRect(
   height: number
 ): HudRect {
   const scale = hudScale(height);
+  const across = anchorScale(anchor, width, height);
   const origin = anchorOrigin(anchor, width, height);
-  return { x: origin + rect.x * scale, y: rect.y * scale, w: rect.w * scale, h: rect.h * scale };
+  return { x: origin + rect.x * across, y: rect.y * scale, w: rect.w * across, h: rect.h * scale };
 }

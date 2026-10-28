@@ -4,6 +4,7 @@ import {
   MEDAL_SHADERS,
   NET_SHADER,
   NUMBER_NAMES,
+  TEAM_STATUS_BAR_SHADER,
   WEAPON_ASSETS
 } from '../formats/asset-manifest';
 import { COLOR_TABLE } from '../formats/color-codes';
@@ -48,6 +49,7 @@ import type { Rgb } from './player-color';
 import type { PowerupTimer } from './powerup-timers';
 import type { RewardFrame } from './rewards';
 import { SPEED_GRAPH_COLOR, speedColumns, type SpeedGraph } from './speedometer';
+import type { TeamChatFrame } from './team-chat';
 import {
   SELECT_INSET,
   SELECT_SIZE,
@@ -149,9 +151,9 @@ interface Draw {
 
 /**
  * Write this frame's HUD, in `CG_Draw2D`'s order (`cg_draw.c:2522–2620`): a spectator's line, or
- * the player's own block; the lagometer and what it says of the connection; the upper right; the
- * lower right's scores and powerups; the lower left's pickup; the follow line or the warmup; and the
- * message in the middle.
+ * the player's own block; the team chat box; the lagometer and what it says of the connection; the
+ * upper right; the lower right's scores and powerups; the lower left's pickup; the follow line or
+ * the warmup; and the message in the middle.
  *
  * Quake Live's speedometer is not Q3's, and stands just before the lagometer, whose box it shares.
  *
@@ -174,6 +176,7 @@ export function drawHud(
   weaponBar(draw, frame.weaponBar);
   holdable(draw, frame.holdable);
   reward(draw, frame.reward);
+  teamChat(draw, frame.teamChat);
   speedometer(draw, frame.speedometer, speeds, scale);
   lagometer(draw, frame.lagometer, scale);
   disconnect(draw, frame.disconnect);
@@ -428,6 +431,13 @@ function reward(draw: Draw, frame: RewardFrame | null): void {
   const shader = MEDAL_SHADERS[frame.medal];
   for (const medal of frame.medals) imageOver(draw, shader, medal, 'centre', color);
   text(draw, frame.count);
+}
+
+/** `CG_DrawTeamInfo`: the band in the team's colour, across the screen, then the lines over it. */
+function teamChat(draw: Draw, frame: TeamChatFrame | null): void {
+  if (!frame) return;
+  imageOver(draw, TEAM_STATUS_BAR_SHADER, frame.band, 'stretch', frame.color);
+  lines(draw, frame.lines);
 }
 
 /** The speedometer's number and peak line, then its graph's columns in yellow. */

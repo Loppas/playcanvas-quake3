@@ -80,6 +80,17 @@ describe('the buffered voices', () => {
     }
     expect(heard).toHaveLength(MAX_SOUNDBUFFER + 5);
   });
+
+  it('starts the talk sound at once, past any voice waiting its turn', () => {
+    const announcer = new Announcer();
+    announcer.add('takenLead');
+    announcer.play(1000);
+    announcer.add('twoFrag');
+    announcer.talk();
+    announcer.talk();
+    announcer.play(1001);
+    expect(announcer.take()).toEqual(['takenLead', 'talk', 'talk']);
+  });
 });
 
 describe('CG_ParseWarmup and CG_MapRestart', () => {
