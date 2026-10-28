@@ -103,6 +103,20 @@ const STATUS_LINE = '/?pcq_drawStatusLine=1';
 /** What the page started the app with. */
 const setup = (): SetupOptions => setupApp.mock.calls[0][0] as SetupOptions;
 
+/** The load or connect screen up, which the app draws. */
+const shown = () => setup().screens.top;
+
+/**
+ * The app as it starts on the main menu: it takes the boot's load screen away, as the real one
+ * does once its game has begun, and hands back `handle`.
+ */
+function begins(handle: AppHandle) {
+  setupApp.mockImplementation(async (options: SetupOptions) => {
+    options.loading.close();
+    return handle;
+  });
+}
+
 /** The stand-ins a boot runs against, reset. */
 function standIn() {
   workers = [];
@@ -128,7 +142,7 @@ function cleanUp() {
 // first boot is taken here, with a minute to take.
 beforeAll(async () => {
   standIn();
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
   cleanUp();
 }, 60_000);
@@ -138,7 +152,7 @@ beforeEach(standIn);
 afterEach(cleanUp);
 
 it('mounts a canvas and a HUD into the page', async () => {
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
 
   expect(document.getElementById('application-canvas')).toBeInstanceOf(HTMLCanvasElement);
@@ -146,7 +160,7 @@ it('mounts a canvas and a HUD into the page', async () => {
 });
 
 it('boots the app against the mounted canvas', async () => {
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
 
   expect(setupApp).toHaveBeenCalledOnce();
@@ -159,16 +173,17 @@ it('shows the load screen, and hands it to the app to take away', async () => {
   const booted = bootPage();
   await vi.waitFor(() => expect(setupApp).toHaveBeenCalledOnce());
 
-  expect(document.querySelector('.load-title')?.textContent).toBe('playcanvas-quake3');
-  expect(document.querySelector('.load-text')?.textContent).toBe('Loading... game data');
-  // The app is handed the screen, for its own steps, and no map: it starts on the main menu.
+  expect([shown()?.title, shown()?.line]).toEqual(['playcanvas-quake3', 'Loading... game data']);
+  // The app is handed the screen, for its own steps, on the screens it draws, and no map: it
+  // starts on the main menu.
+  expect(shown()).toBe(setup().loading);
   expect(setup().map).toBeUndefined();
   started(fakeHandle());
   await booted;
   // The app's to close, which a boot's map holds until the player is in its world.
-  expect(document.querySelector('.load-screen')).not.toBeNull();
+  expect(shown()).not.toBeNull();
   setup().loading.close();
-  expect(document.querySelector('.load-screen')).toBeNull();
+  expect(shown()).toBeNull();
 });
 
 it("fills the load screen's bar as the game data comes in, and names each file", async () => {
@@ -181,26 +196,26 @@ it("fills the load screen's bar as the game data comes in, and names each file",
   setupApp.mockReturnValue(new Promise((resolve) => (started = resolve)));
   const booted = bootPage();
   await vi.waitFor(() => expect(setupApp).toHaveBeenCalledOnce());
-  const bar = () => document.querySelector('[role=progressbar]')?.getAttribute('aria-valuenow');
-  const file = () => document.querySelector('.load-file')?.textContent;
+  const bar = () => Math.round(shown()!.fraction * 100);
+  const file = () => shown()?.detail;
 
   // The paks are mounted, a fifth of the boot's share, and the boot is the only step here.
   report({ phase: 'paks', pak: { phase: 'ready', fs: {} } });
-  expect([bar(), file()]).toEqual(['20', 'extracting']);
+  expect([bar(), file()]).toEqual([20, 'extracting']);
   // Half the files are read, and they take the rest.
   report({
     phase: 'extracting',
     read: { done: 1, total: 2, path: 'sound/weapons/change.wav' },
     keeps: false
   });
-  expect([bar(), file()]).toEqual(['60', 'reading sound/weapons/change.wav (1/2)']);
+  expect([bar(), file()]).toEqual([60, 'reading sound/weapons/change.wav (1/2)']);
   started(fakeHandle());
   await booted;
 });
 
 it('reports backend and splat count once running, and lists no keys or settings', async () => {
   window.history.replaceState(null, '', STATUS_LINE);
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
   tick(1);
 
@@ -217,7 +232,7 @@ it('reports backend and splat count once running, and lists no keys or settings'
 it('shows where the view is, as viewpos prints it, and follows it', async () => {
   let reading = '(-4 -4 69) : 0';
   window.history.replaceState(null, '', STATUS_LINE);
-  setupApp.mockResolvedValue(fakeHandle({ viewpos: () => reading }));
+  begins(fakeHandle({ viewpos: () => reading }));
   await bootPage();
   tick(1);
   expect(hud()?.textContent).toMatch(/^\d+ fps \| viewpos \(-4 -4 69\) : 0 \| webgpu/);
@@ -235,7 +250,7 @@ it("hands the app the player's paks as soon as they are mounted, before the asse
       return new Promise(() => {});
     }
   );
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
 
   // The map is read through them, and waits for them but not for the assets.
@@ -250,7 +265,7 @@ it("hands the app the favourite servers as favorites.txt's stores keep them", as
     'favorites.txt': [kept('10.0.0.5:27960 "Office"\n')]
   };
   homeStores.mockImplementation((name: string) => stores[name]);
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
 
   expect(setup().favorites.saved).toBe('10.0.0.5:27960 "Office"\n');
@@ -259,7 +274,7 @@ it("hands the app the favourite servers as favorites.txt's stores keep them", as
 
 it("hands the app none of the player's paks when the boot fails before mounting any", async () => {
   bootAssets.mockRejectedValue(new Error('no pk3 files in the Quake 3 install'));
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
 
   // The map is read from the port's own pk3s alone.
@@ -268,7 +283,7 @@ it("hands the app none of the player's paks when the boot fails before mounting 
 
 it('throws the grapple style the query string asks for', async () => {
   window.history.replaceState(null, '', '/?g_allowGrapple=3');
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
 
   // The app throws the hook its config names.
@@ -278,7 +293,7 @@ it('throws the grapple style the query string asks for', async () => {
 it("prints the config's warnings to the console at once, then holds to cl_noprint", async () => {
   window.history.replaceState(null, '', '/?cl_noprint=1&cg_fov=wide');
   const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
   const { consoleText, print } = setup();
   /** The console's last whole line. */
@@ -299,14 +314,14 @@ it("prints the config's warnings to the console at once, then holds to cl_noprin
 
 it('takes the hook away at g_allowGrapple 0, as CorkScrew does', async () => {
   window.history.replaceState(null, '', '/?g_allowGrapple=0');
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
 
   expect(setup().config.cvars.settings.allowGrapple).toBe(0);
 });
 
 it('starts with the status line hidden, and follows pcq_drawStatusLine', async () => {
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
   tick(1);
   expect(hud()?.hidden).toBe(true);
@@ -328,7 +343,7 @@ it('starts the map the address names, as the command line names one with +map', 
   const booted = bootPage();
   await vi.waitFor(() => expect(setupApp).toHaveBeenCalledOnce());
 
-  expect(document.querySelector('.load-title')?.textContent).toBe('backyard');
+  expect(shown()?.title).toBe('backyard');
   expect(setup().map).toBe('backyard');
   started(fakeHandle());
   await booted;
@@ -339,7 +354,7 @@ it('quits the game at EXIT GAME before the window closes, then stops it if it st
   const destroy = vi.fn();
   const handle = fakeHandle({ quit });
   Object.assign(handle.app, { destroy });
-  setupApp.mockResolvedValue(handle);
+  begins(handle);
   const close = vi.spyOn(window, 'close').mockImplementation(() => {});
   try {
     await bootPage();
@@ -354,26 +369,19 @@ it('quits the game at EXIT GAME before the window closes, then stops it if it st
   }
 });
 
-it('gives the app a load screen of its own for each map it changes to', async () => {
+it('keeps the status line hidden under a load screen, which covers it, until the last goes', async () => {
+  window.history.replaceState(null, '', STATUS_LINE);
+  // An app whose boot's screen stays up, as one starting a map's match keeps it.
   setupApp.mockResolvedValue(fakeHandle());
   await bootPage();
+  expect(hud()?.hidden).toBe(true);
+  tick(1);
+  expect(hud()?.hidden).toBe(true);
+
   setup().loading.close();
-
-  const screen = setup().loadScreen('backyard');
-  expect(document.querySelector('.load-title')?.textContent).toBe('backyard');
-  screen.close();
-  expect(document.querySelector('.load-screen')).toBeNull();
-});
-
-it('gives the app a connect screen for each connect, naming the server as named', async () => {
-  setupApp.mockResolvedValue(fakeHandle());
-  await bootPage();
-  setup().loading.close();
-
-  const screen = setup().connectScreen('localhost:27960');
-  expect(document.querySelector('.load-server')?.textContent).toBe('Connecting to localhost:27960');
-  screen.close();
-  expect(document.querySelector('.load-screen')).toBeNull();
+  tick(1);
+  expect(hud()?.hidden).toBe(false);
+  expect(hud()?.textContent).toContain('fps');
 });
 
 it('surfaces a failed boot with the status line off, since that is not the status line', async () => {
@@ -387,7 +395,7 @@ it('surfaces a failed boot with the status line off, since that is not the statu
 
 it('draws like the renderer the query string asks for, and says so in the HUD', async () => {
   window.history.replaceState(null, '', `${STATUS_LINE}&cl_renderer=opengl2&r_overBrightBits=0&r_specularMapping=0`);
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
   tick(1);
 
@@ -405,7 +413,7 @@ it('draws like the renderer the query string asks for, and says so in the HUD', 
 });
 
 it("inflates the paks' entries, and decodes their TGAs, in a worker of its own", async () => {
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
   expect(workers.map(({ script }) => script)).toEqual([
     expect.stringMatching(/decode-worker\.ts$/)
@@ -435,7 +443,7 @@ it('reports pak read progress in the HUD', async () => {
     });
     return new Promise(() => {});
   });
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
   tick(1);
 
@@ -453,7 +461,7 @@ it('reports a warm boot as coming from the cache', async () => {
     });
     return new Promise(() => {});
   });
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
   tick(1);
 
@@ -467,7 +475,7 @@ it('keeps running when the asset boot fails', async () => {
     onStatus({ phase: 'error', message: 'pak0.pk3 failed to load (404)' });
     return Promise.reject(new Error('pak0.pk3 failed to load (404)'));
   });
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
   tick(1);
 
@@ -477,7 +485,7 @@ it('keeps running when the asset boot fails', async () => {
 
 it('reports the frame rate it is actually being ticked at', async () => {
   window.history.replaceState(null, '', STATUS_LINE);
-  setupApp.mockResolvedValue(fakeHandle());
+  begins(fakeHandle());
   await bootPage();
   tick(1, 1 / 144);
 
@@ -492,5 +500,5 @@ it('surfaces a failed boot in the HUD instead of a blank screen', async () => {
 
   expect(hud()?.textContent).toBe('Failed to load /maps/backyard.sog');
   expect(hud()?.classList.contains('error')).toBe(true);
-  expect(document.querySelector('.load-screen')).toBeNull();
+  expect(shown()).toBeNull();
 });

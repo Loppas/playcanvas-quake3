@@ -425,11 +425,11 @@ export function shifts(from, to) {
 
 /**
  * What changed of the connect screen's panel from one sample to the next: a part that moved or
- * resized while it was shown in both, by its class. The last part may grow at its foot, as lines
+ * resized while it was shown in both, by its name. The last part may grow at its foot, as lines
  * come under everything else, and moves nothing.
  *
- * @param samples - Each `{ panel, parts }`, `parts` each `{ name, box }` in CSS pixels, a box
- *   `[x, y, width, height]`.
+ * @param samples - Each `{ panel, parts }`, `parts` each `{ name, box }` in the canvas's pixels,
+ *   a box `[x, y, width, height]` from its top left.
  */
 export function connectMoves(samples) {
   const moves = [];

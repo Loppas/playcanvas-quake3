@@ -13,17 +13,61 @@ import { connectingTo, connectMessage, connectState, type MatchLines } from './v
  *
  * Under the title is the server it is connecting to, which q3_ui draws over a map's load so that
  * it doesn't flash away (`SCR_DrawScreenField`, `cl_scrn.c:515–525`). Under the panel are
- * cgame's lines about the server and the match (`cg_info.c:188–294`).
+ * cgame's lines about the server and the match (`cg_info.c:188–294`). The connect screen before a
+ * map's load stands in the same panel.
  *
- * It is part of the page, over the canvas, as the drop screen is. So it shows before the graphics
- * device is up, and the drop screen covers it while it asks for the game data. The connect screen
- * before a map's load looks the same.
+ * This is what the screens say; `render/load-panel-screen.ts` draws the one on top. A screen is
+ * kept from the page's start, before there is a device to draw it on.
  */
 
 /** A download's detail: the megabytes in, to a tenth, and of how many where that is known. */
 export function downloaded(received: number, total: number): string {
   const megabytes = (bytes: number) => (bytes / 1024 / 1024).toFixed(1);
   return total > 0 ? `${megabytes(received)} of ${megabytes(total)} MB` : `${megabytes(received)} MB`;
+}
+
+/** What the panel shows of a screen: the parts the load and connect screens share. */
+export interface Panel {
+  /** The map's name, kept empty on a connect. */
+  readonly title: string;
+  /** The server it is connecting to. */
+  readonly server: string;
+  /** Whether the bar is drawn: a connect keeps its room, empty. */
+  readonly bar: boolean;
+  /** How much of the load is in, from 0 to 1. */
+  readonly fraction: number;
+  /** What loads, or how far a connect has got. */
+  readonly line: string;
+  /** What the step on the line is doing. */
+  readonly detail: string;
+  /** cgame's lines, in their groups, or the server's print. */
+  readonly groups: readonly (readonly string[])[];
+  /** Moves whenever any of the above changes, and only then. */
+  readonly revision: number;
+}
+
+/**
+ * The load and connect screens up, the newest on top, as a page stacks what it adds over itself:
+ * a map's load comes up before the connect screen under it goes.
+ */
+export class LoadScreens {
+  private readonly list: Panel[] = [];
+
+  /** The screen on top, which the panel draws, or `null` with none up. */
+  get top(): Panel | null {
+    return this.list.at(-1) ?? null;
+  }
+
+  /** Put a screen up, over any already up. */
+  open(screen: Panel): void {
+    this.list.push(screen);
+  }
+
+  /** Take a screen down, wherever it stands. One not up is let be. */
+  close(screen: Panel): void {
+    const index = this.list.indexOf(screen);
+    if (index >= 0) this.list.splice(index, 1);
+  }
 }
 
 /** One thing the load waits for, and its share of the bar. */
@@ -100,125 +144,115 @@ export class LoadStep {
   }
 }
 
-/**
- * The load screen's panel, which the connect screen shares: the title and server, the bar and its
- * lines, and cgame's under it.
- */
-const LOAD_PANEL = `
-  <div class="load-panel">
-    <h1 class="load-title"></h1>
-    <p class="load-server"></p>
-    <div class="load-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-      <div class="load-fill"></div>
-    </div>
-    <p class="load-text"></p>
-    <p class="load-file"></p>
-    <div class="load-info"></div>
-  </div>
-`;
-
-/** A screen's layer over the page, holding its panel. */
-function overlay(host: HTMLElement, panel: string): HTMLElement {
-  const element = document.createElement('div');
-  element.className = 'load-screen';
-  element.innerHTML = panel;
-  host.appendChild(element);
-  return element;
-}
-
 /** What the connect screen reads of the connection: its share of `uiClientState_t`. */
 type ConnectionState = Pick<ClientConnection, 'state' | 'connectPacketCount' | 'serverMessage'>;
 
 /**
  * q3_ui's connect screen (`UI_DrawConnectScreen`, `ui_connect.c:162–253`), from a `connect` until
  * the map its server names starts to load: the server as it was named, how far the connection has
- * got, and what the server printed. It stands in the load screen's panel, its title's line and the
- * bar's room kept empty, since Q3 draws it over the map's load too and nothing on it moves.
+ * got, and what the server printed. Its title's line and the bar's room are kept empty, since Q3
+ * draws it over the map's load too and nothing on it moves.
  */
-export class ConnectScreen {
-  private readonly element: HTMLElement;
-  private readonly state: HTMLElement;
-  private readonly message: HTMLElement;
+export class ConnectScreen implements Panel {
+  readonly title = '';
+  readonly server: string;
+  readonly bar = false;
+  readonly fraction = 0;
+  readonly detail = '';
+  private state = '';
+  private printed = '';
+  private changes = 0;
+  private readonly screens: LoadScreens;
 
   /**
-   * @param host - What it covers: the page's root, which holds the canvas.
+   * @param screens - The screens up, which it goes on top of.
    * @param server - The server as it was named.
    */
-  constructor(host: HTMLElement, server: string) {
-    this.element = overlay(host, LOAD_PANEL);
-    this.element.querySelector('.load-server')!.textContent = connectingTo(server);
-    // Nothing loads yet, but the bar keeps its room.
-    this.element.querySelector<HTMLElement>('.load-bar')!.style.visibility = 'hidden';
-    this.state = this.element.querySelector<HTMLElement>('.load-text')!;
-    this.message = document.createElement('p');
-    this.message.className = 'load-message';
-    this.element.querySelector('.load-info')!.appendChild(this.message);
+  constructor(screens: LoadScreens, server: string) {
+    this.screens = screens;
+    this.server = connectingTo(server);
+    screens.open(this);
+  }
+
+  get line(): string {
+    return this.state;
+  }
+
+  /** What the server printed, alone under the panel. */
+  get message(): string {
+    return this.printed;
+  }
+
+  get groups(): readonly (readonly string[])[] {
+    return [[this.printed]];
+  }
+
+  get revision(): number {
+    return this.changes;
   }
 
   /**
-   * The connection as it stands, each frame. A line is written only when it changes.
+   * The connection as it stands, each frame. The screen changes only when a line does.
    *
    * @param connection - The connection, or `null` while its server is being looked up.
    */
   show(connection: ConnectionState | null): void {
     const state = connection ? connectState(connection.state, connection.connectPacketCount) : '';
     const message = connection ? connectMessage(connection.state, connection.serverMessage) : '';
-    if (this.state.textContent !== state) this.state.textContent = state;
-    if (this.message.textContent !== message) this.message.textContent = message;
+    if (state === this.state && message === this.printed) return;
+    this.state = state;
+    this.printed = message;
+    this.changes++;
   }
 
   /** Take the screen away, for the map's own load. */
   close(): void {
-    this.element.remove();
+    this.screens.close(this);
   }
 }
 
 /** The screen, its bar, and the steps it waits for. */
-export class LoadScreen {
-  private readonly element: HTMLElement;
-  private readonly server: HTMLElement;
-  private readonly bar: HTMLElement;
-  private readonly fill: HTMLElement;
-  private readonly text: HTMLElement;
-  private readonly file: HTMLElement;
-  private readonly info: HTMLElement;
+export class LoadScreen implements Panel {
+  readonly title: string;
+  readonly bar = true;
+  private shownServer = '';
+  private information: readonly (readonly string[])[] = [];
   private readonly list: LoadStep[] = [];
+  private changes = 0;
+  private readonly screens: LoadScreens;
 
   /**
-   * @param host - What it covers: the page's root, which holds the canvas.
+   * @param screens - The screens up, which it goes on top of.
    * @param title - The map's name.
    */
-  constructor(host: HTMLElement, title: string) {
-    this.element = overlay(host, LOAD_PANEL);
-    this.element.querySelector('.load-title')!.textContent = title;
-    this.server = this.element.querySelector<HTMLElement>('.load-server')!;
-    this.bar = this.element.querySelector<HTMLElement>('.load-bar')!;
-    this.fill = this.element.querySelector<HTMLElement>('.load-fill')!;
-    this.text = this.element.querySelector<HTMLElement>('.load-text')!;
-    this.file = this.element.querySelector<HTMLElement>('.load-file')!;
-    this.info = this.element.querySelector<HTMLElement>('.load-info')!;
-    this.render();
+  constructor(screens: LoadScreens, title: string) {
+    this.screens = screens;
+    this.title = title;
+    screens.open(this);
+  }
+
+  get server(): string {
+    return this.shownServer;
+  }
+
+  get groups(): readonly (readonly string[])[] {
+    return this.information;
+  }
+
+  get revision(): number {
+    return this.changes;
   }
 
   /** The server the map is loading for, under the title. Its line is kept from the start. */
   showServer(server: string): void {
-    this.server.textContent = connectingTo(server);
+    this.shownServer = connectingTo(server);
+    this.changes++;
   }
 
-  /** cgame's lines, under the panel: the server's group, then the match's. */
+  /** cgame's lines, under the panel: the server's group, then the match's, with no group for none. */
   showInformation(lines: MatchLines): void {
-    const group = (texts: readonly string[]) => {
-      const element = document.createElement('div');
-      element.className = 'load-group';
-      for (const text of texts) {
-        const line = document.createElement('p');
-        line.textContent = text;
-        element.appendChild(line);
-      }
-      return element;
-    };
-    const groups = [lines.server, lines.match].filter((texts) => texts.length > 0);
-    this.info.replaceChildren(...groups.map(group));
+    this.information = [lines.server, lines.match].filter((texts) => texts.length > 0);
+    this.changes++;
   }
 
   /**
@@ -226,9 +260,9 @@ export class LoadScreen {
    * Every step is added before any comes in, so the bar never goes back.
    */
   step(label: string, weight = 1): LoadStep {
-    const step = new LoadStep(label, weight, () => this.render());
+    const step = new LoadStep(label, weight, () => this.changes++);
     this.list.push(step);
-    this.render();
+    this.changes++;
     return step;
   }
 
@@ -253,17 +287,17 @@ export class LoadScreen {
     return this.steps.find((step) => !step.finished) ?? null;
   }
 
-  /** Take the screen away, for the game to start. */
-  close(): void {
-    this.element.remove();
+  get line(): string {
+    const loading = this.loading;
+    return loading ? `Loading... ${loading.label}` : '';
   }
 
-  private render(): void {
-    const fraction = this.fraction;
-    this.fill.style.width = `${fraction * 100}%`;
-    this.bar.setAttribute('aria-valuenow', String(Math.round(fraction * 100)));
-    const loading = this.loading;
-    this.text.textContent = loading ? `Loading... ${loading.label}` : '';
-    this.file.textContent = loading?.detail ?? '';
+  get detail(): string {
+    return this.loading?.detail ?? '';
+  }
+
+  /** Take the screen away, for the game to start. */
+  close(): void {
+    this.screens.close(this);
   }
 }

@@ -259,13 +259,13 @@ describe('shifts', () => {
   it("names a connect screen's panel or part that moved or resized as the map loaded", () => {
     const part = (name, box) => ({ name, box });
     const title = part('load-title', [400, 330, 448, 23]);
-    const info = part('load-info', [400, 381, 448, 44]);
+    const info = part('load-info-0', [400, 381, 448, 44]);
     const samples = [
       { panel: [400, 330, 448, 51], parts: [title, info] },
       { panel: [400, 330, 448, 51], parts: [title, info] },
       {
         panel: [400, 304, 448, 112],
-        parts: [part('load-title', [400, 304, 448, 23]), part('load-bar', [0, 0, 1, 1]), info]
+        parts: [part('load-title', [400, 304, 448, 23]), part('load-track', [0, 0, 1, 1]), info]
       }
     ];
     expect(connectMoves(samples)).toEqual([
@@ -275,15 +275,15 @@ describe('shifts', () => {
     expect(connectMoves(samples.slice(0, 2))).toEqual([]);
     // The last part grows at its foot as its lines come, and moves nothing; any other that grows
     // pushes what follows it.
-    const grown = { ...samples[1], parts: [title, part('load-info', [400, 381, 448, 138])] };
+    const grown = { ...samples[1], parts: [title, part('load-info-0', [400, 381, 448, 138])] };
     expect(connectMoves([samples[1], grown])).toEqual([]);
     const taller = { ...samples[1], parts: [part('load-title', [400, 330, 448, 46]), info] };
     expect(connectMoves([samples[1], taller])).toEqual([
       'load-title [400,330,448,23] -> [400,330,448,46]'
     ]);
-    const moved = { ...samples[1], parts: [title, part('load-info', [400, 390, 448, 44])] };
+    const moved = { ...samples[1], parts: [title, part('load-info-0', [400, 390, 448, 44])] };
     expect(connectMoves([samples[1], moved])).toEqual([
-      'load-info [400,381,448,44] -> [400,390,448,44]'
+      'load-info-0 [400,381,448,44] -> [400,390,448,44]'
     ]);
   });
 });

@@ -97,7 +97,7 @@ try {
     // A BSP map's load screen stays over its warm-up, seconds on a cold GPU cache.
     await page.waitForFunction(
       () =>
-        window.pcqController?.inWorld === true && document.querySelector('.load-screen') === null,
+        window.pcqController?.inWorld === true && window.pcqScreens?.top === null,
       null,
       { timeout: 300000, polling: 100 }
     );

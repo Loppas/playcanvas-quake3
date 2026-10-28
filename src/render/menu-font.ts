@@ -11,13 +11,26 @@ import { LIST_ARROWS } from '../view/menu-widgets';
  *   alpha of 1/255, which shows as a faint box round each word.
  */
 
-/** The face, and the size its atlas is drawn at: large, so the text stays sharp at any scale. */
+/** The menu's face, and the size its atlas is drawn at: large, so the text stays sharp at any scale. */
 const FONT_FACE = 'system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const FONT_ATLAS_SIZE = 64;
 const FONT_ATLAS_PIXELS = 1024;
-/** Every character the menu shows: printable ASCII, which a Q3 name keeps to, and list arrows. */
+/** The page's own monospace face, as `style.css` gives it. */
+export const MONO_FACE = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+/** The mark a line cut short ends in. */
+export const ELLIPSIS = '…';
+/**
+ * Every character the screens show: printable ASCII, which a Q3 name keeps to, list arrows, and
+ * the mark of a cut line.
+ */
 const PRINTABLE = String.fromCharCode(...Array.from({ length: 95 }, (_, i) => 32 + i));
-const CHARACTERS = PRINTABLE + LIST_ARROWS.up + LIST_ARROWS.down;
+const CHARACTERS = PRINTABLE + LIST_ARROWS.up + LIST_ARROWS.down + ELLIPSIS;
+
+/** A face other than the menu's, and its weight, as CSS names them. */
+export interface FontStyle {
+  face?: string;
+  weight?: string;
+}
 
 /** A glyph as `CanvasFont` records it: its cell in its atlas, in pixels, and its offsets. */
 interface Glyph {
@@ -46,10 +59,14 @@ export class MenuFont extends CanvasFont {
   cell = 0;
 }
 
-/** The menu's font, its atlas drawn and settled now, for every character the menu shows. */
-export function createMenuFont(app: AppBase): MenuFont {
+/**
+ * The menu's font, or another face's made the same way, its atlas drawn and settled now, for every
+ * character the screens show.
+ */
+export function createMenuFont(app: AppBase, style: FontStyle = {}): MenuFont {
   const font = new MenuFont(app, {
-    fontName: FONT_FACE,
+    fontName: style.face ?? FONT_FACE,
+    fontWeight: style.weight,
     fontSize: FONT_ATLAS_SIZE,
     width: FONT_ATLAS_PIXELS,
     height: FONT_ATLAS_PIXELS,

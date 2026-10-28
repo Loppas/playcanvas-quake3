@@ -32,7 +32,7 @@ async function measure(map) {
   const wait = (ms) => page.waitForTimeout(ms);
   const loadMs = await lib.bootMatch(page, port, map);
   await page.waitForFunction(
-    () => window.pcqController?.inWorld === true && document.querySelector('.load-screen') === null,
+    () => window.pcqController?.inWorld === true && window.pcqScreens?.top === null,
     null,
     { timeout: 300000, polling: 100 }
   );
