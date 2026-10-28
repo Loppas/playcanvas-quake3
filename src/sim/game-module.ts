@@ -37,10 +37,10 @@ export interface GameModule {
    * `GAME_CLIENT_COMMAND`: a reliable command from the client.
    *
    * Quake 3 passes only the slot and the game module reads the arguments back through
-   * `trap_Argv`, because a virtual machine cannot be handed a string. The port passes the text,
-   * since it has no tokenizer of Quake 3's to read it back out of.
+   * `trap_Argv`, because a virtual machine cannot be handed a string. The port passes the
+   * arguments themselves, as the host tokenized and cleaned them.
    */
-  clientCommand(clientNum: number, command: string): void;
+  clientCommand(clientNum: number, argv: readonly string[]): void;
   /**
    * `GAME_CLIENT_THINK`: run this client's pending user command.
    *

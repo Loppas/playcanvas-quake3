@@ -876,13 +876,12 @@ export class Game implements GameModule {
    * all (`:1776–1780`).
    *
    * @param clientNum - Which client sent it.
-   * @param command - The command, as it arrived.
+   * @param argv - The command, tokenized: what `trap_Argv` reads.
    */
-  clientCommand(clientNum: number, command: string): void {
+  clientCommand(clientNum: number, argv: readonly string[]): void {
     if (this.level.clients[clientNum].pers.connected !== CON.CONNECTED) return;
 
     const entity = this.level.gentities[clientNum];
-    const argv = tokenize(command);
     const name = argv[0]?.toLowerCase();
     switch (name) {
       case 'say':

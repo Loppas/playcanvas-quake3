@@ -1709,7 +1709,7 @@ describe('the scores message', () => {
     join(fixture, 0, '\\name\\A');
     fixture.traps.commands.length = 0;
 
-    fixture.game.clientCommand(0, 'score');
+    fixture.game.clientCommand(0, ['score']);
 
     expect(fixture.traps.commands.filter((c) => c.to === 0 && c.text.startsWith('scores '))).toHaveLength(
       1
@@ -1722,7 +1722,7 @@ describe('the scores message', () => {
     fixture.game.clientConnect(0, true, false);
     fixture.traps.commands.length = 0;
 
-    fixture.game.clientCommand(0, 'score');
+    fixture.game.clientCommand(0, ['score']);
 
     expect(fixture.traps.commands.filter((c) => c.text.startsWith('scores '))).toHaveLength(0);
   });
@@ -1732,8 +1732,8 @@ describe('the scores message', () => {
     join(fixture, 0, '\\name\\A');
     fixture.traps.commands.length = 0;
 
-    fixture.game.clientCommand(0, '"NoSuch" "word"');
-    fixture.game.clientCommand(0, 'score');
+    fixture.game.clientCommand(0, ['NoSuch', 'word']);
+    fixture.game.clientCommand(0, ['score']);
 
     expect(fixture.traps.commands.filter((c) => c.text.startsWith('print '))).toEqual([
       { to: 0, text: 'print "unknown cmd NoSuch\n"' }
@@ -1742,7 +1742,7 @@ describe('the scores message', () => {
     // At the intermission Quake 3 says it as chat instead, word for word (`:1776–1780`).
     fixture.traps.commands.length = 0;
     fixture.game.level.intermissiontime = 1000;
-    fixture.game.clientCommand(0, '"NoSuch" "word"');
+    fixture.game.clientCommand(0, ['NoSuch', 'word']);
     expect(fixture.traps.commands).toEqual([{ to: 0, text: 'chat "A^7\x19: ^2NoSuch word"' }]);
   });
 
@@ -2379,9 +2379,9 @@ describe('the intermission', () => {
     const health = client.ps.stats[STAT.HEALTH];
     fixture.traps.commands.length = 0;
 
-    fixture.game.clientCommand(0, 'kill');
-    fixture.game.clientCommand(0, 'team spectator');
-    fixture.game.clientCommand(0, 'score');
+    fixture.game.clientCommand(0, ['kill']);
+    fixture.game.clientCommand(0, ['team', 'spectator']);
+    fixture.game.clientCommand(0, ['score']);
 
     expect(client.ps.stats[STAT.HEALTH]).toBe(health);
     expect(client.sess.sessionTeam).toBe(TEAM.FREE);
@@ -3048,7 +3048,7 @@ describe('the team change', () => {
     const fixture = playing();
     const client = fixture.game.level.clients[0];
 
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
 
     expect(client.sess.sessionTeam).toBe(TEAM.SPECTATOR);
     expect(client.sess.spectatorState).toBe(SPECTATOR.FREE);
@@ -3064,7 +3064,7 @@ describe('the team change', () => {
     client.ps.ammo[WP.ROCKET_LAUNCHER] = 5;
     client.ps.powerups[PW.QUAD] = fixture.game.level.time + 30_000;
 
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
 
     // "Kill him (makes sure he loses flags, etc)" (`g_cmds.c:609–614`).
     const thrown = fixture.game.level.gentities.filter(
@@ -3078,7 +3078,7 @@ describe('the team change', () => {
     const entity = fixture.game.level.gentities[0];
     entity.flags |= FL.GODMODE;
 
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
 
     expect(entity.flags & FL.GODMODE).toBe(0);
   });
@@ -3086,9 +3086,9 @@ describe('the team change', () => {
   it('tells everyone, in the middle of the screen', () => {
     const fixture = playing();
 
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
     fixture.game.level.clients[0].switchTeamTime = 0;
-    fixture.game.clientCommand(0, 'team free');
+    fixture.game.clientCommand(0, ['team', 'free']);
 
     expect(centerPrints(fixture)).toEqual([
       'cp "Sarge^7 joined the spectators.\n"',
@@ -3098,10 +3098,10 @@ describe('the team change', () => {
 
   it('puts a spectator back into the match, body and all', () => {
     const fixture = playing();
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
     fixture.game.level.clients[0].switchTeamTime = 0;
 
-    fixture.game.clientCommand(0, 'team free');
+    fixture.game.clientCommand(0, ['team', 'free']);
 
     const client = fixture.game.level.clients[0];
     expect(client.sess.sessionTeam).toBe(TEAM.FREE);
@@ -3122,7 +3122,7 @@ describe('the team change', () => {
 
     for (const [word, state, watching] of cases) {
       const fixture = playing();
-      fixture.game.clientCommand(0, `team ${word}`);
+      fixture.game.clientCommand(0, ['team', word]);
       const { sess } = fixture.game.level.clients[0];
       expect([word, sess.sessionTeam, sess.spectatorState, sess.spectatorClient]).toEqual([
         word,
@@ -3136,7 +3136,7 @@ describe('the team change', () => {
   it('is refused when it is the team already held, so playing on costs nothing', () => {
     const fixture = playing();
 
-    fixture.game.clientCommand(0, 'team free');
+    fixture.game.clientCommand(0, ['team', 'free']);
 
     expect(fixture.game.level.clients[0].ps.persistant[PERS.SCORE]).toBe(0);
     expect(centerPrints(fixture)).toEqual([]);
@@ -3144,10 +3144,10 @@ describe('the team change', () => {
 
   it('is not refused among the spectators, where the sort of spectator can change', () => {
     const fixture = playing();
-    fixture.game.clientCommand(0, 'team scoreboard');
+    fixture.game.clientCommand(0, ['team', 'scoreboard']);
     fixture.game.level.clients[0].switchTeamTime = 0;
 
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
 
     expect(fixture.game.level.clients[0].sess.spectatorState).toBe(SPECTATOR.FREE);
   });
@@ -3159,7 +3159,7 @@ describe('the team change', () => {
     fixture.game.calculateRanks();
     expect(fixture.game.level.numNonSpectatorClients).toBe(2);
 
-    fixture.game.clientCommand(2, 'team free');
+    fixture.game.clientCommand(2, ['team', 'free']);
 
     expect(fixture.game.level.clients[2].sess.sessionTeam).toBe(TEAM.SPECTATOR);
   });
@@ -3167,11 +3167,11 @@ describe('the team change', () => {
   it('seats nobody past g_maxGameClients', () => {
     const fixture = playing({ maxGameClients: 1 });
     join(fixture, 1, '\\name\\Bones');
-    fixture.game.clientCommand(1, 'team spectator');
+    fixture.game.clientCommand(1, ['team', 'spectator']);
     fixture.game.level.clients[1].switchTeamTime = 0;
     fixture.game.calculateRanks();
 
-    fixture.game.clientCommand(1, 'team free');
+    fixture.game.clientCommand(1, ['team', 'free']);
 
     expect(fixture.game.level.clients[1].sess.sessionTeam).toBe(TEAM.SPECTATOR);
   });
@@ -3181,8 +3181,8 @@ describe('the team change', () => {
     join(fixture, 1, '\\name\\Bones');
     join(fixture, 2, '\\name\\Major');
 
-    fixture.game.clientCommand(1, 'team spectator');
-    fixture.game.clientCommand(2, 'team spectator');
+    fixture.game.clientCommand(1, ['team', 'spectator']);
+    fixture.game.clientCommand(2, ['team', 'spectator']);
 
     // The longest wait is the highest number, which is who a tournament seats next — and
     // the player still in the match is not in the queue at all.
@@ -3194,21 +3194,21 @@ describe('the team change', () => {
   it('sends a spectator who played again and came back to the front of the queue', () => {
     const fixture = playing();
     join(fixture, 1, '\\name\\Bones');
-    fixture.game.clientCommand(0, 'team spectator');
-    fixture.game.clientCommand(1, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
+    fixture.game.clientCommand(1, ['team', 'spectator']);
     expect(fixture.game.level.clients[0].sess.spectatorNum).toBe(1);
 
     fixture.game.level.clients[0].switchTeamTime = 0;
-    fixture.game.clientCommand(0, 'team free');
+    fixture.game.clientCommand(0, ['team', 'free']);
     fixture.game.level.clients[0].switchTeamTime = 0;
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
 
     expect(fixture.game.level.clients.slice(0, 2).map((c) => c.sess.spectatorNum)).toEqual([0, 1]);
   });
 
   it('moves the waiting spectators back when somebody new connects', () => {
     const fixture = playing();
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
     expect(fixture.game.level.clients[0].sess.spectatorNum).toBe(0);
 
     join(fixture, 1, '\\name\\Bones');
@@ -3219,19 +3219,19 @@ describe('the team change', () => {
 
   it('says nothing when a spectator only changes what sort of spectator it is', () => {
     const fixture = playing();
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
     fixture.game.level.clients[0].switchTeamTime = 0;
 
-    fixture.game.clientCommand(0, 'team scoreboard');
+    fixture.game.clientCommand(0, ['team', 'scoreboard']);
 
     expect(centerPrints(fixture)).toEqual(['cp "Sarge^7 joined the spectators.\n"']);
   });
 
   it('is refused more than once every five seconds', () => {
     const fixture = playing();
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
 
-    fixture.game.clientCommand(0, 'team free');
+    fixture.game.clientCommand(0, ['team', 'free']);
 
     expect(fixture.game.level.clients[0].sess.sessionTeam).toBe(TEAM.SPECTATOR);
     expect(prints(fixture)).toContain(
@@ -3242,17 +3242,17 @@ describe('the team change', () => {
   it('counts a loss against a tournament player who walks out of the match', () => {
     const fixture = playing({ gametype: GT.TOURNAMENT });
 
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
 
     expect(fixture.game.level.clients[0].sess.losses).toBe(1);
   });
 
   it('counts nothing against a spectator who was out of the match already', () => {
     const fixture = playing({ gametype: GT.TOURNAMENT });
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
     fixture.game.level.clients[0].switchTeamTime = 0;
 
-    fixture.game.clientCommand(0, 'team scoreboard');
+    fixture.game.clientCommand(0, ['team', 'scoreboard']);
 
     expect(fixture.game.level.clients[0].sess.losses).toBe(1);
   });
@@ -3260,9 +3260,9 @@ describe('the team change', () => {
   it('says which team the client is on when it is asked with no argument', () => {
     const fixture = playing();
 
-    fixture.game.clientCommand(0, 'team');
-    fixture.game.clientCommand(0, 'team spectator');
-    fixture.game.clientCommand(0, 'team');
+    fixture.game.clientCommand(0, ['team']);
+    fixture.game.clientCommand(0, ['team', 'spectator']);
+    fixture.game.clientCommand(0, ['team']);
 
     expect(prints(fixture)).toContain('print "Free team\n"');
     expect(prints(fixture)).toContain('print "Spectator team\n"');
@@ -3293,7 +3293,7 @@ describe('joining a side', () => {
     join(fixture, 1, '\\name\\Bones');
     putOnTeam(fixture, 0, side);
 
-    fixture.game.clientCommand(1, `team ${word}`);
+    fixture.game.clientCommand(1, ['team', word]);
 
     expect(fixture.game.level.clients[1].sess.sessionTeam).toBe(side);
   });
@@ -3302,9 +3302,9 @@ describe('joining a side', () => {
     const fixture = sides();
     join(fixture, 0);
     join(fixture, 1, '\\name\\Bones');
-    fixture.game.clientCommand(0, 'team red');
+    fixture.game.clientCommand(0, ['team', 'red']);
 
-    fixture.game.clientCommand(1, 'team free');
+    fixture.game.clientCommand(1, ['team', 'free']);
 
     expect(fixture.game.level.clients[1].sess.sessionTeam).toBe(TEAM.BLUE);
   });
@@ -3313,10 +3313,10 @@ describe('joining a side', () => {
     const fixture = makeGame({ entities: mapOf(spawnSpot(vec3(0, 0, 20))) });
     fixture.traps.world = createFlatWorldTrace();
     join(fixture, 0);
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
     fixture.game.level.clients[0].switchTeamTime = 0;
 
-    fixture.game.clientCommand(0, 'team red');
+    fixture.game.clientCommand(0, ['team', 'red']);
 
     expect(fixture.game.level.clients[0].sess.sessionTeam).toBe(TEAM.FREE);
   });
@@ -3329,7 +3329,7 @@ describe('joining a side', () => {
     putOnTeam(fixture, 0, TEAM.RED);
     putOnTeam(fixture, 1, TEAM.RED);
 
-    fixture.game.clientCommand(2, 'team red');
+    fixture.game.clientCommand(2, ['team', 'red']);
 
     expect(fixture.game.level.clients[2].sess.sessionTeam).toBe(TEAM.SPECTATOR);
     expect(prints(fixture)).toContain('cp "Red team has too many players.\n"');
@@ -3343,7 +3343,7 @@ describe('joining a side', () => {
     putOnTeam(fixture, 0, TEAM.BLUE);
     putOnTeam(fixture, 1, TEAM.BLUE);
 
-    fixture.game.clientCommand(2, 'team blue');
+    fixture.game.clientCommand(2, ['team', 'blue']);
 
     expect(fixture.game.level.clients[2].sess.sessionTeam).toBe(TEAM.SPECTATOR);
     expect(prints(fixture)).toContain('cp "Blue team has too many players.\n"');
@@ -3362,7 +3362,7 @@ describe('joining a side', () => {
     join(fixture, 1, '\\name\\Bones');
     putOnTeam(fixture, 0, TEAM.RED);
 
-    fixture.game.clientCommand(1, 'team red');
+    fixture.game.clientCommand(1, ['team', 'red']);
 
     expect(fixture.game.level.clients[1].sess.sessionTeam).toBe(TEAM.RED);
   });
@@ -3375,7 +3375,7 @@ describe('joining a side', () => {
     putOnTeam(fixture, 0, TEAM.RED);
     putOnTeam(fixture, 1, TEAM.RED);
 
-    fixture.game.clientCommand(2, 'team red');
+    fixture.game.clientCommand(2, ['team', 'red']);
 
     expect(fixture.game.level.clients[2].sess.sessionTeam).toBe(TEAM.RED);
   });
@@ -3388,7 +3388,7 @@ describe('joining a side', () => {
     putOnTeam(fixture, 0, TEAM.RED);
     putOnTeam(fixture, 1, TEAM.RED);
 
-    fixture.game.clientCommand(2, 'team red');
+    fixture.game.clientCommand(2, ['team', 'red']);
 
     expect(fixture.game.level.clients[2].sess.sessionTeam).toBe(TEAM.RED);
   });
@@ -3407,7 +3407,7 @@ describe('joining a side', () => {
   it('seats an arrival that asked for nothing while g_teamAutoJoin is on', () => {
     const fixture = sides({ g_teamAutoJoin: '1' });
     join(fixture, 0);
-    fixture.game.clientCommand(0, 'team red');
+    fixture.game.clientCommand(0, ['team', 'red']);
     fixture.traps.userinfos.set(1, '\\name\\Bones');
 
     expect(fixture.game.clientConnect(1, true, false)).toBeNull();
@@ -3470,7 +3470,7 @@ describe('a base to spawn at', () => {
     const fixture = ctf();
     join(fixture, 0);
 
-    fixture.game.clientCommand(0, 'team red');
+    fixture.game.clientCommand(0, ['team', 'red']);
 
     // `TEAM_BEGIN` is what a team change leaves behind, so this is the `player` spot. The spawn's
     // think leaves the yaw as the short's own value, as Q3's does: 270 is -90.
@@ -3481,7 +3481,7 @@ describe('a base to spawn at', () => {
   it('is the side’s own respawn spot once they are playing', () => {
     const fixture = ctf();
     join(fixture, 0);
-    fixture.game.clientCommand(0, 'team blue');
+    fixture.game.clientCommand(0, ['team', 'blue']);
     expect(fixture.game.level.clients[0].pers.teamState.state).toBe(TEAM_STATE.ACTIVE);
 
     fixture.game.clientSpawn(fixture.game.level.gentities[0]);
@@ -3494,8 +3494,8 @@ describe('a base to spawn at', () => {
     join(fixture, 0);
     join(fixture, 1, '\\name\\Bones');
 
-    fixture.game.clientCommand(0, 'team red');
-    fixture.game.clientCommand(1, 'team blue');
+    fixture.game.clientCommand(0, ['team', 'red']);
+    fixture.game.clientCommand(1, ['team', 'blue']);
 
     expect(fixture.game.level.clients[0].ps.origin.y).toBe(200);
     expect(fixture.game.level.clients[1].ps.origin.y).toBe(-200);
@@ -3505,7 +3505,7 @@ describe('a base to spawn at', () => {
     const fixture = ctf(mapOf(spawnSpot(vec3(0, 0, 20))));
     join(fixture, 0);
 
-    fixture.game.clientCommand(0, 'team red');
+    fixture.game.clientCommand(0, ['team', 'red']);
 
     expect(fixture.game.level.clients[0].ps.origin.y).toBe(0);
   });
@@ -3515,7 +3515,7 @@ describe('a base to spawn at', () => {
     fixture.traps.world = createFlatWorldTrace();
     join(fixture, 0);
 
-    fixture.game.clientCommand(0, 'team red');
+    fixture.game.clientCommand(0, ['team', 'red']);
 
     expect(fixture.game.level.clients[0].ps.origin.y).toBe(0);
   });
@@ -3578,8 +3578,8 @@ describe('Clan Arena', () => {
     join(fixture, 0);
     join(fixture, 1, '\\name\\Bones');
 
-    fixture.game.clientCommand(0, 'team red');
-    fixture.game.clientCommand(1, 'team blue');
+    fixture.game.clientCommand(0, ['team', 'red']);
+    fixture.game.clientCommand(1, ['team', 'blue']);
 
     expect(fixture.game.level.clients[0].ps.origin.y).toBe(240);
     expect(fixture.game.level.clients[1].ps.origin.y).toBe(-240);
@@ -3591,7 +3591,7 @@ describe('Clan Arena', () => {
     );
     join(fixture, 0);
 
-    fixture.game.clientCommand(0, 'team red');
+    fixture.game.clientCommand(0, ['team', 'red']);
 
     expect(fixture.game.level.clients[0].ps.origin.y).toBe(0);
   });
@@ -3600,7 +3600,7 @@ describe('Clan Arena', () => {
     const fixture = arena(ARENA, { pcq_spawnArmor: '50', pcq_spawnWeapons: '1' });
     join(fixture, 0);
 
-    fixture.game.clientCommand(0, 'team red');
+    fixture.game.clientCommand(0, ['team', 'red']);
 
     const { ps } = fixture.game.level.clients[0];
     expect(ps.weapon).toBe(WP.ROCKET_LAUNCHER);
@@ -3622,8 +3622,8 @@ describe('Clan Arena', () => {
     const fixture = arena();
     join(fixture, 0);
     join(fixture, 1, '\\name\\Bones');
-    fixture.game.clientCommand(0, 'team red');
-    fixture.game.clientCommand(1, 'team blue');
+    fixture.game.clientCommand(0, ['team', 'red']);
+    fixture.game.clientCommand(1, ['team', 'blue']);
     const { level } = fixture.game;
     level.clients[1].ps.powerups[PW.QUAD] = level.time + 30_000;
 
@@ -3665,10 +3665,10 @@ describe('Clan Arena', () => {
     function manned(blues = 1, cvarValues = {}): Fixture {
       const fixture = arena(ROUNDS, cvarValues);
       join(fixture, 0);
-      fixture.game.clientCommand(0, 'team red');
+      fixture.game.clientCommand(0, ['team', 'red']);
       for (let i = 1; i <= blues; i++) {
         join(fixture, i, '\\name\\Bones' + i);
-        fixture.game.clientCommand(i, 'team blue');
+        fixture.game.clientCommand(i, ['team', 'blue']);
       }
       return fixture;
     }
@@ -3752,13 +3752,13 @@ describe('Clan Arena', () => {
       const fixture = arena(ROUNDS);
       expect(warmupString(fixture)).toBe('-1');
       join(fixture, 0);
-      fixture.game.clientCommand(0, 'team red');
+      fixture.game.clientCommand(0, ['team', 'red']);
       fixture.game.runFrame(1000);
       expect(fixture.game.level.roundTime).toBe(-1);
       expect(warmupString(fixture)).toBe('-1');
 
       join(fixture, 1, '\\name\\Bones');
-      fixture.game.clientCommand(1, 'team blue');
+      fixture.game.clientCommand(1, ['team', 'blue']);
       fixture.game.runFrame(2000);
       expect(warmupString(fixture)).toBe(String(2000 + CA_ROUND_WARMUP));
 
@@ -3891,7 +3891,7 @@ describe('Clan Arena', () => {
       const fixture = arena(ROUNDS);
       const { level } = fixture.game;
       join(fixture, 0);
-      fixture.game.clientCommand(0, 'team red');
+      fixture.game.clientCommand(0, ['team', 'red']);
       fixture.game.runFrame(1000);
       hurt(fixture.game, 0, 1000);
       const spawns = level.clients[0].ps.persistant[PERS.SPAWN_COUNT];
@@ -3909,7 +3909,7 @@ describe('Clan Arena', () => {
     it('leaves the dead watching once a round has been played, while the match waits', () => {
       const fixture = playing();
       const { level } = fixture.game;
-      fixture.game.clientCommand(1, 'team spectator');
+      fixture.game.clientCommand(1, ['team', 'spectator']);
       fixture.game.runFrame(level.time + 100);
       expect(level.roundTime).toBe(-1);
       hurt(fixture.game, 0, 1000);
@@ -3994,7 +3994,7 @@ describe('Clan Arena', () => {
       const { fixture, out } = blueOut();
       const { level } = fixture.game;
 
-      fixture.game.clientCommand(1, 'team spectator');
+      fixture.game.clientCommand(1, ['team', 'spectator']);
       fixture.game.runFrame(out + 100);
 
       expect(level.roundTime).toBe(-1);
@@ -4078,18 +4078,18 @@ describe('Clan Arena', () => {
         watch(fixture, 1);
         const watcher = level.clients[1];
 
-        fixture.game.clientCommand(1, 'follow 2');
+        fixture.game.clientCommand(1, ['follow', '2']);
         expect(watcher.sess.spectatorState).toBe(SPECTATOR.FOLLOW);
         expect(watcher.sess.spectatorClient).toBe(2);
         expect(watcher.sess.sessionTeam).toBe(TEAM.BLUE);
 
-        fixture.game.clientCommand(1, 'follow');
+        fixture.game.clientCommand(1, ['follow']);
         expect(watcher.sess.spectatorState).toBe(SPECTATOR.FREE);
         expect(watcher.sess.sessionTeam).toBe(TEAM.BLUE);
         expect(watcher.ps.persistant[PERS.TEAM]).toBe(TEAM.BLUE);
 
         // Nobody follows a watcher, and a player who asks to stays in the game.
-        fixture.game.clientCommand(0, 'follow 1');
+        fixture.game.clientCommand(0, ['follow', '1']);
         expect(level.clients[0].sess.sessionTeam).toBe(TEAM.RED);
         expect(level.clients[0].sess.spectatorState).toBe(SPECTATOR.NOT);
       });
@@ -4163,14 +4163,14 @@ describe('Clan Arena', () => {
         watch(fixture, 1);
         // A late arrival watches with a life in hand, which a death would take.
         join(fixture, 3, '\\name\\Late');
-        fixture.game.clientCommand(3, 'team blue');
+        fixture.game.clientCommand(3, ['team', 'blue']);
         fixture.game.runFrame(level.time + 5000);
         think(fixture, 3);
         expect(level.clients[3].ps.pmType).toBe(PM_SPECTATOR);
         const deaths = obituaries(fixture);
 
-        fixture.game.clientCommand(1, 'team red');
-        fixture.game.clientCommand(3, 'team red');
+        fixture.game.clientCommand(1, ['team', 'red']);
+        fixture.game.clientCommand(3, ['team', 'red']);
 
         for (const i of [1, 3]) {
           expect(level.clients[i].sess.sessionTeam).toBe(TEAM.RED);
@@ -4187,7 +4187,7 @@ describe('Clan Arena', () => {
         join(fixture, 2, '\\name\\Late');
         const before = fixture.traps.commands.length;
 
-        fixture.game.clientCommand(2, 'team blue');
+        fixture.game.clientCommand(2, ['team', 'blue']);
 
         const late = level.clients[2];
         const told = fixture.traps.commands.slice(before);
@@ -4214,7 +4214,7 @@ describe('Clan Arena', () => {
         fixture.game.runFrame(1000);
         join(fixture, 2, '\\name\\Late');
 
-        fixture.game.clientCommand(2, 'team blue');
+        fixture.game.clientCommand(2, ['team', 'blue']);
 
         expect(isSpectator(level.clients[2])).toBe(false);
         expect(prints(fixture)).toContain('cp "Late^7 joined the blue team.\n"');
@@ -4223,13 +4223,13 @@ describe('Clan Arena', () => {
       it('has kill pass over a player who joined mid-round, watching from their side', () => {
         const fixture = playing();
         join(fixture, 2, '\\name\\Late');
-        fixture.game.clientCommand(2, 'team blue');
+        fixture.game.clientCommand(2, ['team', 'blue']);
         const late = fixture.game.level.clients[2];
         const health = late.ps.stats[STAT.HEALTH];
         const told = obituaries(fixture);
         expect(health).toBeGreaterThan(0);
 
-        fixture.game.clientCommand(2, 'kill');
+        fixture.game.clientCommand(2, ['kill']);
 
         expect(late.ps.stats[STAT.HEALTH]).toBe(health);
         expect(obituaries(fixture)).toBe(told);
@@ -4245,8 +4245,8 @@ describe('friendly fire', () => {
     fixture.traps.world = createFlatWorldTrace();
     join(fixture, 0);
     join(fixture, 1, '\\name\\Bones');
-    fixture.game.clientCommand(0, 'team red');
-    fixture.game.clientCommand(1, 'team red');
+    fixture.game.clientCommand(0, ['team', 'red']);
+    fixture.game.clientCommand(1, ['team', 'red']);
     const { level } = fixture.game;
     const mate = level.clients[1];
     const shooter = level.gentities[0];
@@ -4270,8 +4270,8 @@ describe('friendly fire', () => {
     fixture.traps.world = createFlatWorldTrace();
     join(fixture, 0);
     join(fixture, 1, '\\name\\Bones');
-    fixture.game.clientCommand(0, 'team red');
-    fixture.game.clientCommand(1, 'team red');
+    fixture.game.clientCommand(0, ['team', 'red']);
+    fixture.game.clientCommand(1, ['team', 'red']);
     const { level } = fixture.game;
     const shooter = level.gentities[0];
 
@@ -4336,7 +4336,7 @@ describe('the follow command', () => {
     join(fixture, 1, '\\name\\Bones');
     join(fixture, 2, '\\name\\Major');
     join(fixture, 3, '\\name\\Slash');
-    fixture.game.clientCommand(1, 'team spectator');
+    fixture.game.clientCommand(1, ['team', 'spectator']);
     fixture.game.calculateRanks();
     return fixture;
   }
@@ -4344,7 +4344,7 @@ describe('the follow command', () => {
   it('watches a client by slot', () => {
     const fixture = watching();
 
-    fixture.game.clientCommand(1, 'follow 2');
+    fixture.game.clientCommand(1, ['follow', '2']);
 
     const { sess } = fixture.game.level.clients[1];
     expect(sess.spectatorState).toBe(SPECTATOR.FOLLOW);
@@ -4354,7 +4354,7 @@ describe('the follow command', () => {
   it('watches a client by name, colours and case aside', () => {
     const fixture = watching();
 
-    fixture.game.clientCommand(1, 'follow major');
+    fixture.game.clientCommand(1, ['follow', 'major']);
 
     expect(fixture.game.level.clients[1].sess.spectatorClient).toBe(2);
   });
@@ -4362,7 +4362,7 @@ describe('the follow command', () => {
   it('says so when nobody answers to the name', () => {
     const fixture = watching();
 
-    fixture.game.clientCommand(1, 'follow Doom');
+    fixture.game.clientCommand(1, ['follow', 'Doom']);
 
     expect(prints(fixture)).toContain('print "User Doom is not on the server\n"');
     expect(fixture.game.level.clients[1].sess.spectatorState).toBe(SPECTATOR.FREE);
@@ -4370,9 +4370,9 @@ describe('the follow command', () => {
 
   it('watches no other spectator', () => {
     const fixture = watching();
-    fixture.game.clientCommand(2, 'team spectator');
+    fixture.game.clientCommand(2, ['team', 'spectator']);
 
-    fixture.game.clientCommand(1, 'follow 2');
+    fixture.game.clientCommand(1, ['follow', '2']);
 
     expect(fixture.game.level.clients[1].sess.spectatorState).toBe(SPECTATOR.FREE);
   });
@@ -4380,7 +4380,7 @@ describe('the follow command', () => {
   it('does not take a player out of the match to watch themselves', () => {
     const fixture = watching();
 
-    fixture.game.clientCommand(0, 'follow 0');
+    fixture.game.clientCommand(0, ['follow', '0']);
 
     expect(fixture.game.level.clients[0].sess.sessionTeam).toBe(TEAM.FREE);
     expect(fixture.game.level.clients[0].sess.spectatorState).not.toBe(SPECTATOR.FOLLOW);
@@ -4389,7 +4389,7 @@ describe('the follow command', () => {
   it('takes a player out of the match to do it', () => {
     const fixture = watching();
 
-    fixture.game.clientCommand(0, 'follow 2');
+    fixture.game.clientCommand(0, ['follow', '2']);
 
     const { sess } = fixture.game.level.clients[0];
     expect(sess.sessionTeam).toBe(TEAM.SPECTATOR);
@@ -4399,9 +4399,9 @@ describe('the follow command', () => {
 
   it('with no argument, lets a follower off the view it is riding', () => {
     const fixture = watching();
-    fixture.game.clientCommand(1, 'follow 2');
+    fixture.game.clientCommand(1, ['follow', '2']);
 
-    fixture.game.clientCommand(1, 'follow');
+    fixture.game.clientCommand(1, ['follow']);
 
     expect(fixture.game.level.clients[1].sess.spectatorState).toBe(SPECTATOR.FREE);
     expect(fixture.game.level.clients[1].ps.clientNum).toBe(1);
@@ -4410,10 +4410,10 @@ describe('the follow command', () => {
   it('cycles forwards and backwards on its own two commands', () => {
     const fixture = watching();
 
-    fixture.game.clientCommand(1, 'follownext');
+    fixture.game.clientCommand(1, ['follownext']);
     expect(fixture.game.level.clients[1].sess.spectatorClient).toBe(2);
 
-    fixture.game.clientCommand(1, 'followprev');
+    fixture.game.clientCommand(1, ['followprev']);
     expect(fixture.game.level.clients[1].sess.spectatorClient).toBe(0);
   });
 });
@@ -4440,7 +4440,7 @@ describe('the kill command', () => {
     const client = fixture.game.level.clients[0];
     const entity = fixture.game.level.gentities[0];
 
-    fixture.game.clientCommand(0, 'kill');
+    fixture.game.clientCommand(0, ['kill']);
 
     expect(client.ps.pmType).toBe(PM_DEAD);
     expect(client.ps.stats[STAT.HEALTH]).toBe(-999);
@@ -4455,7 +4455,7 @@ describe('the kill command', () => {
     const entity = fixture.game.level.gentities[0];
     entity.flags |= FL.GODMODE;
 
-    fixture.game.clientCommand(0, 'kill');
+    fixture.game.clientCommand(0, ['kill']);
 
     expect(entity.flags & FL.GODMODE).toBe(0);
     expect(fixture.game.level.clients[0].ps.pmType).toBe(PM_DEAD);
@@ -4468,7 +4468,7 @@ describe('the kill command', () => {
     hurt(fixture.game, 0, client.ps.stats[STAT.HEALTH] + 5);
     expect(entity.s.eType).toBe(ET.PLAYER);
 
-    fixture.game.clientCommand(0, 'kill');
+    fixture.game.clientCommand(0, ['kill']);
 
     // A body at −999 would be gibbed by `body_die`.
     expect(client.ps.stats[STAT.HEALTH]).toBe(-5);
@@ -4477,13 +4477,13 @@ describe('the kill command', () => {
 
   it('passes over a spectator', () => {
     const fixture = playing();
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
     const client = fixture.game.level.clients[0];
     const health = client.ps.stats[STAT.HEALTH];
     const told = obituaries(fixture);
     expect(health).toBeGreaterThan(0);
 
-    fixture.game.clientCommand(0, 'kill');
+    fixture.game.clientCommand(0, ['kill']);
 
     expect(client.ps.stats[STAT.HEALTH]).toBe(health);
     expect(obituaries(fixture)).toEqual(told);
@@ -4493,10 +4493,10 @@ describe('the kill command', () => {
     const fixture = playing();
     fixture.traps.commands.length = 0;
 
-    fixture.game.clientCommand(0, 'Score');
+    fixture.game.clientCommand(0, ['Score']);
     expect(prints(fixture).filter((text) => text.startsWith('scores '))).toHaveLength(1);
 
-    fixture.game.clientCommand(0, 'KILL');
+    fixture.game.clientCommand(0, ['KILL']);
     expect(fixture.game.level.clients[0].ps.pmType).toBe(PM_DEAD);
   });
 });
@@ -4552,7 +4552,7 @@ describe('a client that has not finished arriving', () => {
   it('does not drag a spectator through the end of a frame on its way', () => {
     const fixture = makeGame();
     join(fixture, 0);
-    fixture.game.clientCommand(0, 'team spectator');
+    fixture.game.clientCommand(0, ['team', 'spectator']);
     waiting(fixture);
 
     const watcher = fixture.game.level.gentities[0];
@@ -4611,7 +4611,7 @@ describe("the tournament's queue", () => {
 
   it('passes over the scoreboard spectator, who is watching rather than waiting', () => {
     const fixture = tournament(2);
-    fixture.game.clientCommand(2, 'team scoreboard');
+    fixture.game.clientCommand(2, ['team', 'scoreboard']);
     expect(fixture.game.level.clients[2].sess.spectatorNum).toBe(1);
 
     fixture.game.clientDisconnect(1);
@@ -4623,7 +4623,7 @@ describe("the tournament's queue", () => {
 
   it('passes over a dedicated camera, which is a place to watch from', () => {
     const fixture = tournament(2);
-    fixture.game.clientCommand(2, 'team follow1');
+    fixture.game.clientCommand(2, ['team', 'follow1']);
     expect(fixture.game.level.clients[2].sess.spectatorClient).toBe(-1);
 
     fixture.game.clientDisconnect(1);
@@ -4960,7 +4960,7 @@ describe('the move', () => {
     expect(asked).toEqual(new Set([0]));
 
     // The spawn's own frame finds the slime again, but a spectator's frames take no water.
-    game.clientCommand(0, 'team spectator');
+    game.clientCommand(0, ['team', 'spectator']);
     run(1);
     expect(client.sess.sessionTeam).toBe(TEAM.SPECTATOR);
     expect([entity.waterlevel, entity.watertype]).toEqual([0, 0]);
@@ -5002,7 +5002,7 @@ describe('the move', () => {
       game.level.gentities[0].s.weapon = WP.ROCKET_LAUNCHER;
       client.ps.ammo[WP.ROCKET_LAUNCHER] = 5;
       traps.contents = () => contents;
-      game.clientCommand(0, 'kill');
+      game.clientCommand(0, ['kill']);
       const dropped = game.level.gentities.filter(
         (e) => e.inuse && (e.flags & FL.DROPPED_ITEM) !== 0
       );
@@ -7622,7 +7622,7 @@ describe('the chat', () => {
     fixture.game.clientConnect(3, true, true);
     expect(fixture.game.level.gentities[3].inuse).toBe(true);
 
-    fixture.game.clientCommand(0, 'say hello  there');
+    fixture.game.clientCommand(0, ['say', 'hello', 'there']);
 
     const line = 'chat "A^7\x19: ^2hello there"';
     expect(chat(fixture)).toEqual([0, 1, 2].map((to) => ({ to, text: line })));
@@ -7631,17 +7631,17 @@ describe('the chat', () => {
   it('says nothing for a say with no words, and an empty line for an empty one', () => {
     const fixture = threeIn();
 
-    fixture.game.clientCommand(0, 'say');
+    fixture.game.clientCommand(0, ['say']);
     expect(chat(fixture)).toEqual([]);
 
-    fixture.game.clientCommand(0, 'SAY ""');
+    fixture.game.clientCommand(0, ['SAY', '']);
     expect(chat(fixture).map((line) => line.text)).toEqual(Array(3).fill('chat "A^7\x19: ^2"'));
   });
 
   it('joins the words by single spaces, a quoted one whole, its line breaks made spaces', () => {
     const fixture = threeIn();
 
-    fixture.game.clientCommand(0, 'say "two  spaces" and\t"a\nbreak\rhere"');
+    fixture.game.clientCommand(0, ['say', 'two  spaces', 'and', 'a\nbreak\rhere']);
 
     expect(chat(fixture)[0].text).toBe('chat "A^7\x19: ^2two  spaces and a break here"');
   });
@@ -7649,7 +7649,7 @@ describe('the chat', () => {
   it('cuts what was said to 149 characters (MAX_SAY_TEXT)', () => {
     const fixture = threeIn();
 
-    fixture.game.clientCommand(0, `say ${'x'.repeat(100)} ${'y'.repeat(100)}`);
+    fixture.game.clientCommand(0, ['say', 'x'.repeat(100), 'y'.repeat(100)]);
 
     const said = `${'x'.repeat(100)} ${'y'.repeat(48)}`;
     expect(said).toHaveLength(149);
@@ -7662,8 +7662,8 @@ describe('the chat', () => {
     // At the intermission the whole command is said, so a command of one 1,023-byte word says
     // nothing, and one ending in such a word says the words before it, the space left on.
     fixture.traps.commands.length = 0;
-    fixture.game.clientCommand(0, 'z'.repeat(1023));
-    fixture.game.clientCommand(0, `a ${'z'.repeat(1021)}`);
+    fixture.game.clientCommand(0, ['z'.repeat(1023)]);
+    fixture.game.clientCommand(0, ['a', 'z'.repeat(1021)]);
 
     expect(chat(fixture).map((line) => line.text)).toEqual([
       'chat "Sarge^7\x19: ^2"',
@@ -7673,22 +7673,22 @@ describe('the chat', () => {
 
   it('prints a line said to everyone on the console where no client runs beside the server', () => {
     const dedicated = threeIn({ cl_running: '0' });
-    dedicated.game.clientCommand(0, 'say hello');
-    dedicated.game.clientCommand(0, 'say_team hi');
-    dedicated.game.clientCommand(0, 'tell 1 psst');
+    dedicated.game.clientCommand(0, ['say', 'hello']);
+    dedicated.game.clientCommand(0, ['say_team', 'hi']);
+    dedicated.game.clientCommand(0, ['tell', '1', 'psst']);
     // `G_Printf( "%s%s\n", name, text )`: the marks as they are, and the text without its colour.
     expect(dedicated.traps.prints).toEqual(['A^7\x19: hello\n', 'A^7\x19: hi\n']);
 
     // The page's server, whose player is printed the line by cgame.
     const page = threeIn({ cl_running: '1', dedicated: '1' });
-    page.game.clientCommand(0, 'say hello');
+    page.game.clientCommand(0, ['say', 'hello']);
     expect(page.traps.prints).toEqual([]);
   });
 
   it('says a team line to everyone below a team game, as plain chat', () => {
     const fixture = threeIn();
 
-    fixture.game.clientCommand(0, 'say_team hi');
+    fixture.game.clientCommand(0, ['say_team', 'hi']);
 
     expect(chat(fixture)).toEqual([0, 1, 2].map((to) => ({ to, text: 'chat "A^7\x19: ^2hi"' })));
   });
@@ -7696,9 +7696,9 @@ describe('the chat', () => {
   it("says a team line to the speaker's team alone, in cyan, as tchat (OnSameTeam)", () => {
     const fixture = teamGame();
 
-    fixture.game.clientCommand(0, 'say_team hi');
+    fixture.game.clientCommand(0, ['say_team', 'hi']);
     // A spectator's team is the spectators.
-    fixture.game.clientCommand(3, 'say_team hey');
+    fixture.game.clientCommand(3, ['say_team', 'hey']);
 
     expect(chat(fixture)).toEqual([
       { to: 0, text: 'tchat "\x19(A^7\x19)\x19: ^5hi"' },
@@ -7715,7 +7715,7 @@ describe('the chat', () => {
     );
     fixture.traps.inPVS = (_p1, p2) => p2.x !== 50;
 
-    fixture.game.clientCommand(0, 'say_team hi');
+    fixture.game.clientCommand(0, ['say_team', 'hi']);
 
     expect(chat(fixture)[0].text).toBe('tchat "\x19(A^7\x19) (Rail)\x19: ^5hi"');
   });
@@ -7726,7 +7726,7 @@ describe('the chat', () => {
       location(vec3(0, -100, 0), 'Second')
     );
 
-    fixture.game.clientCommand(0, 'say_team hi');
+    fixture.game.clientCommand(0, ['say_team', 'hi']);
 
     expect(chat(fixture)[0].text).toBe('tchat "\x19(A^7\x19) (First)\x19: ^5hi"');
   });
@@ -7734,7 +7734,7 @@ describe('the chat', () => {
   it("colours a location by its count, held to 0–7 once it isn't 0 (Team_GetLocationMsg)", () => {
     const said = (count: number) => {
       const fixture = teamGame(location(vec3(100, 0, 0), 'Rail', count));
-      fixture.game.clientCommand(0, 'say_team hi');
+      fixture.game.clientCommand(0, ['say_team', 'hi']);
       return chat(fixture)[0].text;
     };
 
@@ -7747,7 +7747,7 @@ describe('the chat', () => {
   it('names a location with no message as nothing, as its configstring does', () => {
     const fixture = teamGame({ classname: 'target_location', origin: '100 0 0' });
 
-    fixture.game.clientCommand(0, 'say_team hi');
+    fixture.game.clientCommand(0, ['say_team', 'hi']);
 
     expect(chat(fixture)[0].text).toBe('tchat "\x19(A^7\x19) ()\x19: ^5hi"');
   });
@@ -7759,12 +7759,12 @@ describe('the chat', () => {
     });
     join(early, 0, '\\name\\A');
     putOnTeam(early, 0, TEAM.RED);
-    early.game.clientCommand(0, 'say_team hi');
+    early.game.clientCommand(0, ['say_team', 'hi']);
     expect(chat(early)[0].text).toBe('tchat "\x19(A^7\x19)\x19: ^5hi"');
 
     const unseen = teamGame(location(vec3(100, 0, 0), 'Rail'));
     unseen.traps.sees = false;
-    unseen.game.clientCommand(0, 'say_team hi');
+    unseen.game.clientCommand(0, ['say_team', 'hi']);
     expect(chat(unseen)[0].text).toBe('tchat "\x19(A^7\x19)\x19: ^5hi"');
   });
 
@@ -7772,7 +7772,7 @@ describe('the chat', () => {
     /** What A's team line puts on the console and sends, by its location's length. */
     const said = (length: number) => {
       const fixture = teamGame(location(vec3(100, 0, 0), 'L'.repeat(length)));
-      fixture.game.clientCommand(0, 'say_team hi');
+      fixture.game.clientCommand(0, ['say_team', 'hi']);
       return { prints: fixture.traps.prints, line: chat(fixture)[0].text };
     };
     /** A's name part around a location: 13 bytes and the location. */
@@ -7802,7 +7802,7 @@ describe('the chat', () => {
     const fixture = threeIn();
     putOnTeam(fixture, 2, TEAM.SPECTATOR);
 
-    fixture.game.clientCommand(2, 'say hi');
+    fixture.game.clientCommand(2, ['say', 'hi']);
 
     expect(chat(fixture).map((line) => line.to)).toEqual([0, 1, 2]);
   });
@@ -7819,8 +7819,8 @@ describe('the chat', () => {
     putOnTeam(duel, 3, TEAM.SPECTATOR);
     duel.traps.commands.length = 0;
 
-    duel.game.clientCommand(2, 'say hi');
-    duel.game.clientCommand(0, 'say gg');
+    duel.game.clientCommand(2, ['say', 'hi']);
+    duel.game.clientCommand(0, ['say', 'gg']);
 
     expect(chat(duel)).toEqual([
       { to: 2, text: 'chat "C^7\x19: ^2hi"' },
@@ -7832,7 +7832,7 @@ describe('the chat', () => {
   it('tells a slot in magenta, and the teller their own line (Cmd_Tell_f, g_cmds.c:973)', () => {
     const fixture = threeIn();
 
-    fixture.game.clientCommand(0, 'tell 2 meet  at "the\nrail"');
+    fixture.game.clientCommand(0, ['tell', '2', 'meet', 'at', 'the\nrail']);
 
     const line = 'chat "\x19[A^7\x19]\x19: ^6meet at the rail"';
     expect(chat(fixture)).toEqual([
@@ -7847,8 +7847,8 @@ describe('the chat', () => {
     fixture.game.clientUserinfoChanged(1);
     fixture.traps.commands.length = 0;
 
-    fixture.game.clientCommand(0, 'tell bones hi');
-    fixture.game.clientCommand(0, 'tell Doom hi');
+    fixture.game.clientCommand(0, ['tell', 'bones', 'hi']);
+    fixture.game.clientCommand(0, ['tell', 'Doom', 'hi']);
 
     expect(fixture.traps.commands.filter((command) => command.to === 1)).toEqual([
       { to: 1, text: 'chat "\x19[A^7\x19]\x19: ^6hi"' }
@@ -7859,8 +7859,8 @@ describe('the chat', () => {
   it('gives the usage for a tell with no text, and tells oneself once', () => {
     const fixture = threeIn();
 
-    fixture.game.clientCommand(0, 'tell 1');
-    fixture.game.clientCommand(0, 'tell 0 note');
+    fixture.game.clientCommand(0, ['tell', '1']);
+    fixture.game.clientCommand(0, ['tell', '0', 'note']);
 
     expect(fixture.traps.commands).toEqual([
       { to: 0, text: 'print "Usage: tell <player id> <message>\n"' },
@@ -7873,7 +7873,7 @@ describe('the chat', () => {
     joinBot(fixture, 3);
     fixture.traps.commands.length = 0;
 
-    fixture.game.clientCommand(3, 'tell 0 hi');
+    fixture.game.clientCommand(3, ['tell', '0', 'hi']);
 
     expect(chat(fixture)).toEqual([{ to: 0, text: 'chat "\x19[Grunt^7\x19]\x19: ^6hi"' }]);
   });
@@ -7886,7 +7886,7 @@ describe('the chat', () => {
     fixture.game.runFrame(1000);
     fixture.traps.commands.length = 0;
 
-    fixture.game.clientCommand(0, 'tell 1 hi');
+    fixture.game.clientCommand(0, ['tell', '1', 'hi']);
 
     expect(chat(fixture)[0].text).toBe('chat "\x19[A^7\x19]\x19: ^6hi"');
   });
@@ -7894,8 +7894,8 @@ describe('the chat', () => {
   it('says where the teller is to a teammate alone, and to the teller', () => {
     const fixture = teamGame(location(vec3(100, 0, 0), 'Rail'));
 
-    fixture.game.clientCommand(0, 'tell 1 here');
-    fixture.game.clientCommand(0, 'tell 2 there');
+    fixture.game.clientCommand(0, ['tell', '1', 'here']);
+    fixture.game.clientCommand(0, ['tell', '2', 'there']);
 
     expect(chat(fixture)).toEqual([
       { to: 1, text: 'chat "\x19[A^7\x19] (Rail)\x19: ^6here"' },
@@ -7914,7 +7914,7 @@ describe('the chat', () => {
     putOnTeam(duel, 2, TEAM.SPECTATOR);
     duel.traps.commands.length = 0;
 
-    duel.game.clientCommand(2, 'tell 0 hi');
+    duel.game.clientCommand(2, ['tell', '0', 'hi']);
 
     expect(chat(duel)).toEqual([{ to: 2, text: 'chat "\x19[C^7\x19]\x19: ^6hi"' }]);
   });
@@ -7923,8 +7923,8 @@ describe('the chat', () => {
     const fixture = atIntermission(2);
     fixture.traps.commands.length = 0;
 
-    fixture.game.clientCommand(0, 'say_team well played');
-    fixture.game.clientCommand(1, 'kill');
+    fixture.game.clientCommand(0, ['say_team', 'well', 'played']);
+    fixture.game.clientCommand(1, ['kill']);
 
     expect(chat(fixture).map((line) => line.text)).toEqual([
       'chat "Sarge^7\x19: ^2well played"',

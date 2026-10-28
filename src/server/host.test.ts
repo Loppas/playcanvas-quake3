@@ -85,6 +85,8 @@ class TestGame implements GameModule {
   readonly level = new Level({ maxclients: 4 });
 
   readonly calls: string[] = [];
+  /** Each client command's arguments, as the host handed them over. */
+  readonly commands: (readonly string[])[] = [];
   thinks = 0;
   frames = 0;
 
@@ -129,8 +131,9 @@ class TestGame implements GameModule {
     this.calls.push(`disconnect ${clientNum}`);
   }
 
-  clientCommand(clientNum: number, command: string): void {
-    this.calls.push(`command ${clientNum} ${command}`);
+  clientCommand(clientNum: number, argv: readonly string[]): void {
+    this.calls.push(`command ${clientNum} ${argv.join(' ')}`);
+    this.commands.push(argv);
   }
 
   clientThink(clientNum: number): void {
@@ -1901,6 +1904,18 @@ describe('the host', () => {
 
       expect(game.calls).toContain('command 0 say hello');
     });
+
+    it('clean the arguments after the name before the game module reads them', () => {
+      connectLocal(host, connection);
+
+      // `Cmd_Args_Sanitize` (`cmd.c:469–485`): line breaks and semicolons made spaces, and each
+      // argument cut to 255 bytes, `MAX_CVAR_VALUE_STRING` less its NUL.
+      const [kept, cut] = ['x'.repeat(255), 'y'.repeat(256)];
+      connection.addReliableCommand(`"a;b" "c;d" "e\nf\rg" ${kept} ${cut}`);
+      sendMove(host, connection, [moveCmd(8)]);
+
+      expect(game.commands).toEqual([['a;b', 'c d', 'e f g', kept, 'y'.repeat(255)]]);
+    });
   });
 
   describe('dropping a client', () => {
@@ -2172,6 +2187,17 @@ describe('the handshake', () => {
     expect(host.clients[0].name).toBe('Grunt');
     expect(infoValueForKey(host.clients[0].userinfo, 'ip')).toBe('localhost');
     expect(game.calls).toContain('userinfo 0');
+  });
+
+  it("reads a userinfo as it came, as only the game module's commands are cleaned", () => {
+    const { host } = makeHost();
+    const connection = new ClientConnection(testCvars());
+    connectLocal(host, connection, '\\name\\Sarge');
+
+    connection.addReliableCommand('userinfo "\\name\\Gr;unt"');
+    sendMove(host, connection, [moveCmd(8)]);
+
+    expect(host.clients[0].name).toBe('Gr;unt');
   });
 });
 
