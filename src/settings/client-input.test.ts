@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { K } from '../formats/q3-keys';
-import { BUTTON_AFFIRMATIVE, BUTTON_ATTACK } from '../sim/constants';
+import { BUTTON_AFFIRMATIVE, BUTTON_ATTACK, BUTTON_TALK } from '../sim/constants';
 import { KEYCATCH } from './client-input';
 import { routedInput } from './input-test-fixtures';
 
@@ -432,6 +432,31 @@ describe('ClientInput: the key catchers', () => {
       input.mouseMove(2, 3);
       expect(input.takeMouse()).toEqual({ dx: 0, dy: 0 });
     }
+  });
+});
+
+describe('ClientInput: the talk button (cl_input.c:540–542)', () => {
+  it.each(SETS)('presses it with %s up', (_, catchers) => {
+    const { input } = catching();
+    input.setCatcher(catchers);
+    expect(input.talkButton()).toBe(BUTTON_TALK);
+    expect(input.cmdButtons()).toBe(BUTTON_TALK);
+  });
+
+  it('presses nothing with none up', () => {
+    const { input } = catching();
+    expect(input.talkButton()).toBe(0);
+    expect(input.cmdButtons()).toBe(0);
+  });
+
+  it('goes with the buttons held, and as the catcher goes: +attack typed at the console', () => {
+    const { input, router } = catching();
+    input.setCatcher(KEYCATCH.CONSOLE);
+    router.execute(['+attack']);
+    expect(input.cmdButtons()).toBe(BUTTON_ATTACK | BUTTON_TALK);
+    // Typed, it names no key, so the catcher going lets nothing go.
+    input.setCatcher(0);
+    expect(input.cmdButtons()).toBe(BUTTON_ATTACK);
   });
 });
 
