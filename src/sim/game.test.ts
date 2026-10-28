@@ -91,7 +91,7 @@ import {
   SPECTATOR_SPEED,
   type GameOptions
 } from './game';
-import { entityText, mapOf, ORIGIN_MAP, spawnSpot } from './map-test-fixtures';
+import { entityText, mapOf, ORIGIN_MAP, spawnSpot, type TestEntity } from './map-test-fixtures';
 import { FRY_SOUND } from './player-life';
 import { HASTE_RATE } from './powerups';
 import { presetRules } from './rules-test-fixtures';
@@ -1739,11 +1739,11 @@ describe('the scores message', () => {
       { to: 0, text: 'print "unknown cmd NoSuch\n"' }
     ]);
 
-    // At the intermission Quake 3 says it as chat, which the port has none of.
+    // At the intermission Quake 3 says it as chat instead, word for word (`:1776–1780`).
     fixture.traps.commands.length = 0;
     fixture.game.level.intermissiontime = 1000;
-    fixture.game.clientCommand(0, 'nosuch');
-    expect(fixture.traps.commands).toEqual([]);
+    fixture.game.clientCommand(0, '"NoSuch" "word"');
+    expect(fixture.traps.commands).toEqual([{ to: 0, text: 'chat "A^7\x19: ^2NoSuch word"' }]);
   });
 
   it('sends the board to everyone when the intermission begins', () => {
@@ -7565,5 +7565,373 @@ describe("the move's touches", () => {
     floor.touch = (_self, other) => addPredictableEvent(other.client!.ps, EV.JUMP_PAD, 0);
     press(fixture, 0, 0);
     expect(entity.eventTime).toBe(1050);
+  });
+});
+
+describe('the chat', () => {
+  /** Every chat line sent, to whom and what it said. */
+  function chat(fixture: Fixture): { to: number | null; text: string }[] {
+    return fixture.traps.commands.filter((command) => /^t?chat /.test(command.text));
+  }
+
+  /** A free-for-all with A, B and C in, the commands and prints of their arrival cleared. */
+  function threeIn(cvarValues = {}): Fixture {
+    const fixture = makeGame({}, cvarValues);
+    join(fixture, 0, '\\name\\A');
+    join(fixture, 1, '\\name\\B');
+    join(fixture, 2, '\\name\\C');
+    fixture.traps.commands.length = 0;
+    fixture.traps.prints.length = 0;
+    return fixture;
+  }
+
+  /** A `target_location` at a point. */
+  function location(origin: Vec3, message: string, count?: number): TestEntity {
+    return {
+      classname: 'target_location',
+      origin: `${origin.x} ${origin.y} ${origin.z}`,
+      message,
+      ...(count === undefined ? {} : { count: String(count) })
+    };
+  }
+
+  /**
+   * A team game with these locations, linked: A and B on red, C on blue and D watching, A at the
+   * origin.
+   */
+  function teamGame(...locations: TestEntity[]): Fixture {
+    const entities = mapOf(spawnSpot(vec3()), ...locations);
+    const fixture = makeGame({ gametype: GT.TEAM, entities });
+    ['A', 'B', 'C', 'D'].forEach((name, i) => join(fixture, i, `\\name\\${name}`));
+    putOnTeam(fixture, 0, TEAM.RED);
+    putOnTeam(fixture, 1, TEAM.RED);
+    putOnTeam(fixture, 2, TEAM.BLUE);
+    putOnTeam(fixture, 3, TEAM.SPECTATOR);
+    // `target_location_linkup` runs 200 ms in.
+    fixture.game.runFrame(1000);
+    fixture.game.level.gentities[0].r.currentOrigin = vec3();
+    fixture.traps.commands.length = 0;
+    fixture.traps.prints.length = 0;
+    return fixture;
+  }
+
+  it("says a line to everyone who has begun, in green, as G_Say's chat (g_cmds.c:871–929)", () => {
+    const fixture = threeIn();
+    // A bot's entity is in use from its connect, before it has begun.
+    fixture.traps.userinfos.set(3, '\\name\\Grunt');
+    fixture.game.clientConnect(3, true, true);
+    expect(fixture.game.level.gentities[3].inuse).toBe(true);
+
+    fixture.game.clientCommand(0, 'say hello  there');
+
+    const line = 'chat "A^7\x19: ^2hello there"';
+    expect(chat(fixture)).toEqual([0, 1, 2].map((to) => ({ to, text: line })));
+  });
+
+  it('says nothing for a say with no words, and an empty line for an empty one', () => {
+    const fixture = threeIn();
+
+    fixture.game.clientCommand(0, 'say');
+    expect(chat(fixture)).toEqual([]);
+
+    fixture.game.clientCommand(0, 'SAY ""');
+    expect(chat(fixture).map((line) => line.text)).toEqual(Array(3).fill('chat "A^7\x19: ^2"'));
+  });
+
+  it('joins the words by single spaces, a quoted one whole, its line breaks made spaces', () => {
+    const fixture = threeIn();
+
+    fixture.game.clientCommand(0, 'say "two  spaces" and\t"a\nbreak\rhere"');
+
+    expect(chat(fixture)[0].text).toBe('chat "A^7\x19: ^2two  spaces and a break here"');
+  });
+
+  it('cuts what was said to 149 characters (MAX_SAY_TEXT)', () => {
+    const fixture = threeIn();
+
+    fixture.game.clientCommand(0, `say ${'x'.repeat(100)} ${'y'.repeat(100)}`);
+
+    const said = `${'x'.repeat(100)} ${'y'.repeat(48)}`;
+    expect(said).toHaveLength(149);
+    expect(chat(fixture)[0].text).toBe(`chat "A^7\x19: ^2${said}"`);
+  });
+
+  it('stops ConcatArgs before a word that would fill MAX_STRING_CHARS (g_cmds.c:134–159)', () => {
+    const fixture = atIntermission();
+
+    // At the intermission the whole command is said, so a command of one 1,023-byte word says
+    // nothing, and one ending in such a word says the words before it, the space left on.
+    fixture.traps.commands.length = 0;
+    fixture.game.clientCommand(0, 'z'.repeat(1023));
+    fixture.game.clientCommand(0, `a ${'z'.repeat(1021)}`);
+
+    expect(chat(fixture).map((line) => line.text)).toEqual([
+      'chat "Sarge^7\x19: ^2"',
+      'chat "Sarge^7\x19: ^2a "'
+    ]);
+  });
+
+  it('prints a line said to everyone on the console where no client runs beside the server', () => {
+    const dedicated = threeIn({ cl_running: '0' });
+    dedicated.game.clientCommand(0, 'say hello');
+    dedicated.game.clientCommand(0, 'say_team hi');
+    dedicated.game.clientCommand(0, 'tell 1 psst');
+    // `G_Printf( "%s%s\n", name, text )`: the marks as they are, and the text without its colour.
+    expect(dedicated.traps.prints).toEqual(['A^7\x19: hello\n', 'A^7\x19: hi\n']);
+
+    // The page's server, whose player is printed the line by cgame.
+    const page = threeIn({ cl_running: '1', dedicated: '1' });
+    page.game.clientCommand(0, 'say hello');
+    expect(page.traps.prints).toEqual([]);
+  });
+
+  it('says a team line to everyone below a team game, as plain chat', () => {
+    const fixture = threeIn();
+
+    fixture.game.clientCommand(0, 'say_team hi');
+
+    expect(chat(fixture)).toEqual([0, 1, 2].map((to) => ({ to, text: 'chat "A^7\x19: ^2hi"' })));
+  });
+
+  it("says a team line to the speaker's team alone, in cyan, as tchat (OnSameTeam)", () => {
+    const fixture = teamGame();
+
+    fixture.game.clientCommand(0, 'say_team hi');
+    // A spectator's team is the spectators.
+    fixture.game.clientCommand(3, 'say_team hey');
+
+    expect(chat(fixture)).toEqual([
+      { to: 0, text: 'tchat "\x19(A^7\x19)\x19: ^5hi"' },
+      { to: 1, text: 'tchat "\x19(A^7\x19)\x19: ^5hi"' },
+      { to: 3, text: 'tchat "\x19(D^7\x19)\x19: ^5hey"' }
+    ]);
+  });
+
+  it("says where the speaker is: the nearest location in their PVS (Team_GetLocation)", () => {
+    const fixture = teamGame(
+      location(vec3(100, 0, 0), 'Rail'),
+      location(vec3(50, 0, 0), 'Hidden'),
+      location(vec3(300, 0, 0), 'Far')
+    );
+    fixture.traps.inPVS = (_p1, p2) => p2.x !== 50;
+
+    fixture.game.clientCommand(0, 'say_team hi');
+
+    expect(chat(fixture)[0].text).toBe('tchat "\x19(A^7\x19) (Rail)\x19: ^5hi"');
+  });
+
+  it('names the first of two locations as near, as the chain walks back to it', () => {
+    const fixture = teamGame(
+      location(vec3(0, 100, 0), 'First'),
+      location(vec3(0, -100, 0), 'Second')
+    );
+
+    fixture.game.clientCommand(0, 'say_team hi');
+
+    expect(chat(fixture)[0].text).toBe('tchat "\x19(A^7\x19) (First)\x19: ^5hi"');
+  });
+
+  it("colours a location by its count, held to 0–7 once it isn't 0 (Team_GetLocationMsg)", () => {
+    const said = (count: number) => {
+      const fixture = teamGame(location(vec3(100, 0, 0), 'Rail', count));
+      fixture.game.clientCommand(0, 'say_team hi');
+      return chat(fixture)[0].text;
+    };
+
+    expect(said(3)).toBe('tchat "\x19(A^7\x19) (^3Rail^7)\x19: ^5hi"');
+    expect(said(12)).toBe('tchat "\x19(A^7\x19) (^7Rail^7)\x19: ^5hi"');
+    // Found non-zero before it is held, so a negative count is black.
+    expect(said(-2)).toBe('tchat "\x19(A^7\x19) (^0Rail^7)\x19: ^5hi"');
+  });
+
+  it('names a location with no message as nothing, as its configstring does', () => {
+    const fixture = teamGame({ classname: 'target_location', origin: '100 0 0' });
+
+    fixture.game.clientCommand(0, 'say_team hi');
+
+    expect(chat(fixture)[0].text).toBe('tchat "\x19(A^7\x19) ()\x19: ^5hi"');
+  });
+
+  it('says no location before the locations link, or where none is in sight', () => {
+    const early = makeGame({
+      gametype: GT.TEAM,
+      entities: mapOf(spawnSpot(vec3()), location(vec3(100, 0, 0), 'Rail'))
+    });
+    join(early, 0, '\\name\\A');
+    putOnTeam(early, 0, TEAM.RED);
+    early.game.clientCommand(0, 'say_team hi');
+    expect(chat(early)[0].text).toBe('tchat "\x19(A^7\x19)\x19: ^5hi"');
+
+    const unseen = teamGame(location(vec3(100, 0, 0), 'Rail'));
+    unseen.traps.sees = false;
+    unseen.game.clientCommand(0, 'say_team hi');
+    expect(chat(unseen)[0].text).toBe('tchat "\x19(A^7\x19)\x19: ^5hi"');
+  });
+
+  it('cuts the name and the location to 63 bytes as Com_sprintf does, and says so', () => {
+    /** What A's team line puts on the console and sends, by its location's length. */
+    const said = (length: number) => {
+      const fixture = teamGame(location(vec3(100, 0, 0), 'L'.repeat(length)));
+      fixture.game.clientCommand(0, 'say_team hi');
+      return { prints: fixture.traps.prints, line: chat(fixture)[0].text };
+    };
+    /** A's name part around a location: 13 bytes and the location. */
+    const nameAround = (loc: string) => `\x19(A^7\x19) (${loc})\x19: `;
+
+    // The location first, into its own 64 bytes, then the name around it, then the echo.
+    const cut = nameAround('L'.repeat(63)).slice(0, 63);
+    expect(said(64)).toEqual({
+      prints: [
+        'Com_sprintf: Output length 64 too short, require 65 bytes.\n',
+        'Com_sprintf: Output length 64 too short, require 77 bytes.\n',
+        `${cut}hi\n`
+      ],
+      line: `tchat "${cut}^5hi"`
+    });
+
+    // A location of 51 bytes makes a name of 64, one too many; one of 50 fits.
+    expect(said(51).prints[0]).toBe('Com_sprintf: Output length 64 too short, require 65 bytes.\n');
+    expect(said(51).line).toBe(`tchat "${nameAround('L'.repeat(51)).slice(0, 63)}^5hi"`);
+    expect(said(50)).toEqual({
+      prints: [`${nameAround('L'.repeat(50))}hi\n`],
+      line: `tchat "${nameAround('L'.repeat(50))}^5hi"`
+    });
+  });
+
+  it("lets a free-for-all's onlookers chat to its players", () => {
+    const fixture = threeIn();
+    putOnTeam(fixture, 2, TEAM.SPECTATOR);
+
+    fixture.game.clientCommand(2, 'say hi');
+
+    expect(chat(fixture).map((line) => line.to)).toEqual([0, 1, 2]);
+  });
+
+  it("keeps a tournament's onlookers from chatting to its players", () => {
+    const duel = makeGame({ gametype: GT.TOURNAMENT });
+    join(duel, 0, '\\name\\A');
+    join(duel, 1, '\\name\\B');
+    join(duel, 2, '\\name\\C');
+    join(duel, 3, '\\name\\D');
+    putOnTeam(duel, 0, TEAM.FREE);
+    putOnTeam(duel, 1, TEAM.FREE);
+    putOnTeam(duel, 2, TEAM.SPECTATOR);
+    putOnTeam(duel, 3, TEAM.SPECTATOR);
+    duel.traps.commands.length = 0;
+
+    duel.game.clientCommand(2, 'say hi');
+    duel.game.clientCommand(0, 'say gg');
+
+    expect(chat(duel)).toEqual([
+      { to: 2, text: 'chat "C^7\x19: ^2hi"' },
+      { to: 3, text: 'chat "C^7\x19: ^2hi"' },
+      ...[0, 1, 2, 3].map((to) => ({ to, text: 'chat "A^7\x19: ^2gg"' }))
+    ]);
+  });
+
+  it('tells a slot in magenta, and the teller their own line (Cmd_Tell_f, g_cmds.c:973)', () => {
+    const fixture = threeIn();
+
+    fixture.game.clientCommand(0, 'tell 2 meet  at "the\nrail"');
+
+    const line = 'chat "\x19[A^7\x19]\x19: ^6meet at the rail"';
+    expect(chat(fixture)).toEqual([
+      { to: 2, text: line },
+      { to: 0, text: line }
+    ]);
+  });
+
+  it('tells a name, its colours and case aside, and says so when nobody answers to it', () => {
+    const fixture = threeIn();
+    fixture.traps.userinfos.set(1, '\\name\\^1Bo^2nes');
+    fixture.game.clientUserinfoChanged(1);
+    fixture.traps.commands.length = 0;
+
+    fixture.game.clientCommand(0, 'tell bones hi');
+    fixture.game.clientCommand(0, 'tell Doom hi');
+
+    expect(fixture.traps.commands.filter((command) => command.to === 1)).toEqual([
+      { to: 1, text: 'chat "\x19[A^7\x19]\x19: ^6hi"' }
+    ]);
+    expect(prints(fixture)).toContain('print "User Doom is not on the server\n"');
+  });
+
+  it('gives the usage for a tell with no text, and tells oneself once', () => {
+    const fixture = threeIn();
+
+    fixture.game.clientCommand(0, 'tell 1');
+    fixture.game.clientCommand(0, 'tell 0 note');
+
+    expect(fixture.traps.commands).toEqual([
+      { to: 0, text: 'print "Usage: tell <player id> <message>\n"' },
+      { to: 0, text: 'chat "\x19[A^7\x19]\x19: ^6note"' }
+    ]);
+  });
+
+  it('sends a bot no copy of its own tell', () => {
+    const fixture = threeIn();
+    joinBot(fixture, 3);
+    fixture.traps.commands.length = 0;
+
+    fixture.game.clientCommand(3, 'tell 0 hi');
+
+    expect(chat(fixture)).toEqual([{ to: 0, text: 'chat "\x19[Grunt^7\x19]\x19: ^6hi"' }]);
+  });
+
+  it('says no location in a tell below a team game', () => {
+    const entities = mapOf(spawnSpot(vec3()), location(vec3(100, 0, 0), 'Rail'));
+    const fixture = makeGame({ entities });
+    join(fixture, 0, '\\name\\A');
+    join(fixture, 1, '\\name\\B');
+    fixture.game.runFrame(1000);
+    fixture.traps.commands.length = 0;
+
+    fixture.game.clientCommand(0, 'tell 1 hi');
+
+    expect(chat(fixture)[0].text).toBe('chat "\x19[A^7\x19]\x19: ^6hi"');
+  });
+
+  it('says where the teller is to a teammate alone, and to the teller', () => {
+    const fixture = teamGame(location(vec3(100, 0, 0), 'Rail'));
+
+    fixture.game.clientCommand(0, 'tell 1 here');
+    fixture.game.clientCommand(0, 'tell 2 there');
+
+    expect(chat(fixture)).toEqual([
+      { to: 1, text: 'chat "\x19[A^7\x19] (Rail)\x19: ^6here"' },
+      { to: 0, text: 'chat "\x19[A^7\x19] (Rail)\x19: ^6here"' },
+      { to: 2, text: 'chat "\x19[A^7\x19]\x19: ^6there"' },
+      // The teller's own copy is a tell to a teammate.
+      { to: 0, text: 'chat "\x19[A^7\x19] (Rail)\x19: ^6there"' }
+    ]);
+  });
+
+  it("keeps a tournament onlooker's tell from its players, but not their own copy", () => {
+    const duel = makeGame({ gametype: GT.TOURNAMENT });
+    join(duel, 0, '\\name\\A');
+    join(duel, 1, '\\name\\B');
+    join(duel, 2, '\\name\\C');
+    putOnTeam(duel, 2, TEAM.SPECTATOR);
+    duel.traps.commands.length = 0;
+
+    duel.game.clientCommand(2, 'tell 0 hi');
+
+    expect(chat(duel)).toEqual([{ to: 2, text: 'chat "\x19[C^7\x19]\x19: ^6hi"' }]);
+  });
+
+  it('chats at the intermission, and says any other command there to everyone', () => {
+    const fixture = atIntermission(2);
+    fixture.traps.commands.length = 0;
+
+    fixture.game.clientCommand(0, 'say_team well played');
+    fixture.game.clientCommand(1, 'kill');
+
+    expect(chat(fixture).map((line) => line.text)).toEqual([
+      'chat "Sarge^7\x19: ^2well played"',
+      'chat "Sarge^7\x19: ^2well played"',
+      'chat "Sarge^7\x19: ^2kill"',
+      'chat "Sarge^7\x19: ^2kill"'
+    ]);
+    expect(fixture.game.level.clients[1].ps.stats[STAT.HEALTH]).toBeGreaterThan(0);
   });
 });

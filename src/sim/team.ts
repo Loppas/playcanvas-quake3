@@ -17,7 +17,7 @@ import { respawnItem } from './item-touch';
 import { PW } from './items';
 import type { Level } from './level';
 import { tempEntity } from './temp-entity';
-import { length, sub, type Vec3 } from './vec3';
+import { length, lengthSquared, sub, type Vec3 } from './vec3';
 
 /**
  * The two sides and the flags they fight over: `g_team.c`.
@@ -230,6 +230,56 @@ export function onSameTeam(gametype: number, ent1: GameEntity, ent2: GameEntity)
   if (!ent1.client || !ent2.client) return false;
   if (gametype < GT.TEAM) return false;
   return ent1.client.sess.sessionTeam === ent2.client.sess.sessionTeam;
+}
+
+/**
+ * `Team_GetLocation` (`g_team.c:897–929`): the `target_location` nearest a player that their PVS
+ * holds, or null. The chain is walked from its head, and a later one wins a tie.
+ *
+ * @param level - The match, whose locations are walked.
+ * @param ent - The player.
+ */
+function teamGetLocation(level: Level, ent: GameEntity): GameEntity | null {
+  const origin = ent.r.currentOrigin;
+  let best: GameEntity | null = null;
+  let bestlen = 3 * 8192 * 8192;
+  for (let eloc = level.locationHead; eloc; eloc = eloc.nextTrain) {
+    const len = lengthSquared(sub(origin, eloc.r.currentOrigin));
+    if (len > bestlen) continue;
+    if (!level.inPVS(origin, eloc.r.currentOrigin)) continue;
+    bestlen = len;
+    best = eloc;
+  }
+  return best;
+}
+
+/**
+ * `Team_GetLocationMsg` (`g_team.c:936–958`): what team chat calls the place a player is, or null
+ * where no location is near.
+ *
+ * A non-zero `count` colours it, held to 0–7 only once it was found non-zero, so a negative one
+ * colours it black; white follows. It is written into a buffer of `size` bytes as `Com_sprintf`
+ * writes, cut to fit with its complaint on the console.
+ *
+ * @param level - The match, whose locations are walked.
+ * @param ent - The player.
+ * @param size - The buffer's size, NUL and all.
+ * @param print - Where `Com_Printf` goes.
+ */
+export function teamGetLocationMsg(
+  level: Level,
+  ent: GameEntity,
+  size: number,
+  print: (text: string) => void
+): string | null {
+  const best = teamGetLocation(level, ent);
+  if (!best) return null;
+
+  const message = best.message ?? '';
+  const loc = best.count ? `^${Math.min(Math.max(best.count, 0), 7)}${message}^7` : message;
+  if (loc.length < size) return loc;
+  print(`Com_sprintf: Output length ${size} too short, require ${loc.length + 1} bytes.\n`);
+  return loc.slice(0, size - 1);
 }
 
 /**

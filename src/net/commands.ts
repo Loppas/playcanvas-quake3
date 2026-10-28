@@ -161,3 +161,15 @@ export const CONFIGSTRING = {
  * clear past those.
  */
 export const MAX_MAP_AREA_BYTES = 32;
+
+/**
+ * `MAX_SAY_TEXT` (`q_shared.h:256`): a chat line's buffer, NUL and all. The game cuts what was said
+ * to it, and cgame the whole line it is sent.
+ */
+export const MAX_SAY_TEXT = 150;
+
+/**
+ * `EC` (`g_cmds.c:869`): the byte the game sets around a chat line's name and before its colon,
+ * which cgame takes out before printing the line (`CG_RemoveChatEscapeChar`).
+ */
+export const CHAT_ESCAPE = '\x19';

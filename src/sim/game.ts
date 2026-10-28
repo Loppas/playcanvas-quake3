@@ -1,7 +1,8 @@
-import { CONFIGSTRING, MAX_MODELS, MAX_SOUNDS } from '../net/commands';
+import { CHAT_ESCAPE, CONFIGSTRING, MAX_MODELS, MAX_SAY_TEXT, MAX_SOUNDS } from '../net/commands';
 import type { CvarStore } from '../net/cvar';
 import { copyPlayerState } from '../net/delta';
 import { infoValidate, infoValueForKey } from '../net/info';
+import { MAX_STRING_CHARS } from '../net/msg';
 import {
   createNetUserCmd,
   createPlayerState,
@@ -99,7 +100,7 @@ import { RULE_CVARS, RuleCvars } from './rules';
 import { smoothClient } from './smooth-clients';
 import { findTeams, pickTarget, useTargets } from './targets';
 import { sendPendingPredictableEvents, tempEntity } from './temp-entity';
-import { initTeamGame, pickupTeam } from './team';
+import { initTeamGame, onSameTeam, pickupTeam, teamGetLocationMsg } from './team';
 import { killBox, TELEFRAG_DAMAGE, teleportPlayer } from './teleport';
 import { clientImpacts, touchTriggers } from './triggers';
 import { playerBounds, type PointContentsFn, type TraceFn } from './types';
@@ -295,6 +296,37 @@ export function isGameCommand(name: string | undefined): boolean {
  */
 export function grappleMode(type: number): GrappleMode | null {
   return GRAPPLE_TYPES[type]?.mode ?? null;
+}
+
+/** `SAY_*` (`q_shared.h:1414–1416`): to everyone, to the team, or to one player. */
+const SAY = { ALL: 0, TEAM: 1, TELL: 2 } as const;
+
+/** `EC`, as `G_Say`'s formats spell it. */
+const EC = CHAT_ESCAPE;
+
+/** `G_Say`'s `name[64]` and `location[64]`, NUL and all. */
+const SAY_BUFFER = 64;
+
+/**
+ * `ConcatArgs` (`g_cmds.c:134–159`): the arguments from `start` on, joined by single spaces, up to
+ * the first that would fill `MAX_STRING_CHARS`, which leaves the space before it.
+ *
+ * @param argv - The command, tokenized.
+ * @param start - The first argument joined.
+ */
+function concatArgs(argv: readonly string[], start: number): string {
+  let line = '';
+  for (let i = start; i < argv.length; i++) {
+    if (line.length + argv[i].length >= MAX_STRING_CHARS - 1) break;
+    line += argv[i];
+    if (i !== argv.length - 1) line += ' ';
+  }
+  return line;
+}
+
+/** `SanitizeChatText` (`g_cmds.c:931–939`): what was said, its line breaks made spaces. */
+function sanitizeChatText(text: string): string {
+  return text.replaceAll(/[\n\r]/g, ' ');
 }
 
 export class Game implements GameModule {
@@ -833,15 +865,15 @@ export class Game implements GameModule {
   }
 
   /**
-   * `ClientCommand` (`g_cmds.c:1709–1822`), for the client commands the game module answers:
-   * `score`, which asks for the board (`Cmd_Score_f`, `:105–107`), then `kill`, `team` and the
-   * follow commands. Any other is answered as one it doesn't know. A command's name is matched
+   * `ClientCommand` (`g_cmds.c:1709–1822`), for the client commands the game module answers: the
+   * chat, `score`, which asks for the board (`Cmd_Score_f`, `:105–107`), then `kill`, `team` and
+   * the follow commands. Any other is answered as one it doesn't know. A command's name is matched
    * without regard to case, as `Q_stricmp` matches it.
    *
    * "Not fully in game yet" clients are passed over, as Q3 passes them (`:1714–1724`): a client
-   * that has connected but not begun has no board to be shown. At the intermission the board is
-   * all that is answered (`:1776–1780`); Quake 3 says any other command as chat, which the port
-   * has none of.
+   * that has connected but not begun has no board to be shown. The chat and the board are
+   * answered at the intermission too, and any other command is said there as chat, its name and
+   * all (`:1776–1780`).
    *
    * @param clientNum - Which client sent it.
    * @param command - The command, as it arrived.
@@ -852,11 +884,24 @@ export class Game implements GameModule {
     const entity = this.level.gentities[clientNum];
     const argv = tokenize(command);
     const name = argv[0]?.toLowerCase();
-    if (name === 'score') {
-      this.sendScoreboard(clientNum);
+    switch (name) {
+      case 'say':
+        this.cmdSay(entity, argv, SAY.ALL, false);
+        return;
+      case 'say_team':
+        this.cmdSay(entity, argv, SAY.TEAM, false);
+        return;
+      case 'tell':
+        this.cmdTell(entity, argv);
+        return;
+      case 'score':
+        this.sendScoreboard(clientNum);
+        return;
+    }
+    if (this.level.intermissiontime) {
+      this.cmdSay(entity, argv, SAY.ALL, true);
       return;
     }
-    if (this.level.intermissiontime) return;
 
     switch (name) {
       case 'kill':
@@ -1554,7 +1599,7 @@ export class Game implements GameModule {
   }
 
   /**
-   * `ClientNumberFromString` (`g_cmds.c:44–80`), with Quake 3's two ways of naming a client: the
+   * `ClientNumberFromString` (`g_cmds.c:195–229`), with Quake 3's two ways of naming a client: the
    * slot number, and the name with its colours taken off.
    *
    * @param to - Who asked, and who is told when nobody answers.
@@ -1577,6 +1622,150 @@ export class Game implements GameModule {
 
     this.traps.sendServerCommand(to, `print "User ${name} is not on the server\n"`);
     return -1;
+  }
+
+  /**
+   * `Cmd_Say_f` (`g_cmds.c:947–966`): `say` and `say_team`, the words after the command, or nothing
+   * for none. At the intermission any other command is said this way, its name first.
+   *
+   * @param entity - The speaker's entity.
+   * @param argv - The command, tokenized.
+   * @param mode - One of {@link SAY}.
+   * @param arg0 - Whether the command's name is said too.
+   */
+  private cmdSay(entity: GameEntity, argv: readonly string[], mode: number, arg0: boolean): void {
+    if (argv.length < 2 && !arg0) return;
+    this.say(entity, null, mode, sanitizeChatText(concatArgs(argv, arg0 ? 0 : 1)));
+  }
+
+  /**
+   * `Cmd_Tell_f` (`g_cmds.c:973–1006`): `tell`, to a slot or a name as
+   * {@link clientNumberFromString} reads one. The teller is sent their own line too, unless they
+   * told themselves or are a bot.
+   *
+   * @param entity - The teller's entity.
+   * @param argv - The command, tokenized.
+   */
+  private cmdTell(entity: GameEntity, argv: readonly string[]): void {
+    const clientNum = entity.s.number;
+    if (argv.length < 3) {
+      this.traps.sendServerCommand(clientNum, 'print "Usage: tell <player id> <message>\n"');
+      return;
+    }
+
+    const targetNum = this.clientNumberFromString(clientNum, argv[1]);
+    if (targetNum === -1) return;
+    const target = this.level.gentities[targetNum];
+    if (!target.inuse || !target.client) return;
+
+    const text = sanitizeChatText(concatArgs(argv, 2));
+    this.say(entity, target, SAY.TELL, text);
+    if (entity !== target && !(entity.r.svFlags & SVF.BOT)) {
+      this.say(entity, entity, SAY.TELL, text);
+    }
+  }
+
+  /**
+   * `G_Say` (`g_cmds.c:871–929`): a line said, to one player or to everyone it reaches.
+   *
+   * The line is the speaker's name, in brackets for a team line or a tell, with where they are for
+   * a team line or a tell between teammates, then the text in the mode's colour. Below a team game
+   * a team line is said to everyone. The name and the location are written as `Com_sprintf` writes
+   * them into {@link SAY_BUFFER} bytes, and the text is cut to {@link MAX_SAY_TEXT}.
+   *
+   * A line to everyone is printed on the console too where no client plays beside the server,
+   * which is what Quake 3 tells by `dedicated`. The page's `dedicated` says only how its game is
+   * listed, and its own player is printed the line by cgame.
+   *
+   * @param entity - The speaker's entity.
+   * @param target - The one player told, or null for everyone.
+   * @param mode - One of {@link SAY}.
+   * @param chatText - What was said.
+   */
+  private say(entity: GameEntity, target: GameEntity | null, mode: number, chatText: string): void {
+    const sender = entity.client!;
+    const netname = sender.pers.netname;
+    const print = (text: string) => this.traps.print(text);
+    if (this.gametype < GT.TEAM && mode === SAY.TEAM) mode = SAY.ALL;
+
+    let name: string;
+    let color: number;
+    if (mode === SAY.TEAM) {
+      const location = teamGetLocationMsg(this.level, entity, SAY_BUFFER, print);
+      name =
+        location === null
+          ? `${EC}(${netname}^7${EC})${EC}: `
+          : `${EC}(${netname}^7${EC}) (${location})${EC}: `;
+      color = 5;
+    } else if (mode === SAY.TELL) {
+      const teammate =
+        target !== null &&
+        target.inuse &&
+        target.client !== null &&
+        this.gametype >= GT.TEAM &&
+        target.client.sess.sessionTeam === sender.sess.sessionTeam;
+      const location = teammate ? teamGetLocationMsg(this.level, entity, SAY_BUFFER, print) : null;
+      name =
+        location === null
+          ? `${EC}[${netname}^7${EC}]${EC}: `
+          : `${EC}[${netname}^7${EC}] (${location})${EC}: `;
+      color = 6;
+    } else {
+      name = `${netname}^7${EC}: `;
+      color = 2;
+    }
+    if (name.length >= SAY_BUFFER) {
+      print(
+        `Com_sprintf: Output length ${SAY_BUFFER} too short, require ${name.length + 1} bytes.\n`
+      );
+      name = name.slice(0, SAY_BUFFER - 1);
+    }
+    const text = chatText.slice(0, MAX_SAY_TEXT - 1);
+
+    if (target) {
+      this.sayTo(entity, target, mode, color, name, text);
+      return;
+    }
+
+    if (this.cvarInt('cl_running') === 0) print(`${name}${text}\n`);
+    for (let i = 0; i < this.maxclients; i++) {
+      this.sayTo(entity, this.level.gentities[i], mode, color, name, text);
+    }
+  }
+
+  /**
+   * `G_SayTo` (`g_cmds.c:841–867`): a line to one player, as `chat`, or `tchat` for a team line.
+   * Nobody is sent it before they have begun, a team line goes to the speaker's team alone, and
+   * "no chatting to players in tournements" from anyone not playing.
+   *
+   * @param entity - The speaker's entity.
+   * @param other - The player it goes to.
+   * @param mode - One of {@link SAY}.
+   * @param color - The text's colour code.
+   * @param name - The line before the text.
+   * @param message - The text.
+   */
+  private sayTo(
+    entity: GameEntity,
+    other: GameEntity,
+    mode: number,
+    color: number,
+    name: string,
+    message: string
+  ): void {
+    if (!other.inuse || !other.client) return;
+    if (other.client.pers.connected !== CON.CONNECTED) return;
+    if (mode === SAY.TEAM && !onSameTeam(this.gametype, entity, other)) return;
+    if (
+      this.gametype === GT.TOURNAMENT &&
+      other.client.sess.sessionTeam === TEAM.FREE &&
+      entity.client!.sess.sessionTeam !== TEAM.FREE
+    ) {
+      return;
+    }
+
+    const command = mode === SAY.TEAM ? 'tchat' : 'chat';
+    this.traps.sendServerCommand(other.s.number, `${command} "${name}^${color}${message}"`);
   }
 
   /**
