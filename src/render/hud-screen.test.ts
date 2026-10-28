@@ -168,7 +168,7 @@ interface Quad {
 function printed(text: string): NotifyRow[] {
   const buffer = new ConsoleBuffer();
   buffer.print(text, 1000);
-  return notifyRows(buffer, { notifyLines: 3, notifyTime: 3, conXOffset: 0 }, 1000, false);
+  return notifyRows(buffer, { notifyLines: 3, notifyTime: 3, conXOffset: 0, conScale: 1 }, 1000, false);
 }
 
 describe('HudScreen', () => {

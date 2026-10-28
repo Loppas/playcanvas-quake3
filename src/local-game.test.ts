@@ -1142,3 +1142,29 @@ describe('LocalGame: a server elsewhere', () => {
     expect(slot.state).toBe(CS.ZOMBIE);
   });
 });
+
+describe("LocalGame: the client's CL_MapLoading", () => {
+  it('runs the rest of it at the first map and at each map the server starts, not at a restart', () => {
+    const program = slowMaps(['backyard']);
+    let loads = 0;
+    const cvars = new Cvars({ debugMode: true, print: () => {} });
+    const game = new LocalGame({
+      cvars,
+      map: flatMap('garage', 0),
+      maps: program.maps,
+      mapLoading: () => loads++,
+      random: () => 0
+    });
+    expect(loads).toBe(1);
+    for (let i = 0; i < 5; i++) game.tick(still());
+
+    // `SV_MapRestart_f` keeps the map, and no `SV_SpawnServer` runs.
+    game.consoleCommand('map_restart 0\n');
+    for (let i = 0; i < 5; i++) game.tick(still());
+    expect(loads).toBe(1);
+
+    game.host.sendConsoleCommand('map backyard\n');
+    game.tick(still());
+    expect(loads).toBe(2);
+  });
+});

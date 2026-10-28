@@ -59,6 +59,8 @@ describe('the settings registry', () => {
       notifyTime: 3,
       notifyLines: 3,
       conXOffset: 0,
+      conSpeed: 3,
+      conScale: 1,
       gametype: 0,
       fragLimit: 20,
       timeLimit: 0,
@@ -191,6 +193,8 @@ describe('the settings registry', () => {
       notifyTime: 'con_notifytime',
       notifyLines: 'con_notifylines',
       conXOffset: 'cl_conXOffset',
+      conSpeed: 'scr_conspeed',
+      conScale: 'con_scale',
       gametype: 'g_gametype',
       fragLimit: 'fraglimit',
       timeLimit: 'timelimit',
@@ -358,6 +362,8 @@ describe('the settings registry', () => {
         'notifyTime',
         'notifyLines',
         'conXOffset',
+        'conSpeed',
+        'conScale',
         'dedicated',
         'hostname',
         'master1',
@@ -636,6 +642,12 @@ describe('reading a setting from a string', () => {
 
   it('takes con_notifytime as any number of seconds', () => {
     expect(read('notifyTime', '0.5')).toEqual({ value: 0.5 });
+  });
+
+  it('clamps con_scale to 1–4, as Cvar_CheckRange does, and takes a fraction', () => {
+    expect(read('conScale', '0.5')).toEqual({ value: 1 });
+    expect(read('conScale', '1.5')).toEqual({ value: 1.5 });
+    expect(read('conScale', '5')).toEqual({ value: 4 });
   });
 
   it('refuses a grapple type or speedometer that does not exist, and armor below 0', () => {

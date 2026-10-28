@@ -777,7 +777,7 @@ describe('drawNotify', () => {
   function printed(text: string) {
     const buffer = new ConsoleBuffer();
     buffer.print(text, 1000);
-    return notifyRows(buffer, { notifyLines: 3, notifyTime: 3, conXOffset: 0 }, 1000, false);
+    return notifyRows(buffer, { notifyLines: 3, notifyTime: 3, conXOffset: 0, conScale: 1 }, 1000, false);
   }
 
   /** The notify lines written at a scale. */
@@ -806,6 +806,16 @@ describe('drawNotify', () => {
     expect(pics[5].color).toEqual([1, 1, 1, 1]);
     // 'S' is 83: row 5, column 3.
     expect(pics[0].st).toEqual([3 / 16, 5 / 16, 4 / 16, 6 / 16]);
+  });
+
+  it('writes each character at the size its row gives, which con_scale sets', () => {
+    const buffer = new ConsoleBuffer();
+    buffer.print('ab\ncd\n', 1000);
+    const rows = notifyRows(buffer, { notifyLines: 3, notifyTime: 3, conXOffset: 0, conScale: 2 }, 1000, false);
+    const pics: Written[] = [];
+    drawNotify(rows, SCALE, art(), writer(pics));
+    expect(placed(pics.slice(0, 1))).toEqual([[CHARSET_SHADER, [16 / SCALE, 0, 16 / SCALE, 32 / SCALE], 'left']]);
+    expect(pics[2].rect[1]).toBe(32 / SCALE);
   });
 
   it('writes nothing with no lines', () => {

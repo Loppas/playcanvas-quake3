@@ -1,5 +1,9 @@
+import { PRODUCT_NAME } from './formats/q3config';
 import { GAMENAME } from './net/net';
 import { inShell } from './shell';
+
+/** `Q3_VERSION` (`q_shared.h:75`): the port's name and its version, which the console draws. */
+export const Q3_VERSION = `${PRODUCT_NAME} ${__PRODUCT_VERSION__}`;
 
 /**
  * `PLATFORM_STRING` (`q_platform.h:416–420`): what the port is running in. Quake 3's is the system

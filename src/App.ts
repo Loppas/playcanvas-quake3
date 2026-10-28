@@ -69,6 +69,7 @@ import { BOT_LIST, BOTS_FILE, MAX_BOTS, MAX_BOTS_TEXT } from './sim/bots';
 import { PlayerController, cameraPose, type CameraPose } from './player-controller';
 import { deviceTypes } from './render/backend';
 import { BspWorld, type BspWorldOptions } from './render/bsp-world';
+import { ConsoleScreen } from './render/console-screen';
 import { DebugPlayer } from './render/debug-player';
 import { GibEffects } from './render/gib-effects';
 import { HudIcons } from './render/hud-icons';
@@ -77,6 +78,7 @@ import { HyperspaceScreen } from './render/hyperspace-screen';
 import { SceneDraws } from './render/scene-draws';
 import { Levelshots } from './render/levelshots';
 import { LoadPanelScreen } from './render/load-panel-screen';
+import { createMenuFont, MONO_FACE } from './render/menu-font';
 import { MenuIcons } from './render/menu-icons';
 import { MenuScreen } from './render/menu-screen';
 import { guardMeshInstanceStorage } from './render/mesh-instance-storage';
@@ -147,7 +149,7 @@ import { setSunDirection } from './view/entity-light';
 import { sceneStyle } from './view/overbright';
 import { Explosions } from './view/explosions';
 import { horizontalFov, verticalFov } from './view/fov';
-import { SMALLCHAR_WIDTH } from './view/hud-text';
+import { smallCharWidth } from './view/hud-text';
 import { LocalEntities } from './view/local-entities';
 import { flagTrails } from './view/flag-trail';
 import { readFlagStatus } from './view/flag-status';
@@ -466,8 +468,12 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     toneMapping: TONEMAP_LINEAR
   });
   app.root.addChild(camera);
+  // The page's monospace face, which the load and connect screens and the console draw in.
+  const monoFont = createMenuFont(app, { face: MONO_FACE });
   // The load and connect screens, drawn from the first frame: the boot's is up already.
-  const loadPanel = new LoadPanelScreen(app, setup.screens, camera);
+  const loadPanel = new LoadPanelScreen(app, setup.screens, camera, { font: monoFont });
+  // The console, drawn over them, out of sight until `toggleconsole` drops it.
+  const consoleScreen = new ConsoleScreen(app, camera, consoleText, settings, { font: monoFont });
   /** The screen's aspect, which an automatic aspect ratio resolves against. */
   const screenAspect = () => {
     const { width, height } = app.graphicsDevice;
@@ -512,6 +518,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     detachOverlayToggle();
     destroyDriver();
     loadPanel.destroy();
+    consoleScreen.destroy();
+    monoFont.destroy();
   });
 
   // Start before loading: the SOG handler finishes its work (codebook prep, texture uploads)
@@ -897,6 +905,11 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   });
   commands.add('vid_restart', () => host.vidRestart());
   commands.add('clear', () => consoleText.clear());
+  // `Con_ToggleConsole_f` (`cl_console.c:73–90`).
+  commands.add('toggleconsole', () => {
+    consoleText.clearNotify();
+    input.setCatcher(input.catchers ^ KEYCATCH.CONSOLE);
+  });
   addCondump(commands, {
     consoleText,
     dumps: setup.dumps,
@@ -1056,6 +1069,12 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       return { name, trace: world.trace };
     }
   };
+  /** `Con_Close` (`cl_console.c:856–865`): the console gone at once, and its keys with it. */
+  const closeConsole = () => {
+    consoleText.clearNotify();
+    input.setCatcher(input.catchers & ~KEYCATCH.CONSOLE);
+    consoleScreen.close();
+  };
   /**
    * `map <n>` with no match: `SV_Map_f`'s look for the map (`sv_ccmds.c:138–171`), then a match
    * on it, which resolves once the map is in and the program is playing it. The menu goes as the
@@ -1070,6 +1089,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       print(`Can't find map ${bspPath(name)}\n`);
       return;
     }
+    // `CL_MapLoading`'s `Con_Close` and `Key_SetCatcher( 0 )` (`cl_main.c:1292–1293`).
+    closeConsole();
     menu.forceOff();
     // `CL_MapLoading` (`cl_main.c:1303–1306`): a client of a server elsewhere leaves it.
     closeConnectScreen();
@@ -1214,7 +1235,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       worldTrace,
       channel,
       config.cvars,
-      { clientLoader },
+      // `SV_SpawnServer`'s `CL_MapLoading` closes the console at each of its map's starts.
+      { clientLoader, mapLoading: closeConsole },
       localEntities,
       worldContents,
       worldModels
@@ -1481,7 +1503,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     closeConnectScreen();
     if (controller || mapPreview) leave(finalMessage);
     // `Con_Close` and `Key_SetCatcher( 0 )`.
-    consoleText.clearNotify();
+    closeConsole();
     menu.forceOff();
     connectScreen = new ConnectScreen(setup.screens, server);
   };
@@ -2189,13 +2211,13 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       controller.game.configstring(CONFIGSTRING.FLAGSTATUS),
       info.gametype
     );
-    // `Con_DrawNotify`, the client's own, drawn over cgame's 2D. A menu hides the lines, but not
-    // at the intermission.
+    // `Con_DrawNotify`, the client's own, drawn over cgame's 2D. Any of the console showing hides
+    // the lines (`Con_DrawConsole`), and so does a menu, but not at the intermission.
     const notify = notifyRows(
       consoleText,
       settings,
       performance.now(),
-      menu.isOpen && player.pmType !== PM_INTERMISSION
+      consoleScreen.shown || (menu.isOpen && player.pmType !== PM_INTERMISSION)
     );
     const frame = hud?.update(
       {
@@ -2357,7 +2379,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     // `Con_CheckResize`, every frame (`cl_console.c:284–346`): the console as wide as the canvas,
     // less two characters. A hidden canvas is 0 wide, where Q3's window never is, and a width under
     // one character would blank the console, so it keeps its width then.
-    const columns = Math.floor(app.graphicsDevice.width / SMALLCHAR_WIDTH) - 2;
+    const columns = Math.floor(app.graphicsDevice.width / smallCharWidth(settings.conScale)) - 2;
     if (columns >= 1) consoleText.resize(columns);
     // `Com_Frame`'s `Cbuf_Execute`: a `wait` counts this frame.
     commands.frame();
@@ -2385,6 +2407,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     const idle = !controller && !mapPreview;
     if (began && idle && !loadingMap && connectScreen === null && !menu.isOpen) openMain();
     menuScreen.opaque = idle;
+    consoleScreen.open = (input.catchers & KEYCATCH.CONSOLE) !== 0;
+    consoleScreen.disconnected = idle && !loadingMap && connectScreen === null;
     // The page's own work before it draws, as the server browser's refresh runs from its draw.
     menu.frame();
     menuScreen.update();

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { BIGCHAR_WIDTH, stringGlyphs, stringLength, stringWidth } from './hud-text';
+import {
+  BIGCHAR_WIDTH,
+  smallCharHeight,
+  smallCharWidth,
+  stringGlyphs,
+  stringLength,
+  stringWidth
+} from './hud-text';
 
 describe('stringGlyphs', () => {
   it("cuts each character's cell out of the 16 × 16 grid by its code", () => {
@@ -37,5 +44,14 @@ describe('stringLength and stringWidth', () => {
     expect(stringWidth('Rocket Launcher', BIGCHAR_WIDTH)).toBe(240);
     expect(stringWidth('^1Rocket', BIGCHAR_WIDTH)).toBe(96);
     expect(stringLength('^4Tied for ^41st^7')).toBe(12);
+  });
+});
+
+describe('smallCharWidth and smallCharHeight', () => {
+  it("are 8 by 16 under con_scale, cut to whole pixels as ioquake3's ints are", () => {
+    expect([smallCharWidth(1), smallCharHeight(1)]).toEqual([8, 16]);
+    expect([smallCharWidth(2), smallCharHeight(2)]).toEqual([16, 32]);
+    expect([smallCharWidth(1.3), smallCharHeight(1.3)]).toEqual([10, 20]);
+    expect([smallCharWidth(1.45), smallCharHeight(1.45)]).toEqual([11, 23]);
   });
 });
