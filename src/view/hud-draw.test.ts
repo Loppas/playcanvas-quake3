@@ -29,6 +29,7 @@ import type { HudAnchor } from './hud-layout';
 import { Lagometer } from './lagometer';
 import { notifyRows } from './notify-lines';
 import { REWARD_TIME, createRewardState, pushReward } from './rewards';
+import { createAttacker } from './attacker';
 import { addToTeamChat, createTeamChat } from './team-chat';
 
 /** One picture written: its shader, rectangle on Q3's grid, anchor, texture corners and colour. */
@@ -106,6 +107,8 @@ function input(overrides: Partial<HudInput> = {}): HudInput {
     weaponSelect: WP.MACHINEGUN,
     weaponSelectTime: Number.NEGATIVE_INFINITY,
     damage: { time: Number.NEGATIVE_INFINITY, x: 0 },
+    attacker: createAttacker(),
+    attackerNum: 0,
     thirdPerson: false,
     speed: 0,
     peak: 0,

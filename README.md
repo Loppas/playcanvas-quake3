@@ -204,11 +204,13 @@ browser keeps that folder in the browser's own storage, so it hands the file ove
 instead. A name with `..` in it is refused, as Quake 3 refuses it.
 
 Chat runs from a bind or a cfg, as Quake 3's game takes it: `bind h "say hello"` says it to
-everyone, `say_team` to your team, and `tell <player> <text>` to one player. Each line plays the
-talk sound and shows on the notify lines in its colours, a team line with where its speaker is.
-`cg_teamChatsOnly 1` keeps a team game to team chat. `cg_teamChatHeight` shows up to 8 team lines
-over a band above the status bar, each for `cg_teamChatTime` milliseconds; at its default of 0
-the band stays hidden. There is no line to type chat on yet.
+everyone, `say_team` to your team, and `tell <player> <text>` to one player. `sayto <name> <text>`
+tells the player of that name, its colours left off, and `tell_attacker <text>` the last player
+who hurt you. Each line plays the talk sound and shows on the notify lines in its colours, a team
+line with where its speaker is. `cg_teamChatsOnly 1` keeps a team game to team chat.
+`cg_teamChatHeight` shows up to 8 team lines over a band above the status bar, each for
+`cg_teamChatTime` milliseconds; at its default of 0 the band stays hidden. There is no line to type
+chat on yet.
 
 ## Quake 3 assets
 

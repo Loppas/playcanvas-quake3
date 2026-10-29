@@ -22,6 +22,7 @@ import type { HudInput, HudSettings } from '../view/hud';
 import { createCenterPrint } from '../view/center-print';
 import { ConsoleBuffer } from '../view/console-buffer';
 import { createRewardState } from '../view/rewards';
+import { createAttacker } from '../view/attacker';
 import { addToTeamChat, createTeamChat } from '../view/team-chat';
 import { screenRect, type HudAnchor, type HudRect } from '../view/hud-layout';
 import { Lagometer } from '../view/lagometer';
@@ -104,6 +105,8 @@ function input(overrides: Partial<HudInput> = {}): HudInput {
     weaponSelect: WP.MACHINEGUN,
     weaponSelectTime: Number.NEGATIVE_INFINITY,
     damage: { time: Number.NEGATIVE_INFINITY, x: 0 },
+    attacker: createAttacker(),
+    attackerNum: 0,
     thirdPerson: false,
     speed: 0,
     peak: 0,

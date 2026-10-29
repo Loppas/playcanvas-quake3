@@ -6,6 +6,7 @@ import { CUSTOM_SOUNDS, DEFAULT_MODEL } from '../formats/asset-manifest';
 import { EV, eventNumber, type Event } from '../sim/events';
 import { NO_CONTENTS, type PointContentsFn } from '../sim/types';
 import { vec3, type Vec3 } from '../sim/vec3';
+import { createAttacker, type AttackerState } from './attacker';
 import { createDamageFeedback, damageFeedback, type DamageFeedback } from './damage-feedback';
 import { jumpPadEvent } from './jump-pad-events';
 
@@ -273,6 +274,8 @@ export function bodyEventSound(
 export interface PlayerEvents extends PainMemory {
   /** The view's reaction to the last hurt. */
   damage: DamageFeedback;
+  /** When the last hurt came, for who caused it. */
+  attacker: AttackerState;
   /** `ops`: the health and `damageEvent` the last transition left, to see a change against. */
   health: number;
   damageEvent: number;
@@ -284,6 +287,7 @@ export function createPlayerEvents(state: Pick<PlayerState, 'stats' | 'damageEve
     painTime: Number.NEGATIVE_INFINITY,
     painDirection: 0,
     damage: createDamageFeedback(),
+    attacker: createAttacker(),
     health: state.stats[STAT.HEALTH],
     damageEvent: state.damageEvent
   };
@@ -336,6 +340,8 @@ export function transitionPlayerEvents(
   const depth = () => waterLevel(state.origin, state.legsAnim, pointContents);
 
   if (state.damageEvent !== events.damageEvent && state.damageCount) {
+    // `cg.attackerTime`, on `cg.time`'s clock where the kick is on the snapshot's.
+    events.attacker.time = Math.floor(time);
     damageFeedback(
       events.damage,
       state.damageYaw,

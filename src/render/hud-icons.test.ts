@@ -24,6 +24,7 @@ import { GT, SCORE_NOT_PRESENT, TEAM } from '../sim/constants';
 import { ARMOR_TIER, GREEN_ARMOR_TINT, findItemForArmorTier } from '../sim/items';
 import { createCenterPrint } from '../view/center-print';
 import { createRewardState } from '../view/rewards';
+import { createAttacker } from '../view/attacker';
 import { createTeamChat } from '../view/team-chat';
 import { DAMAGE_TIME } from '../view/damage-feedback';
 import { anglesToAxis } from '../view/hand-pose';
@@ -119,6 +120,8 @@ function statusBar(
     weaponSelect: WP.MACHINEGUN,
     weaponSelectTime: Number.NEGATIVE_INFINITY,
     damage: { time: Number.NEGATIVE_INFINITY, x: 0 },
+    attacker: createAttacker(),
+    attackerNum: 0,
     thirdPerson: false,
     speed: 0,
     peak: 0,

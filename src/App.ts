@@ -56,6 +56,7 @@ import { CA, ServerDisconnect } from './net/connection';
 import { infoValueForKey } from './net/info';
 import type { NetAdr } from './net/net';
 import type { PeerConnectionFactory } from './net/peer-signalling';
+import { sayto } from './net/sayto';
 import { mountMapPaks } from './pak/boot';
 import { mapConcurrent } from './pak/concurrency';
 import type { GameDataContext } from './pak/game-data';
@@ -258,8 +259,12 @@ const CGAME_COMMAND_NAMES: readonly string[] = [
   'weapnext',
   'weapprev',
   'weapon',
+  'tell_attacker',
   'loaddeferred',
   'kill',
+  'say',
+  'say_team',
+  'tell',
   'team',
   'follow',
   'follownext',
@@ -869,6 +874,10 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
         scoresUp(scoreboardState, controller.time);
         return true;
       }
+      if (name === 'tell_attacker') {
+        controller.tellAttacker(argv);
+        return true;
+      }
       // `CG_LoadDeferredPlayers` on demand (`cg_consolecmds.c:503`).
       if (name === 'loaddeferred') {
         controller.loadDeferredPlayers();
@@ -903,6 +912,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       print('Not connected to a server.\n');
     }
   });
+  // `CL_Sayto_f`, which only a program with a client registers (`cl_main.c:3740–3743`).
+  commands.add('sayto', (argv) => sayto(argv, controller?.game ?? null, print));
   commands.add('vid_restart', () => host.vidRestart());
   commands.add('clear', () => consoleText.clear());
   // `Con_ToggleConsole_f` (`cl_console.c:73–90`).
@@ -2233,6 +2244,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
         weaponSelect: controller.weaponSelect,
         weaponSelectTime: controller.weaponSelectTime,
         damage: controller.damage,
+        attacker: controller.attacker,
+        attackerNum: player.persistant[PERS.ATTACKER],
         thirdPerson,
         speed,
         peak,
