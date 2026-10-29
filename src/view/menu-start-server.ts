@@ -486,7 +486,8 @@ function serverOptionsPage(
       get: () => state[key],
       set: (text) => {
         state[key] = text;
-      }
+      },
+      mode: menu.editMode
     });
   const serverRows: MenuItem[] = [
     spinControl({
@@ -505,7 +506,8 @@ function serverOptionsPage(
       get: () => state.hostname,
       set: (text) => {
         state.hostname = text;
-      }
+      },
+      mode: menu.editMode
     })
   ];
   const presetNames = () => [

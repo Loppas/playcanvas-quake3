@@ -1028,7 +1028,8 @@ function specifyPage(context: ServersContext, added: () => void): MenuPage {
         maxchars: 80,
         widthInChars: 38,
         get: () => state.address,
-        set: (text) => (state.address = text)
+        set: (text) => (state.address = text),
+        mode: menu.editMode
       }),
       textField({
         label: 'Port',
@@ -1036,14 +1037,16 @@ function specifyPage(context: ServersContext, added: () => void): MenuPage {
         widthInChars: 6,
         numbersOnly: true,
         get: () => state.port,
-        set: (text) => (state.port = text)
+        set: (text) => (state.port = text),
+        mode: menu.editMode
       }),
       textField({
         label: 'Name',
         maxchars: FAVORITE_NAME_KEPT,
         widthInChars: FAVORITE_NAME_KEPT,
         get: () => state.name,
-        set: (text) => (state.name = text)
+        set: (text) => (state.name = text),
+        mode: menu.editMode
       }),
       {
         label: 'ADD TO FAVORITES',

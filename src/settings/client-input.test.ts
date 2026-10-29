@@ -377,18 +377,17 @@ describe('ClientInput: the key catchers', () => {
     expect(input.keyMove().forwardmove).toBe(0);
   });
 
-  it.each(SETS)("gives a character and a paste to %s, where its key goes", (_, catchers, who) => {
+  it.each(SETS)("gives a key's character, after it, and a paste to %s", (_, catchers, who) => {
     const { input, heard } = catching();
     input.setCatcher(catchers);
-    expect(input.char('q')).toBe(true);
+    expect(input.keyDown(key('q'), 'q')).toBe(true);
     expect(input.paste('203.0.113.9')).toBe(true);
-    expect(heard).toEqual([`${who} char q`, `${who} paste 203.0.113.9`]);
+    expect(heard).toEqual([`${who} key ${key('q')}`, `${who} char q`, `${who} paste 203.0.113.9`]);
   });
 
   it('runs the bind with none up, and gives no catcher the key, the character or the paste', () => {
     const { input, heard } = catching([[key('w'), '+forward']]);
-    input.keyDown(key('w'));
-    expect(input.char('w')).toBe(false);
+    input.keyDown(key('w'), 'w');
     expect(input.paste('x')).toBe(false);
     expect(input.keyMove().forwardmove).toBe(127);
     expect(heard).toEqual([]);
@@ -507,6 +506,21 @@ describe('ClientInput: binds over a catcher', () => {
       `menu key ${key('v')}`
     ]);
     expect(printed).toEqual([]);
+  });
+
+  it("gives the key's character where the key went, and runs the bind after, as Q3 does", () => {
+    const heard: string[] = [];
+    const { input, router } = routedInput([[key('k'), 'toggleconsole']], undefined, {
+      console: { key: () => false, char: (ch) => heard.push(`console char ${ch}`) > 0 }
+    });
+    router.add('toggleconsole', () => input.setCatcher(input.catchers ^ KEYCATCH.CONSOLE));
+    // The key that drops the console types nothing into it.
+    input.keyDown(key('k'), 'k');
+    expect(input.catchers).toBe(KEYCATCH.CONSOLE);
+    expect(heard).toEqual([]);
+    // With the console down, the key is the console's, and so is its character.
+    input.keyDown(key('k'), 'k');
+    expect([input.catchers, heard]).toEqual([KEYCATCH.CONSOLE, ['console char k']]);
   });
 
   it('runs neither with the console up', () => {

@@ -518,3 +518,11 @@ describe("the pointer's items, a paste and a page's frame", () => {
     expect(over).toHaveBeenCalledOnce();
   });
 });
+
+describe('insert and overstrike', () => {
+  it("hands its fields the mode it is given, the client's, or one of its own", () => {
+    const mode = { overstrike: true };
+    expect(new Menu({ editMode: mode }).editMode).toBe(mode);
+    expect(new Menu().editMode).toEqual({ overstrike: false });
+  });
+});

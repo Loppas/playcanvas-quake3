@@ -1,4 +1,5 @@
 import { K } from '../formats/q3-keys';
+import type { EditMode } from './edit-field';
 import type { PlayerLook } from './player-model';
 import type { Scoreboard } from './scoreboard';
 
@@ -285,6 +286,11 @@ export interface MenuOptions {
   pushed?: () => void;
   /** The last page went: `UI_ForceMenuOff`, which lets the game go on (`ui_atoms.c:152–160`). */
   closed?: () => void;
+  /**
+   * Insert or overstrike, shared with the client's fields as q3_ui reaches Q3's one mode
+   * (`trap_Key_GetOverstrikeMode`). Without it, the menu's fields share one of their own.
+   */
+  editMode?: EditMode;
 }
 
 /** A page on the stack, and where its cursor is. */
@@ -329,11 +335,14 @@ export class Menu {
   /** Where the pointer is on the item at the cursor, while it is over it. */
   private pointer: Pointer = {};
   private placed: MenuPlacement = 'centred';
+  /** Insert or overstrike, for every text field on the menu's pages. */
+  readonly editMode: EditMode;
 
   constructor(options: MenuOptions = {}) {
     this.sound = options.sound ?? (() => {});
     this.pushed = options.pushed ?? (() => {});
     this.closed = options.closed ?? (() => {});
+    this.editMode = options.editMode ?? { overstrike: false };
   }
 
   /** Whether the menu is up: `KEYCATCH_UI`. */

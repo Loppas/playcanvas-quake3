@@ -6,6 +6,7 @@ import {
   CONSOLE_COLORS,
   CONSOLE_OPEN_FRAC,
   drawnLines,
+  inputLayers,
   runConsole,
   scrollMarks,
   textRows
@@ -127,6 +128,36 @@ describe('colorLayers', () => {
   it('is empty in every colour for nothing printed', () => {
     const buffer = printed(20);
     expect(colorLayers(buffer, drawnLines(buffer, 4))).toEqual(Array<string>(CONSOLE_COLORS).fill(''));
+  });
+});
+
+describe('inputLayers', () => {
+  it('lays the window out a text per colour, each code drawn and colouring from it', () => {
+    const layers = inputLayers('say ^1hi^7 there', { start: 0, length: 16 });
+    expect(layers[7]).toBe('say     ^7 there');
+    expect(layers[1]).toBe('    ^1hi');
+    expect(layers.filter((layer) => layer !== '')).toHaveLength(2);
+  });
+
+  it('reads only what the window shows, so a code scrolled off colours nothing', () => {
+    const layers = inputLayers('^3abcdef^2gh', { start: 3, length: 7 });
+    expect(layers[7]).toBe('bcdef');
+    expect(layers[2]).toBe('     ^2');
+    expect(layers[3]).toBe('');
+  });
+
+  it('leaves out the spaces, as nothing is drawn for one, trailing ones too', () => {
+    const layers = inputLayers('a b ^1 c  ', { start: 0, length: 10 });
+    expect([layers[7], layers[1]]).toEqual(['a b', '    ^1 c']);
+  });
+
+  it('draws nothing where the window starts before the line', () => {
+    expect(inputLayers('abcdef', { start: -2, length: 5 })[7]).toBe('  abc');
+  });
+
+  it('is empty in every colour for an empty line', () => {
+    const none = Array<string>(CONSOLE_COLORS).fill('');
+    expect(inputLayers('', { start: 0, length: 0 })).toEqual(none);
   });
 });
 

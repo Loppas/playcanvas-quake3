@@ -2,8 +2,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppBase, Entity } from 'playcanvas';
 
+import { K } from '../formats/q3-keys';
 import { Q3_VERSION } from '../version';
 import { ConsoleBuffer } from '../view/console-buffer';
+import { EditField, type EditMode } from '../view/edit-field';
 import { CONSOLE_CAMERA_PRIORITY, ConsoleScreen, type ConsoleSettings } from './console-screen';
 import { createTestApp, squareFont } from './engine-test-fixtures';
 import { LOAD_PANEL_CAMERA_PRIORITY } from './load-panel-screen';
@@ -14,6 +16,8 @@ import type { MenuFont } from './menu-font';
 let app: AppBase;
 let eye: Entity;
 let buffer: ConsoleBuffer;
+let mode: EditMode;
+let field: EditField;
 let settings: ConsoleSettings;
 let screen: ConsoleScreen;
 let clock: number;
@@ -25,6 +29,8 @@ beforeEach(() => {
   app.graphicsDevice.canvas.height = 480;
   buffer = new ConsoleBuffer();
   buffer.resize(78);
+  mode = { overstrike: false };
+  field = new EditField(mode, 78);
   settings = { conSpeed: 3, conScale: 1 };
   clock = 1000;
 });
@@ -39,7 +45,7 @@ afterEach(() => {
  * frame: the app's frames run before the console is opened.
  */
 function drawn(font: MenuFont | null = null): ConsoleScreen {
-  screen = new ConsoleScreen(app, eye, buffer, settings, { font, now: () => clock });
+  screen = new ConsoleScreen(app, eye, buffer, field, settings, { font, now: () => clock });
   app.render();
   return screen;
 }
@@ -66,6 +72,13 @@ const color = (name: string) => {
 };
 const text = (name: string) => find(name).element!.text;
 const shown = (name: string) => find(name).enabled;
+/** `text` typed at the field as a browser types it: each character after its key. */
+const type = (text: string) => {
+  for (const ch of text) {
+    field.keyDown(ch.toLowerCase().charCodeAt(0));
+    field.char(ch);
+  }
+};
 /** How far the panel is moved up from its open place, in pixels. */
 const raised = () => find('console-panel').getLocalPosition().y;
 /** An element's top left from the panel's, in pixels down and across, and its size. */
@@ -185,6 +198,109 @@ describe('ConsoleScreen', () => {
     screen.disconnected = true;
     frames(1);
     expect(shown('console-prompt')).toBe(true);
+  });
+
+  it('draws the line typed after the prompt, a text per colour, its codes drawn as typed', () => {
+    drawn(squareFont(app, 0.7));
+    type('say ^1hi^7 all');
+    opened();
+    expect(text('console-input-7')).toBe('say     ^7 all');
+    expect(text('console-input-1')).toBe('    ^1hi');
+    expect([shown('console-input-7'), shown('console-input-1'), shown('console-input-2')]).toEqual([
+      true,
+      true,
+      false
+    ]);
+    expect(color('console-input-1')).toEqual([1, 0, 0, 1]);
+    // From the column after the prompt's, on its row, as wide as the field.
+    const row = { x: 16, down: 240 - 32 + 4, width: 78 * 8, height: 16 };
+    expect(box('console-input-7')).toEqual(row);
+    expect(box('console-input-1')).toEqual(box('console-input-7'));
+  });
+
+  it('scrolls a long line to keep its cursor in view', () => {
+    drawn();
+    const line = 'abcdefghij'.repeat(10);
+    type(line);
+    opened();
+    // A character short of the field's 78, the cursor in the last.
+    expect(text('console-input-7')).toBe(line.slice(100 - 77));
+    field.keyDown(K.HOME);
+    frames(1);
+    expect(text('console-input-7')).toBe(line.slice(0, 77));
+  });
+
+  it('shows the line and its cursor only with the prompt', () => {
+    drawn();
+    screen.disconnected = false;
+    type('hi');
+    opened();
+    // On the blink's shown half.
+    frames(1, 1536 - clock);
+    expect([shown('console-input-7'), shown('console-cursor')]).toEqual([true, true]);
+    screen.open = false;
+    frames(1, 1);
+    expect([shown('console-input-7'), shown('console-cursor')]).toEqual([false, false]);
+    screen.disconnected = true;
+    frames(1, 1);
+    expect([shown('console-input-7'), shown('console-cursor')]).toEqual([true, true]);
+  });
+
+  it('draws the cursor white, an underline inserting and a block overstriking', () => {
+    const cursor = () => box('console-cursor');
+    drawn();
+    type('hello');
+    clock = 1024;
+    opened();
+    // In the cell after the line's last character: 2 for the prompt's, then 5.
+    expect(cursor()).toEqual({ x: 7 * 8 + 0.5, down: 240 - 32 + 12, width: 7, height: 2 });
+    expect(color('console-cursor')).toEqual([1, 1, 1, 1]);
+    field.keyDown(K.HOME);
+    field.keyDown(K.INS);
+    frames(1);
+    expect(cursor()).toEqual({ x: 2 * 8 + 1, down: 240 - 32 + 2, width: 6, height: 12 });
+    // Twice the size under con_scale 2.
+    settings.conScale = 2;
+    frames(1);
+    expect(cursor()).toEqual({ x: 2 * 16 + 2, down: 240 - 64 + 4, width: 12, height: 24 });
+    // The line laid out again with it.
+    expect(box('console-input-7')).toMatchObject({ x: 32, down: 240 - 64 + 16, height: 32 });
+  });
+
+  it('draws the cursor over the line, so the block hides the character it stands on', () => {
+    drawn();
+    type('hello');
+    clock = 1024;
+    opened();
+    const order = (name: string) => find(name).element!.drawOrder;
+    for (let color = 0; color < 8; color++) {
+      expect(order('console-cursor')).toBeGreaterThan(order(`console-input-${color}`));
+    }
+  });
+
+  it('blinks the cursor 256 ms on and 256 ms off on the clock', () => {
+    drawn();
+    opened();
+    frames(1, 1536 - clock);
+    const blink: boolean[] = [];
+    for (let t = 0; t < 6; t++) {
+      blink.push(shown('console-cursor'));
+      frames(1, 128);
+    }
+    // 1536 on, 1664 on, 1792 off, 1920 off, 2048 on, 2176 on.
+    expect(blink).toEqual([true, true, false, false, true, true]);
+  });
+
+  it('writes the line only when it changes', () => {
+    drawn();
+    type('hello');
+    opened();
+    find('console-input-7').element!.text = 'held';
+    frames(3);
+    expect(text('console-input-7')).toBe('held');
+    type('!');
+    frames(1);
+    expect(text('console-input-7')).toBe('hello!');
   });
 
   it('marks a view scrolled back, and draws its text a row higher', () => {

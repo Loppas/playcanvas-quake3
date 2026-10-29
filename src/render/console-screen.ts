@@ -23,10 +23,12 @@ import {
   CONSOLE_COLORS,
   CONSOLE_OPEN_FRAC,
   drawnLines,
+  inputLayers,
   runConsole,
   scrollMarks,
   textRows
 } from '../view/console-rows';
+import { cursorShown, type EditField } from '../view/edit-field';
 import { smallCharHeight, smallCharWidth } from '../view/hud-text';
 import { textWidth, type MenuFont } from './menu-font';
 
@@ -34,7 +36,8 @@ import { textWidth, type MenuFont } from './menu-font';
  * Q3's console on screen: dropped from the top over everything else, as ioquake3's
  * `Con_DrawSolidConsole` draws it (`cl_console.c:662–765`), in the port's chrome. A panel in the
  * page's colour, a rule in the menu's accent along its foot, the version in the bottom row, the `]`
- * prompt above it, and the buffer's lines from there up, each character in its colour.
+ * prompt above it with the line being typed after it, and the buffer's lines from there up, each
+ * character in its colour.
  *
  * Everything stands on ioquake3's grid in the canvas's own pixels, a character `g_smallchar_width`
  * by `g_smallchar_height`, so the console holds more on a larger screen rather than drawing larger.
@@ -55,6 +58,13 @@ const ACCENT = new Color(1, 0.55, 0.12);
 const WHITE = new Color(1, 1, 1);
 /** The rule's height on Q3's 480-high grid (`SCR_FillRect( 0, y, SCREEN_WIDTH, 2, color )`, `:696`). */
 const RULE_HEIGHT = 2 / 480;
+/**
+ * The cursor's two shapes in its character's cell, in sixteenths of the cell across and down, as
+ * Quake 3's charset draws them: inserting an underline (glyph 10), overstriking a block (glyph 11)
+ * that hides the character under it. The port's face has no such glyphs, so they are boxes.
+ */
+const UNDERLINE = { x: 1, y: 12, width: 14, height: 2 };
+const BLOCK = { x: 2, y: 2, width: 12, height: 12 };
 
 /** The settings the console reads: `scr_conspeed` and `con_scale`. */
 export type ConsoleSettings = Pick<Settings, 'conSpeed' | 'conScale'>;
@@ -90,6 +100,9 @@ export class ConsoleScreen {
   private readonly marks: Entity;
   private readonly prompt: Entity;
   private readonly version: Entity;
+  private readonly field: EditField;
+  private readonly inputs: Entity[];
+  private readonly cursor: Entity;
   /** `con.displayFrac`. */
   private displayFrac = 0;
   private lastFrame: number;
@@ -100,16 +113,27 @@ export class ConsoleScreen {
   private readonly grid = { width: 0, height: 0, scale: 0, w: 0, h: 0, lead: 0, open: 0 };
   /** The buffer's revision written into the grid. */
   private revision = -1;
+  /** The input line as written into the grid, its text, window and width; none while hidden. */
+  private input: { text: string; start: number; length: number; width: number } | null = null;
   private readonly draw = () => this.update();
   private destroyed = false;
 
   /**
    * @param text - The console's buffer, which it draws.
+   * @param field - The console's input line, which it draws after the prompt.
    * @param eye - The camera the world is seen through; the console draws after the load panel's.
    */
-  constructor(app: AppBase, eye: Entity, text: ConsoleText, settings: ConsoleSettings, options: ConsoleScreenOptions) {
+  constructor(
+    app: AppBase,
+    eye: Entity,
+    text: ConsoleText,
+    field: EditField,
+    settings: ConsoleSettings,
+    options: ConsoleScreenOptions
+  ) {
     this.app = app;
     this.text = text;
+    this.field = field;
     this.settings = settings;
     this.font = options.font;
     this.now = options.now ?? (() => performance.now());
@@ -156,6 +180,12 @@ export class ConsoleScreen {
     this.prompt.element!.text = ']';
     this.version = this.textElement('console-version', ACCENT);
     this.version.element!.text = Q3_VERSION;
+    this.inputs = Array.from({ length: CONSOLE_COLORS }, (_, color) => {
+      const [r, g, b] = COLOR_TABLE[color];
+      return this.textElement(`console-input-${color}`, new Color(r, g, b));
+    });
+    // After the line, so the block is drawn over the character it stands on.
+    this.cursor = this.image('console-cursor', WHITE, 1);
 
     app.on('prerender', this.draw);
   }
@@ -175,12 +205,12 @@ export class ConsoleScreen {
     const now = this.now();
     const frameMs = now - this.lastFrame;
     this.lastFrame = now;
-    this.place();
+    this.place(now);
     this.displayFrac = runConsole(this.displayFrac, this.open, this.settings.conSpeed, frameMs);
   }
 
   /** Show the console `displayFrac` down the screen, or nothing with none of it in view. */
-  private place(): void {
+  private place(now: number): void {
     const { width, height } = this.app.graphicsDevice;
     // `lines` (`:672–674`): the console's foot, in pixels down from the top.
     const lines = Math.trunc(height * this.displayFrac);
@@ -194,13 +224,16 @@ export class ConsoleScreen {
     if (width !== grid.width || height !== grid.height || scale !== grid.scale) {
       this.layOut(width, height, scale);
       this.revision = -1;
+      this.input = null;
     }
     if (this.text.revision !== this.revision) {
       this.writeText();
       this.revision = this.text.revision;
     }
     // `Con_DrawInput`'s (`:555–557`): the prompt shows disconnected, or while the console has the keys.
-    this.prompt.enabled = this.open || this.disconnected;
+    const prompted = this.open || this.disconnected;
+    this.prompt.enabled = prompted;
+    this.writeInput(prompted, now);
     this.panel.setLocalPosition(0, grid.open - lines, 0);
   }
 
@@ -221,7 +254,7 @@ export class ConsoleScreen {
     panel.height = open;
     this.setBox(this.background, 0, 0, width, open);
     this.setBox(this.rule, 0, open, width, height * RULE_HEIGHT);
-    for (const entity of [...this.layers, this.marks, this.prompt, this.version]) {
+    for (const entity of [...this.layers, this.marks, this.prompt, this.version, ...this.inputs]) {
       const element = entity.element!;
       element.fontSize = size;
       element.lineHeight = h;
@@ -254,6 +287,52 @@ export class ConsoleScreen {
       this.setRows(entity, w, bottom - (rows - 1) * h, text.lineWidth, rows);
       this.setText(entity, layers[color]);
     });
+  }
+
+  /**
+   * `Con_DrawInput`'s field (`:559–566`): the line's window from the column after the prompt, a
+   * text per colour, rewritten only when it moves; and the cursor in its place, blinking on the
+   * clock in the mode's shape.
+   */
+  private writeInput(shown: boolean, now: number): void {
+    const field = this.field;
+    if (!shown) {
+      for (const entity of this.inputs) entity.enabled = false;
+      this.cursor.enabled = false;
+      this.input = null;
+      return;
+    }
+    const { w, h, open } = this.grid;
+    const window = field.window();
+    const width = field.widthInChars;
+    const last = this.input;
+    if (
+      !last ||
+      last.text !== field.text ||
+      last.start !== window.start ||
+      last.length !== window.length ||
+      last.width !== width
+    ) {
+      this.input = { text: field.text, ...window, width };
+      const layers = inputLayers(field.text, window);
+      this.inputs.forEach((entity, color) => {
+        entity.enabled = layers[color] !== '';
+        if (!entity.enabled) return;
+        this.setRows(entity, 2 * w, open - 2 * h, width, 1);
+        this.setText(entity, layers[color]);
+      });
+    }
+    const cell = field.overstrike ? BLOCK : UNDERLINE;
+    const across = (2 + field.cursor - window.start) * w;
+    const down = open - 2 * h;
+    this.setBox(
+      this.cursor,
+      across + (cell.x * w) / 16,
+      down + (cell.y * h) / 16,
+      (cell.width * w) / 16,
+      (cell.height * h) / 16
+    );
+    this.cursor.enabled = cursorShown(now);
   }
 
   /** Take the screen, its camera and its layer away. The font is the caller's. */

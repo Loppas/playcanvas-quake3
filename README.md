@@ -196,7 +196,14 @@ the bottom up, in the colours it was printed in, with the port's version in the 
 binds it by default; `bind <key> toggleconsole` puts it on a key. As in Quake 3, a bound key doesn't
 lift it again while it is down: Escape does, and opens the menu as it goes. The notify lines hide
 while it shows. `scr_conspeed` sets how fast it slides, and `con_scale` how large its characters
-are, the notify lines' with them. There is nothing to type into on it yet.
+are, the notify lines' with them.
+
+A line is typed after the console's `]` prompt and edited as Quake 3 edits it: the arrows, Home and
+End move along it, Backspace and Delete take a character, Insert swaps to writing over the one at
+the cursor (in the menu's fields too, as in Quake 3), Ctrl+A and Ctrl+E go to its ends, Ctrl+C
+clears it, and Ctrl+V or Shift+Insert pastes the clipboard's first line. A colour code shows as
+typed, colouring what follows it. Enter doesn't run the line yet. It is cleared each time the
+console drops, unless `con_autoclear` is 0.
 
 `writeconfig <name>` writes the config to `<name>.cfg` beside `q3config.cfg`, where `exec <name>`
 reads it back. `condump <name>` writes the console's text to `<name>.txt` there; a build in the
