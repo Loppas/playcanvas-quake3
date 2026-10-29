@@ -1,4 +1,5 @@
 import { K } from '../formats/q3-keys';
+import type { EditMode } from './edit-field';
 import type { ColoredText, KeyResult, Menu, MenuItem } from './menu';
 
 /**
@@ -245,7 +246,7 @@ export function slider(
       return 'move';
     },
     char(ch) {
-      if (ch.length !== 1) return null;
+      if (ch.length !== 1 || ch < ' ') return null;
       const text = typed ?? '';
       if (!takes(text, ch)) return 'buzz';
       typed = text + ch;
@@ -263,7 +264,8 @@ export function slider(
  * - A printable ASCII character goes in at the cursor, while there are fewer than `maxchars`.
  * - Backspace takes the character before the cursor, and Delete the one at it.
  * - Left, right, Home and End move the cursor. Insert swaps putting a character in for writing
- *   over the one at the cursor.
+ *   over the one at the cursor, for every field sharing its mode, as Q3's one
+ *   `key_overstrikeMode` is every field's.
  * - Enter goes on to the next item, as Tab does.
  *
  * Its text is read and written through what it is given, at every edit. Given colours for its text,
@@ -289,10 +291,12 @@ export function textField(
     numbersOnly?: boolean;
     /** `widthInChars`: the room it keeps for its text, in q3_ui's cells. */
     widthInChars: number;
+    /** Insert or overstrike, which every field shares. */
+    mode: EditMode;
   }
 ): MenuItem {
   let cursor = options.get().length;
-  let overstrike = false;
+  const { mode } = options;
   /** The cursor, kept within the text as it is now, which the console may have shortened. */
   const place = () => Math.min(cursor, options.get().length);
   /** `MField_CharEvent`: a printable character in at the cursor, or over the one there. */
@@ -301,8 +305,8 @@ export function textField(
     if (ch.length !== 1 || code < 32 || code > 126) return false;
     const text = options.get();
     cursor = place();
-    if (overstrike ? cursor >= options.maxchars : text.length >= options.maxchars) return true;
-    options.set(text.slice(0, cursor) + ch + text.slice(overstrike ? cursor + 1 : cursor));
+    if (mode.overstrike ? cursor >= options.maxchars : text.length >= options.maxchars) return true;
+    options.set(text.slice(0, cursor) + ch + text.slice(mode.overstrike ? cursor + 1 : cursor));
     // Q3's cursor stops on a full field's last place.
     if (cursor < options.maxchars - 1) cursor++;
     return true;
@@ -362,7 +366,7 @@ export function textField(
           return 'silent';
         case K.INS:
         case K.KP_INS:
-          overstrike = !overstrike;
+          mode.overstrike = !mode.overstrike;
           return 'silent';
         default:
           return null;

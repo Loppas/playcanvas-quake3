@@ -143,9 +143,11 @@ import type { Vec3 } from './sim/vec3';
 import type { WeaponId } from './sim/weapons/constants';
 import { brushModelsAtRest, type BrushModelPose } from './view/brush-models';
 import type { FirstPersonView } from './view/camera-feel';
+import { DEFAULT_CONSOLE_WIDTH } from './view/console-buffer';
 import type { ConsoleText } from './view/console-print';
 import { damageBlob } from './view/damage-feedback';
 import { SceneLights, type DynamicLight } from './view/dynamic-lights';
+import { EditField, type EditMode } from './view/edit-field';
 import { setSunDirection } from './view/entity-light';
 import { sceneStyle } from './view/overbright';
 import { Explosions } from './view/explosions';
@@ -477,8 +479,14 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   const monoFont = createMenuFont(app, { face: MONO_FACE });
   // The load and connect screens, drawn from the first frame: the boot's is up already.
   const loadPanel = new LoadPanelScreen(app, setup.screens, camera, { font: monoFont });
+  // `key_overstrikeMode`: insert or overstrike, for the console's line and the menu's fields.
+  const editMode: EditMode = { overstrike: false };
+  // `g_consoleField`: the line typed at the console, as wide as the console's lines.
+  const consoleField = new EditField(editMode, DEFAULT_CONSOLE_WIDTH);
   // The console, drawn over them, out of sight until `toggleconsole` drops it.
-  const consoleScreen = new ConsoleScreen(app, camera, consoleText, settings, { font: monoFont });
+  const consoleScreen = new ConsoleScreen(app, camera, consoleText, consoleField, settings, {
+    font: monoFont
+  });
   /** The screen's aspect, which an automatic aspect ratio resolves against. */
   const screenAspect = () => {
     const { width, height } = app.graphicsDevice;
@@ -918,6 +926,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   commands.add('clear', () => consoleText.clear());
   // `Con_ToggleConsole_f` (`cl_console.c:73–90`).
   commands.add('toggleconsole', () => {
+    if (settings.conAutoclear) consoleField.clear();
     consoleText.clearNotify();
     input.setCatcher(input.catchers ^ KEYCATCH.CONSOLE);
   });
@@ -974,11 +983,20 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       };
       app.on('update', look);
     });
-  // The player's keys and mouse, through the binds, each bound command run as the console runs it,
-  // and the menu's while it is up.
+  // The player's keys and mouse, through the binds, each bound command run as the console runs it;
+  // the console's while it is down, `Console_Key` handing each to its line; and the menu's while it
+  // is up.
   const input = new ClientInput(config.binds, {
     command: (argv) => commands.execute(argv),
     warn,
+    console: {
+      key: (key) => consoleField.keyDown(key),
+      char: (ch) => consoleField.char(ch),
+      paste: (text) => {
+        consoleField.paste(text);
+        return true;
+      }
+    },
     menu: {
       key: (key) => menu.key(key),
       char: (ch) => menu.char(ch),
@@ -1080,8 +1098,11 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       return { name, trace: world.trace };
     }
   };
-  /** `Con_Close` (`cl_console.c:856–865`): the console gone at once, and its keys with it. */
+  /**
+   * `Con_Close` (`cl_console.c:856–865`): the console gone at once, its line and its keys with it.
+   */
   const closeConsole = () => {
+    consoleField.clear();
     consoleText.clearNotify();
     input.setCatcher(input.catchers & ~KEYCATCH.CONSOLE);
     consoleScreen.close();
@@ -1572,6 +1593,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   // The menu is the UI catcher, set alone on each page it puts up, and cleared as it goes. A page
   // put up over the captured mouse lets it go, to point with.
   const menu = new Menu({
+    editMode,
     sound: (cue) => sound?.playMenu(cue),
     pushed: () => {
       input.setCatcher(KEYCATCH.UI);
@@ -2393,9 +2415,13 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     lastFrame = performance.now();
     // `Con_CheckResize`, every frame (`cl_console.c:284–346`): the console as wide as the canvas,
     // less two characters. A hidden canvas is 0 wide, where Q3's window never is, and a width under
-    // one character would blank the console, so it keeps its width then.
+    // one character would blank the console, so it keeps its width then. Its line is as wide, as
+    // ioquake3 sets it with the renderer (`cl_main.c:3178–3179`), which a resize starts again.
     const columns = Math.floor(app.graphicsDevice.width / smallCharWidth(settings.conScale)) - 2;
-    if (columns >= 1) consoleText.resize(columns);
+    if (columns >= 1) {
+      consoleText.resize(columns);
+      consoleField.widthInChars = columns;
+    }
     // `Com_Frame`'s `Cbuf_Execute`: a `wait` counts this frame.
     commands.frame();
     gameBoard = null;

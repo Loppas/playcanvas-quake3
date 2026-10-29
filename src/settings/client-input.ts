@@ -220,20 +220,25 @@ export class ClientInput {
   }
 
   /**
-   * A key goes down: `CL_KeyDownEvent` (`cl_keys.c:1241–1329`). Escape is handled first, and is
-   * never a bind; any other key runs its bind and goes to the catcher on top.
+   * A key goes down: `CL_KeyDownEvent` (`cl_keys.c:1241–1329`), and the character it types, if
+   * any: `CL_CharEvent` (`cl_keys.c:1388–1412`). Escape is handled first, and is never a bind; any
+   * other key runs its bind and goes to the catcher on top, and its character after it.
    *
-   * @returns whether the key was taken, so its browser default is stopped
+   * @param typed - The character the key types, or none.
+   * @returns whether the key or its character was taken, so its browser default is stopped
    */
-  keyDown(key: number): boolean {
+  keyDown(key: number, typed = ''): boolean {
     this.down.add(key);
     if (key === K.ESCAPE) return this.escape();
     // Decided before the catcher has the key, which may take the catcher down, so the click that
-    // closes the menu fires nothing; and run after it, as Q3's command buffer runs them.
+    // closes the menu fires nothing; and run after it and the character, as Q3's command buffer
+    // runs them once the frame's events are in, so a key bound to toggleconsole types nothing into
+    // the console it drops.
     const commands = this.binding(key, true);
     const used = this.catcher()?.key(key) ?? false;
+    const took = typed !== '' && (this.catcher()?.char?.(typed) ?? false);
     for (const command of commands) this.run(command);
-    return used || commands.length > 0;
+    return used || took || commands.length > 0;
   }
 
   /**
@@ -243,15 +248,6 @@ export class ClientInput {
   keyUp(key: number): void {
     this.down.delete(key);
     for (const command of this.binding(key, false)) this.run(command);
-  }
-
-  /**
-   * The character a key typed, after its key: `CL_CharEvent` (`cl_keys.c:1388–1412`).
-   *
-   * @returns whether a catcher used it
-   */
-  char(ch: string): boolean {
-    return this.catcher()?.char?.(ch) ?? false;
   }
 
   /**

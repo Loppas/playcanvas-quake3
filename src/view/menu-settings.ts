@@ -1,6 +1,7 @@
 import { atoi } from '../formats/c-scan';
 import type { Cvars } from '../settings/cvars';
 import { SETTINGS, type Settings } from '../settings/registry';
+import type { EditMode } from './edit-field';
 import type { MenuItem } from './menu';
 import { radioButton, slider, spinControl, textField, type WidgetOptions } from './menu-widgets';
 
@@ -91,7 +92,7 @@ export function settingSlider(
  */
 export function settingNumberField(
   cvars: Cvars,
-  options: WidgetOptions & { cvar: () => string; maxchars?: number }
+  options: WidgetOptions & { cvar: () => string; maxchars?: number; mode: EditMode }
 ): MenuItem {
   /** What is being typed, and the cvar's string as this field last left it. */
   let draft: string | null = null;

@@ -14,6 +14,15 @@ interface LayoutNavigator {
 const UNLOCK_ESCAPE_MS = 100;
 
 /**
+ * The control character SDL types after a key (`sdl_input.c:1050–1053`): ^H for Backspace, and
+ * for a letter with Ctrl held, its own. None for any other key.
+ */
+function controlChar(key: number, ctrl: boolean): string {
+  if (key === K.BACKSPACE) return '\b';
+  return ctrl && key >= 0x61 && key <= 0x7a ? String.fromCharCode(key - 0x60) : '';
+}
+
+/**
  * The browser's keys, buttons and mouse, handed to {@link ClientInput} as Q3's, which sends each
  * where the key catchers say.
  *
@@ -29,6 +38,7 @@ const UNLOCK_ESCAPE_MS = 100;
  * - With a catcher up, the browser's paste is the catcher's: Ctrl+V and Shift+Ins paste as Q3's
  *   do, the clipboard read from the paste itself, which asks no permission. Shift+Ins is left to
  *   the browser so that it pastes, rather than reaching the catcher as Insert.
+ * - Backspace, and a letter with Ctrl, type SDL's control characters, which Q3's fields edit by.
  */
 export class KeyInput {
   private readonly canvas: HTMLCanvasElement;
@@ -69,11 +79,10 @@ export class KeyInput {
         if (this.locked || (catchers & KEYCATCH.UI && unlocking)) return;
       }
       if (catchers !== 0 && (key === K.INS || key === K.KP_INS) && event.shiftKey) return;
-      const used = this.input.keyDown(key);
-      // The character it types, as SDL sends a text event after the key's.
-      const typed =
-        event.key.length === 1 && !event.ctrlKey && !event.metaKey && this.input.char(event.key);
-      if (used || typed) event.preventDefault();
+      // With the character it types, as SDL sends a text event after the key's.
+      const printable = event.key.length === 1 && !event.ctrlKey && !event.metaKey ? event.key : '';
+      const typed = controlChar(key, event.ctrlKey) || printable;
+      if (this.input.keyDown(key, typed)) event.preventDefault();
     };
     const onKeyUp = (event: KeyboardEvent) => {
       const key = keyForCode(event.code, this.layout, this.apple);

@@ -512,7 +512,8 @@ function playerPage(context: SetupContext): MenuPage {
         widthInChars: MAX_NAME_LENGTH,
         get: () => cvars.settings.name,
         set: (text) => cvars.set('name', text),
-        colored: nameColors
+        colored: nameColors,
+        mode: menu.editMode
       }),
       spinControl({
         ...settingOptions(cvars, 'handicap', 'Handicap'),
@@ -855,11 +856,13 @@ function serverOptionsPage(context: MenuContext): MenuPage {
         marked: () => cvars.fromUrl(limit().setting),
         status: () =>
           cvars.fromUrl(limit().setting) ? FROM_ADDRESS : `${limit().status}; 0 for no limit`,
-        cvar: () => limit().cvar
+        cvar: () => limit().cvar,
+        mode: menu.editMode
       }),
       settingNumberField(cvars, {
         ...settingOptions(cvars, 'timeLimit', 'Time limit', 'Minutes; 0 for no limit'),
-        cvar: () => 'timelimit'
+        cvar: () => 'timelimit',
+        mode: menu.editMode
       }),
       settingChoice(
         cvars,

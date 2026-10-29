@@ -6,6 +6,7 @@ import { KeyInput } from './key-input';
 import { BUTTON_ATTACK, BUTTON_TALK } from './sim/constants';
 import { KEYCATCH, type ClientInput } from './settings/client-input';
 import { routedInput } from './settings/input-test-fixtures';
+import { EditField } from './view/edit-field';
 
 /**
  * The DOM seam: which browser event becomes which Q3 key, and when the game takes them. Pointer
@@ -276,13 +277,17 @@ describe('the menu', () => {
     expect(q.defaultPrevented).toBe(false);
   });
 
-  it("hands the menu the character a key types, after the key, but no Ctrl chord's", () => {
+  it("hands the menu the character a key types after the key, and SDL's control characters", () => {
     input.setCatcher(KEYCATCH.UI);
     menu.key.mockReturnValue(false);
     const typed = keyDown('KeyA', { key: 'A' });
+    // A Ctrl chord's letter, as its control character alone; Backspace's ^H.
     keyDown('KeyC', { key: 'c', ctrlKey: true });
+    keyDown('Backspace', { key: 'Backspace' });
     keyDown('Enter', { key: 'Enter' });
-    expect(menu.char.mock.calls.map(([ch]) => ch)).toEqual(['A']);
+    // Ctrl with a key that isn't a letter types nothing.
+    keyDown('Digit1', { key: '1', ctrlKey: true });
+    expect(menu.char.mock.calls.map(([ch]) => ch)).toEqual(['A', '\x03', '\b']);
     expect(typed.defaultPrevented).toBe(true);
   });
 
@@ -348,6 +353,86 @@ describe('the menu', () => {
   it('captures the mouse when asked, as Resume asks from its own click', () => {
     keys.capture();
     expect(requestPointerLock).toHaveBeenCalledWith({ unadjustedMovement: true });
+  });
+});
+
+describe("the console's line", () => {
+  let field: EditField;
+
+  beforeEach(() => {
+    keys.destroy();
+    field = new EditField({ overstrike: false }, 78);
+    input = routedInput(undefined, undefined, {
+      console: {
+        key: (key) => field.keyDown(key),
+        char: (ch) => field.char(ch),
+        paste: (text) => {
+          field.paste(text);
+          return true;
+        }
+      }
+    }).input;
+    keys = new KeyInput(canvas, input);
+    input.setCatcher(KEYCATCH.CONSOLE);
+  });
+
+  /** Letters typed a key at a time, each with its character. */
+  const type = (letters: string) =>
+    Array.from(letters, (ch) => keyDown(`Key${ch.toUpperCase()}`, { key: ch }));
+  /** A letter's key with Ctrl held. */
+  const ctrl = (letter: string) =>
+    keyDown(`Key${letter.toUpperCase()}`, { key: letter, ctrlKey: true });
+
+  it('takes no character from the key whose bind drops it', () => {
+    keys.destroy();
+    const console = {
+      key: (key: number) => field.keyDown(key),
+      char: (ch: string) => field.char(ch)
+    };
+    const wired = routedInput([['k'.charCodeAt(0), 'toggleconsole']], undefined, { console });
+    wired.router.add('toggleconsole', () => input.setCatcher(input.catchers ^ KEYCATCH.CONSOLE));
+    input = wired.input;
+    keys = new KeyInput(canvas, input);
+    type('k');
+    expect([input.catchers, field.text]).toEqual([KEYCATCH.CONSOLE, '']);
+    type('k');
+    expect(field.text).toBe('k');
+  });
+
+  it("types each key's character into it, and stops the key's default", () => {
+    const events = type('hello');
+    expect([field.text, field.cursor]).toEqual(['hello', 5]);
+    expect(events.every((event) => event.defaultPrevented)).toBe(true);
+  });
+
+  it('takes the character before the cursor on Backspace, as the ^H SDL types for it', () => {
+    type('abc');
+    keyDown('ArrowLeft', { key: 'ArrowLeft' });
+    const backspace = keyDown('Backspace', { key: 'Backspace' });
+    expect([field.text, field.cursor]).toEqual(['ac', 1]);
+    expect(backspace.defaultPrevented).toBe(true);
+  });
+
+  it('goes to its ends on Ctrl+A and Ctrl+E, and clears it on Ctrl+C', () => {
+    type('abc');
+    expect(ctrl('a').defaultPrevented).toBe(true);
+    expect(field.cursor).toBe(0);
+    ctrl('e');
+    expect(field.cursor).toBe(3);
+    ctrl('c');
+    expect([field.text, field.cursor]).toEqual(['', 0]);
+  });
+
+  it("leaves Ctrl+V to the browser, and takes the paste it makes, the first line of it", () => {
+    type('ab');
+    const v = ctrl('v');
+    expect(v.defaultPrevented).toBe(false);
+    expect(field.text).toBe('ab');
+    const event = new Event('paste', { cancelable: true });
+    Object.defineProperty(event, 'clipboardData', { value: { getData: () => 'cd\r\nef' } });
+    document.dispatchEvent(event);
+    expect(field.text).toBe('abcd');
+    expect(event.defaultPrevented).toBe(true);
   });
 });
 

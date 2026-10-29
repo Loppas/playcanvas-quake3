@@ -149,6 +149,8 @@ export interface Settings {
   conSpeed: number;
   /** `con_scale`: the console's and the notify lines' characters, 1–4 times 8 by 16 pixels. */
   conScale: number;
+  /** `con_autoclear`: `toggleconsole` clears the line being typed. */
+  conAutoclear: boolean;
   /** `cg_teamChatsOnly`: in a team game, only team chat is shown and heard. */
   teamChatsOnly: boolean;
   /** `cg_teamChatHeight`: how many lines the team chat box shows, up to 8; 0 hides it. */
@@ -680,6 +682,7 @@ export const SETTINGS: SettingDefs = {
     read: decimal({ min: 1, max: 4, clamp: true }),
     section: null
   },
+  conAutoclear: { cvar: 'con_autoclear', default: '1', read: flag, section: null },
   // cgame's chat, with ioquake3's defaults, archived (`cg_main.c:265–266, 278`), on no page.
   teamChatsOnly: { cvar: 'cg_teamChatsOnly', default: '0', read: flag, section: null },
   teamChatHeight: {

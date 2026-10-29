@@ -120,14 +120,15 @@ describe('spinControl, drawn as colours', () => {
 });
 
 describe('textField (MField)', () => {
-  function field(start = '', maxchars = 5) {
+  function field(start = '', maxchars = 5, mode = { overstrike: false }) {
     let text = start;
     const item = textField({
       label: 'Name',
       maxchars,
       widthInChars: maxchars,
       get: () => text,
-      set: (value) => (text = value)
+      set: (value) => (text = value),
+      mode
     });
     return { item, text: () => text };
   }
@@ -175,6 +176,27 @@ describe('textField (MField)', () => {
     expect(text()).toBe('xyc');
   });
 
+  it('shares insert and overstrike with every field given its mode, as Q3 does', () => {
+    const mode = { overstrike: false };
+    const name = field('abc', 20, mode);
+    const port = field('123', 20, mode);
+    name.item.key!(K.INS);
+    expect(mode.overstrike).toBe(true);
+    port.item.key!(K.HOME);
+    type(port.item, '9');
+    expect(port.text()).toBe('923');
+    mode.overstrike = false;
+    name.item.key!(K.HOME);
+    type(name.item, 'x');
+    expect(name.text()).toBe('xabc');
+  });
+
+  it("passes by the control characters a key types, Backspace's among them", () => {
+    const { item, text } = field('abc', 20);
+    for (const ch of '\b\x01\x03\x05\x16') expect(item.char!(ch)).toBeNull();
+    expect(text()).toBe('abc');
+  });
+
   it('goes on to the next item on Enter, as Tab does, and leaves a letter to its character', () => {
     const { item } = field();
     expect(item.key!(K.ENTER)).toBe(K.TAB);
@@ -189,7 +211,8 @@ describe('textField (MField)', () => {
       widthInChars: 20,
       get: () => text,
       set: (value) => (text = value),
-      colored: (value) => [{ text: value.toUpperCase(), color: [1, 0, 0] }]
+      colored: (value) => [{ text: value.toUpperCase(), color: [1, 0, 0] }],
+      mode: { overstrike: false }
     });
     expect(item.colored).toEqual([{ text: 'A', color: [1, 0, 0] }]);
     item.char!('b');
@@ -204,7 +227,8 @@ describe('textField (MField)', () => {
       maxchars: 20,
       widthInChars: 5,
       get: () => text,
-      set: (value) => (text = value)
+      set: (value) => (text = value),
+      mode: { overstrike: false }
     });
     const shown = () => [item.value, item.caret];
     type(item, 'abcdefgh');
@@ -227,7 +251,8 @@ describe('textField (MField)', () => {
       widthInChars: 6,
       numbersOnly: true,
       get: () => text,
-      set: (value) => (text = value)
+      set: (value) => (text = value),
+      mode: { overstrike: false }
     });
     expect(item.char!('x')).toBe('buzz');
     item.paste!('2x\t7\n');
@@ -423,8 +448,9 @@ describe('slider, with a number typed in', () => {
     expect(type('.55.')).toEqual(['silent', 'silent', 'buzz', 'buzz']);
     expect(type('a -')).toEqual(['buzz', 'buzz', 'buzz']);
     expect(item.value).toBe('123.5');
-    // A key's name is no character.
+    // A key's name is no character, nor is the control character Backspace or a Ctrl chord types.
     expect(item.char!('Enter')).toBeNull();
+    expect(['\b', '\x01', '\x1f'].map((ch) => item.char!(ch))).toEqual([null, null, null]);
     item.key!(K.ENTER);
     expect(value()).toBe(123.5);
   });
