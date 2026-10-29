@@ -1,7 +1,24 @@
 import { describe, expect, it } from 'vitest';
 
 import { K, keyToString } from '../formats/q3-keys';
-import { keyForButton, keyForCode, keyForWheel } from './browser-keys';
+import { DEFAULT_SETTINGS } from './registry';
+import { isConsoleKey, keyForButton, keyForCode, keyForWheel } from './browser-keys';
+import {
+  CONSOLE_KEY_CASES,
+  consoleKeysCorpus,
+  runConsoleKeys,
+  type ConsoleKeysRun
+} from './console-keys-test-fixtures';
+
+/**
+ * The corpus over three seeds, 300 values each, as ioquake3's own `IN_IsConsoleKey`, compiled from
+ * its C, answered it.
+ */
+const TWIN: Record<number, ConsoleKeysRun> = {
+  1: { matches: 1368, digest: '4abad0a5' },
+  2: { matches: 1431, digest: '2a7d51c4' },
+  3: { matches: 1412, digest: '99fbce35' }
+};
 
 /** A code's key, by Q3's name for it. */
 const named = (code: string, layout?: ReadonlyMap<string, string>, apple?: boolean) => {
@@ -82,5 +99,26 @@ describe('keyForWheel', () => {
     expect(keyForWheel(-100)).toBe(K.MWHEELUP);
     expect(keyForWheel(3)).toBe(K.MWHEELDOWN);
     expect(keyForWheel(0)).toBeNull();
+  });
+});
+
+describe('isConsoleKey', () => {
+  it.each(CONSOLE_KEY_CASES)(
+    'reads %j for key %i, character %i, as ioquake3 does',
+    (value, key, character, answer) => {
+      expect(isConsoleKey(value, key, character)).toBe(answer);
+    }
+  );
+
+  it.each([1, 2, 3])('runs seed %i as ioquake3 does', (seed) => {
+    expect(runConsoleKeys(consoleKeysCorpus(seed, 300))).toEqual(TWIN[seed]);
+  });
+
+  it('makes the key left of 1 a console key by default, by its two characters as well', () => {
+    const { consoleKeys } = DEFAULT_SETTINGS;
+    const byCode = (code: string) => isConsoleKey(consoleKeys, keyForCode(code)!, 0);
+    const byCharacter = (ch: string) => isConsoleKey(consoleKeys, 0, ch.charCodeAt(0));
+    expect(['Backquote', 'KeyA', 'Escape'].map(byCode)).toEqual([true, false, false]);
+    expect(['`', '~', 'a'].map(byCharacter)).toEqual([true, true, false]);
   });
 });

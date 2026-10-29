@@ -6,6 +6,7 @@ import { KeyInput } from './key-input';
 import { BUTTON_ATTACK, BUTTON_TALK } from './sim/constants';
 import { KEYCATCH, type ClientInput } from './settings/client-input';
 import { routedInput } from './settings/input-test-fixtures';
+import { DEFAULT_SETTINGS } from './settings/registry';
 import { ConsoleHistory } from './view/console-history';
 import { consoleKey, type ConsoleLine } from './view/console-key';
 import { EditField } from './view/edit-field';
@@ -494,6 +495,161 @@ describe("the console's line", () => {
     canvas.dispatchEvent(new WheelEvent('wheel', sideways));
     expect(field.text).toBe('\\kill');
     expect(line.scrollback.pageUp).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the console key', () => {
+  let field: EditField;
+  let menu: {
+    key: ReturnType<typeof vi.fn<(key: number) => boolean>>;
+    char: ReturnType<typeof vi.fn<(ch: string) => boolean>>;
+    open: ReturnType<typeof vi.fn<() => void>>;
+  };
+  let lost: ReturnType<typeof vi.fn<() => void>>;
+  /** The binds' halves run and the toggles, in order. */
+  let ran: string[];
+  let consoleKeys: string;
+  let exitPointerLock: ReturnType<typeof vi.fn<() => void>>;
+
+  beforeEach(() => {
+    keys.destroy();
+    field = new EditField({ overstrike: false }, 78);
+    const up = () => input.setCatcher(KEYCATCH.UI);
+    menu = { key: vi.fn(() => true), char: vi.fn(() => true), open: vi.fn(up) };
+    lost = vi.fn(up);
+    consoleKeys = DEFAULT_SETTINGS.consoleKeys;
+    exitPointerLock = vi.fn();
+    document.exitPointerLock = exitPointerLock;
+    ran = [];
+    const binds = ['`', 'q'].map((ch) => [ch.charCodeAt(0), '+held'] as const);
+    const wired = routedInput(binds, undefined, {
+      console: { key: (key) => field.keyDown(key), char: (ch) => field.char(ch) },
+      menu
+    });
+    // As the client's own: the catcher flipped, and the mouse after it.
+    wired.router.add('toggleconsole', () => {
+      ran.push('toggleconsole');
+      input.setCatcher(input.catchers ^ KEYCATCH.CONSOLE);
+      keys.followConsole();
+    });
+    for (const half of ['+held', '-held']) {
+      wired.router.add(half, (argv) => void ran.push(argv.join(' ')));
+    }
+    input = wired.input;
+    keys = new KeyInput(canvas, input, lost, true, () => consoleKeys);
+  });
+
+  const backquote = (init: KeyboardEventInit = {}) => keyDown('Backquote', { key: '`', ...init });
+
+  it('drops and lifts the console on the key left of 1, typing nothing and running no bind', () => {
+    const drop = backquote();
+    expect([input.catchers, field.text]).toEqual([KEYCATCH.CONSOLE, '']);
+    expect(drop.defaultPrevented).toBe(true);
+    backquote();
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Backquote' }));
+    expect(input.catchers).toBe(0);
+    expect(ran).toEqual(['toggleconsole', 'toggleconsole']);
+  });
+
+  it('drops it over the menu, which has neither the key nor its character, and lifts it', () => {
+    input.setCatcher(KEYCATCH.UI);
+    keyDown('ShiftLeft', { key: 'Shift', shiftKey: true });
+    menu.key.mockClear();
+    backquote({ key: '~', shiftKey: true });
+    expect(input.catchers).toBe(KEYCATCH.UI | KEYCATCH.CONSOLE);
+    expect([menu.key, menu.char].map((spy) => spy.mock.calls.length)).toEqual([0, 0]);
+    backquote();
+    expect(input.catchers).toBe(KEYCATCH.UI);
+  });
+
+  it('toggles on a character cl_consoleKeys names, typed by any key, after that key', () => {
+    backquote();
+    keyDown('KeyQ', { key: 'q' });
+    const tilde = keyDown('KeyQ', { key: '~' });
+    expect([input.catchers, field.text, tilde.defaultPrevented]).toEqual([0, 'q', true]);
+  });
+
+  it('runs the bind of the key that types one first, as SDL sends a key before its text', () => {
+    lock();
+    keyDown('KeyQ', { key: '~' });
+    expect(ran).toEqual(['+held 113', 'toggleconsole', '-held 113']);
+  });
+
+  it('frees the backquote once cl_consoleKeys leaves it out, and toggles on what it names', () => {
+    consoleKeys = 'PAUSE';
+    keyDown('Pause');
+    backquote();
+    keyDown('KeyQ', { key: '~' });
+    expect([input.catchers, field.text]).toEqual([KEYCATCH.CONSOLE, '`~']);
+    keyDown('Pause');
+    expect(input.catchers).toBe(0);
+  });
+
+  it('lifts it on Shift+Escape with the mouse free', () => {
+    backquote();
+    keyDown('ShiftLeft', { key: 'Shift', shiftKey: true });
+    keyDown('Escape', { key: 'Escape', shiftKey: true });
+    expect(input.catchers).toBe(0);
+    expect(menu.open).not.toHaveBeenCalled();
+  });
+
+  it("toggles again on the held key's repeats while a catcher is up, as SDL hands them on", () => {
+    backquote();
+    backquote({ repeat: true });
+    expect(input.catchers).toBe(0);
+    backquote({ repeat: true });
+    expect(input.catchers).toBe(0);
+  });
+
+  it('makes no console key of a mouse button or the wheel, as SDL makes none', () => {
+    consoleKeys = 'MOUSE1 MWHEELUP';
+    input.setCatcher(KEYCATCH.CONSOLE);
+    click();
+    canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, cancelable: true }));
+    expect(input.catchers).toBe(KEYCATCH.CONSOLE);
+  });
+
+  it('lets the mouse go as it drops, opening nothing, and takes it back as it lifts', () => {
+    lock();
+    backquote();
+    expect(exitPointerLock).toHaveBeenCalledOnce();
+    lock(null);
+    expect(lost).not.toHaveBeenCalled();
+    backquote();
+    expect(requestPointerLock).toHaveBeenCalledExactlyOnceWith({ unadjustedMovement: true });
+  });
+
+  it('leaves the mouse free as it lifts over the menu, or with no match to play', () => {
+    input.setCatcher(KEYCATCH.UI);
+    backquote();
+    backquote();
+    input.setCatcher(0);
+    keys.playing = false;
+    backquote();
+    backquote();
+    expect(requestPointerLock).not.toHaveBeenCalled();
+  });
+
+  it('drops it, opening no menu, when the browser lets the mouse go with Shift held', () => {
+    lock();
+    keyDown('ShiftLeft', { key: 'Shift', shiftKey: true });
+    lock(null);
+    expect(input.catchers).toBe(KEYCATCH.CONSOLE);
+    expect([lost, menu.open].map((spy) => spy.mock.calls.length)).toEqual([0, 0]);
+  });
+
+  it('passes over a late Shift+Escape after the mouse it let go dropped the console', () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(1000);
+    lock();
+    keyDown('ShiftLeft', { key: 'Shift', shiftKey: true });
+    lock(null);
+    keyDown('ShiftLeft', { key: 'Shift', shiftKey: true, repeat: true });
+    keyDown('Escape', { key: 'Escape', shiftKey: true });
+    expect(input.catchers).toBe(KEYCATCH.CONSOLE);
+    now.mockReturnValue(1200);
+    keyDown('Escape', { key: 'Escape', shiftKey: true });
+    expect(input.catchers).toBe(0);
+    now.mockRestore();
   });
 });
 

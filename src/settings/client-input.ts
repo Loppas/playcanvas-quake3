@@ -221,14 +221,21 @@ export class ClientInput {
 
   /**
    * A key goes down: `CL_KeyDownEvent` (`cl_keys.c:1241–1329`), and the character it types, if
-   * any: `CL_CharEvent` (`cl_keys.c:1388–1412`). Escape is handled first, and is never a bind; any
-   * other key runs its bind and goes to the catcher on top, and its character after it.
+   * any: `CL_CharEvent` (`cl_keys.c:1388–1412`). The console key, or Shift+Escape, toggles the
+   * console over everything and lets every key go, so no bind can take it. Escape is handled next,
+   * and is never a bind; any other key runs its bind and goes to the catcher on top, and its
+   * character after it.
    *
    * @param typed - The character the key types, or none.
    * @returns whether the key or its character was taken, so its browser default is stopped
    */
   keyDown(key: number, typed = ''): boolean {
     this.down.add(key);
+    if (this.togglesConsole(key)) {
+      this.command(['toggleconsole']);
+      this.clear();
+      return true;
+    }
     if (key === K.ESCAPE) return this.escape();
     // Decided before the catcher has the key, which may take the catcher down, so the click that
     // closes the menu fires nothing; and run after it and the character, as Q3's command buffer
@@ -242,11 +249,13 @@ export class ClientInput {
   }
 
   /**
-   * A key comes up: `CL_KeyUpEvent` (`cl_keys.c:1338–1365`), which runs its bind's release. No
-   * catcher has it, as q3_ui drops a key-up (`ui_atoms.c:858–860`).
+   * A key comes up: `CL_KeyUpEvent` (`cl_keys.c:1338–1365`), which runs its bind's release,
+   * unless it toggles the console. No catcher has it, as q3_ui drops a key-up
+   * (`ui_atoms.c:858–860`).
    */
   keyUp(key: number): void {
     this.down.delete(key);
+    if (this.togglesConsole(key)) return;
     for (const command of this.binding(key, false)) this.run(command);
   }
 
@@ -355,6 +364,11 @@ export class ClientInput {
   /** A move button's speed: {@link MOVE_SPEED} while it is held. */
   private held(name: string): number {
     return this.buttons.get(name)!.active ? MOVE_SPEED : 0;
+  }
+
+  /** "console key is hardcoded, so the user can never unbind it" (`cl_keys.c:1260–1266`). */
+  private togglesConsole(key: number): boolean {
+    return key === K.CONSOLE || (key === K.ESCAPE && this.down.has(K.SHIFT));
   }
 
   /** The catcher a key or a character goes to: the console, else the menu, else the chat line. */

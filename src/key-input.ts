@@ -1,5 +1,5 @@
 import { K } from './formats/q3-keys';
-import { keyForButton, keyForCode, keyForWheel } from './settings/browser-keys';
+import { isConsoleKey, keyForButton, keyForCode, keyForWheel } from './settings/browser-keys';
 import { KEYCATCH, type ClientInput } from './settings/client-input';
 
 /** The Keyboard API's layout map, which TypeScript's DOM types don't carry yet. */
@@ -9,7 +9,8 @@ interface LayoutNavigator {
 
 /**
  * How soon after the mouse is let go an Escape is taken for the one that let it go. A browser that
- * hands the page that key as well as releasing the mouse would otherwise close the menu it opened.
+ * hands the page that key as well as releasing the mouse would otherwise close the menu it opened,
+ * or lift the console.
  */
 const UNLOCK_ESCAPE_MS = 100;
 
@@ -29,7 +30,13 @@ function controlChar(key: number, ctrl: boolean): string {
  * - A click on the canvas with nothing up captures the mouse, asking for raw input, free of the
  *   OS's acceleration, where the browser gives it. That click only captures; it doesn't fire.
  * - Escape with the mouse free is Q3's Escape. With it captured, Escape is the browser's, which lets
- *   it go, and the capture lost with nothing up opens the menu.
+ *   it go and never reaches the page, and the capture lost with nothing up opens the menu, or with
+ *   Shift held drops the console, as Shift+Escape does.
+ * - A key `cl_consoleKeys` names is the console key, which no bind can take and which types
+ *   nothing, and a character it names presses and lets go the console key instead of being typed
+ *   (`sdl_input.c:315–319, 1103–1106`). Mouse buttons and the wheel are never console keys.
+ * - The mouse is let go while the console is down, as Q3 lets it go in a window
+ *   (`sdl_input.c:1251–1255`), and taken back as it lifts.
  * - A held key repeats only with a catcher up, as SDL hands its repeats on
  *   (`sdl_input.c:1044–1045`).
  * - Losing the capture, or the window's focus, lets every key go.
@@ -44,6 +51,7 @@ export class KeyInput {
   private readonly canvas: HTMLCanvasElement;
   private readonly input: ClientInput;
   private readonly lost: () => void;
+  private readonly consoleKeys: () => string;
   private readonly apple: boolean;
   private readonly detach: () => void;
   private layout: ReadonlyMap<string, string> | undefined;
@@ -57,12 +65,20 @@ export class KeyInput {
    * @param input - Where Q3's keys go.
    * @param lost - What the capture lost with nothing up opens: the in-game menu.
    * @param playing - Whether a match is there already, as {@link playing} says.
+   * @param consoleKeys - `cl_consoleKeys`, read at each key.
    */
-  constructor(canvas: HTMLCanvasElement, input: ClientInput, lost?: () => void, playing = true) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    input: ClientInput,
+    lost?: () => void,
+    playing = true,
+    consoleKeys: () => string = () => ''
+  ) {
     this.canvas = canvas;
     this.input = input;
     this.lost = lost ?? (() => {});
     this.match = playing;
+    this.consoleKeys = consoleKeys;
     this.apple = /Mac|iPhone|iPad/.test(navigator.platform);
     (navigator as Navigator & LayoutNavigator).keyboard
       ?.getLayoutMap?.()
@@ -76,17 +92,30 @@ export class KeyInput {
       if (event.repeat && catchers === 0) return;
       if (key === K.ESCAPE) {
         const unlocking = performance.now() - this.unlockedAt < UNLOCK_ESCAPE_MS;
-        if (this.locked || (catchers & KEYCATCH.UI && unlocking)) return;
+        if (this.locked || unlocking) return;
       }
       if (catchers !== 0 && (key === K.INS || key === K.KP_INS) && event.shiftKey) return;
+      const consoleKeys = this.consoleKeys();
+      if (isConsoleKey(consoleKeys, key, 0)) {
+        this.input.keyDown(K.CONSOLE);
+        event.preventDefault();
+        return;
+      }
       // With the character it types, as SDL sends a text event after the key's.
       const printable = event.key.length === 1 && !event.ctrlKey && !event.metaKey ? event.key : '';
-      const typed = controlChar(key, event.ctrlKey) || printable;
-      if (this.input.keyDown(key, typed)) event.preventDefault();
+      const toggles = printable !== '' && isConsoleKey(consoleKeys, 0, printable.charCodeAt(0));
+      const typed = controlChar(key, event.ctrlKey) || (toggles ? '' : printable);
+      const taken = this.input.keyDown(key, typed);
+      if (toggles) {
+        this.input.keyDown(K.CONSOLE);
+        this.input.keyUp(K.CONSOLE);
+      }
+      if (taken || toggles) event.preventDefault();
     };
     const onKeyUp = (event: KeyboardEvent) => {
       const key = keyForCode(event.code, this.layout, this.apple);
-      if (key !== null) this.input.keyUp(key);
+      if (key === null) return;
+      this.input.keyUp(isConsoleKey(this.consoleKeys(), key, 0) ? K.CONSOLE : key);
     };
     const onMouseDown = (event: MouseEvent) => {
       if (this.input.catchers === 0 && !this.locked) {
@@ -115,12 +144,21 @@ export class KeyInput {
     };
     const onLockChange = () => {
       const lost = this.locked && document.pointerLockElement !== this.canvas;
+      // Read before the capture's loss lets every key go.
+      const shifted = this.input.isDown(K.SHIFT);
       this.locked = document.pointerLockElement === this.canvas;
       this.input.active = this.locked;
       if (!lost) return;
       this.unlockedAt = performance.now();
-      // The game lost the mouse: the in-game menu opens over it.
-      if (this.input.catchers === 0) this.lost();
+      if (this.input.catchers !== 0) return;
+      if (shifted) {
+        // Shift+Escape, its Escape the browser's: the console key pressed and let go.
+        this.input.keyDown(K.CONSOLE);
+        this.input.keyUp(K.CONSOLE);
+      } else {
+        // The game lost the mouse: the in-game menu opens over it.
+        this.lost();
+      }
     };
     const onPaste = (event: ClipboardEvent) => {
       const text = event.clipboardData?.getData('text/plain') ?? '';
@@ -188,6 +226,17 @@ export class KeyInput {
   /** Let the mouse go, as a menu opened while it is captured needs it to point with. */
   release(): void {
     if (this.locked) document.exitPointerLock();
+  }
+
+  /**
+   * The console has just dropped or lifted: the mouse is let go while it is down, and taken back
+   * as it lifts with nothing else up in a match. A browser gives it back unasked after the page let
+   * it go itself, but after its own Escape only to a click, or a key other than Escape a moment
+   * later; refused, it waits for a click on the view.
+   */
+  followConsole(): void {
+    if (this.input.catchers & KEYCATCH.CONSOLE) this.release();
+    else if (this.input.catchers === 0 && this.match) this.capture();
   }
 
   /** Stop listening, and let every key go. */

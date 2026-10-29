@@ -497,6 +497,59 @@ describe('ClientInput: Escape', () => {
   });
 });
 
+/** What toggles the console, its own key and Shift+Escape, the last pressed with the rest held. */
+const TOGGLES: [string, number[]][] = [
+  ['the console key', [K.CONSOLE]],
+  ['Shift+Escape', [K.SHIFT, K.ESCAPE]]
+];
+
+describe('ClientInput: the console key and Shift+Escape (cl_keys.c:1260–1266)', () => {
+  const cases = TOGGLES.flatMap(([name, keys]) =>
+    [['nothing', 0] as const, ...SETS].map(([up, catchers]) => [name, up, keys, catchers] as const)
+  );
+
+  it.each(cases)(
+    '%s toggles the console with %s up, and no catcher has it',
+    (_, __, keys, catchers) => {
+      const { input, heard } = catching();
+      input.setCatcher(catchers);
+      for (const held of keys.slice(0, -1)) input.keyDown(held);
+      heard.length = 0;
+      expect(input.keyDown(keys[keys.length - 1], '`')).toBe(true);
+      expect(heard).toEqual(['toggleconsole']);
+    }
+  );
+
+  it.each(TOGGLES)('%s runs no bind, pressed or let go', (_, keys) => {
+    const { input, heard, printed } = catching([
+      [K.CONSOLE, '+probe; echo bound'],
+      [K.ESCAPE, '+probe; echo bound']
+    ]);
+    for (const held of keys) input.keyDown(held);
+    heard.length = 0;
+    // Shift held again, as its repeat holds it, so Escape comes up still Shift+Escape.
+    if (keys.includes(K.SHIFT)) input.keyDown(K.SHIFT);
+    input.keyUp(keys[keys.length - 1]);
+    expect(heard).toEqual([]);
+    expect(printed).toEqual([]);
+  });
+
+  it('lets every key go as it toggles, as Key_ClearStates does', () => {
+    const { input, heard } = catching([[key('w'), '+probe']]);
+    input.keyDown(key('w'));
+    input.keyDown(K.CONSOLE);
+    expect(heard).toEqual([`+probe ${key('w')}`, 'toggleconsole', `-probe ${key('w')}`]);
+    expect([input.isDown(key('w')), input.isDown(K.CONSOLE)]).toEqual([false, false]);
+  });
+
+  it("toggles on togglemenu's Escape with Shift held, as Con_ToggleMenu_f's does", () => {
+    const { input, router, heard } = catching();
+    input.keyDown(K.SHIFT);
+    router.execute(['togglemenu']);
+    expect(heard).toEqual(['toggleconsole']);
+  });
+});
+
 describe('ClientInput: binds over a catcher', () => {
   const binds: [number, string][] = [
     [key('m'), 'togglemenu'],
