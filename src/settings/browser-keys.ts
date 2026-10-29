@@ -127,13 +127,13 @@ export function keyForButton(button: number): number | null {
 }
 
 /**
- * The wheel, by `WheelEvent.deltaY`, as the key Q3 presses and lets go for each turn of it
+ * The wheel, by a turn's `WheelEvent` delta, as the key Q3 presses and lets go for each turn of it
  * (`sdl_input.c:1143–1152`): up, away from the player, is `MWHEELUP`.
  *
- * @returns The key, or `null` for a turn with no vertical part.
+ * @returns The key, or `null` for a turn of none.
  */
-export function keyForWheel(deltaY: number): number | null {
-  if (deltaY < 0) return K.MWHEELUP;
-  if (deltaY > 0) return K.MWHEELDOWN;
+export function keyForWheel(delta: number): number | null {
+  if (delta < 0) return K.MWHEELUP;
+  if (delta > 0) return K.MWHEELDOWN;
   return null;
 }

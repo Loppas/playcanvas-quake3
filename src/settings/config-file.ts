@@ -1,8 +1,8 @@
 import { opfsAvailable, opfsRoot } from '../browser-storage';
 
 /**
- * Where the files the game keeps are kept: `q3config.cfg`, and the favourite servers'
- * `favorites.txt` beside it.
+ * Where the files the game keeps are kept: `q3config.cfg`, and beside it the favourite servers'
+ * `favorites.txt` and the console's history, `q3history`.
  *
  * The desktop shell keeps them in `fs_homepath` alone, as Q3 keeps its one file. A browser build
  * keeps them in OPFS. Dev keeps them in both: the copy in `fs_homepath` can be opened in an editor
@@ -15,6 +15,9 @@ export const Q3CONFIG_CFG = 'q3config.cfg';
 
 /** The favourite servers, which the game keeps beside the config. */
 export const FAVORITES_TXT = 'favorites.txt';
+
+/** `CONSOLE_HISTORY_FILE` (`cl_keys.c:1462`): the lines entered at the console. */
+export const Q3HISTORY = 'q3history';
 
 /** The route to a kept file in `fs_homepath` (`scripts/q3config-route.mjs`). */
 export function homeRoute(name: string): string {
@@ -119,7 +122,7 @@ export async function readKeptFile(stores: readonly FileStore[]): Promise<string
   return undefined;
 }
 
-/** What a kept file holds, and when that changes: the config, or the favourite servers. */
+/** What a kept file holds, and when that changes: the config, the favourites or the history. */
 export interface KeptText {
   /** The file, as it should now read. */
   text(): string;

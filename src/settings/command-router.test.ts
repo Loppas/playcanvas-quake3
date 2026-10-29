@@ -311,6 +311,15 @@ describe('exec', () => {
     expect(printed).toEqual(['execing a.cfg\n', 'Unknown command "nope^7"\n']);
   });
 
+  it("runs a text cut as a file's lines are, what follows an exec waiting for it", async () => {
+    const { router, config, log } = setup({ 'a.cfg': 'seta cg_fov 100' });
+    router.executeText('cg_fov 90; map "q3dm17"\n// a note\nexec a; kick all');
+    expect(log).toEqual(['cvar cg_fov 90', 'map q3dm17']);
+    await router.settled();
+    expect(log).toEqual(['cvar cg_fov 90', 'map q3dm17', 'config seta cg_fov 100', 'kick all']);
+    expect(config.cvars.settings.fov).toBe(100);
+  });
+
   it("runs a command that comes while a file is read after the file's lines, as Cbuf_InsertText has it", async () => {
     const { router, config, log, printed } = setup({ 'a.cfg': 'seta cg_fov 100' });
     router.execute(['exec', 'a']);

@@ -103,7 +103,9 @@ export class KeyInput {
     const onWheel = (event: WheelEvent) => {
       if (this.input.catchers === 0 && !this.input.active) return;
       event.preventDefault();
-      const key = keyForWheel(event.deltaY);
+      // A browser may turn the wheel with Shift held into a sideways scroll, where SDL keeps it.
+      const turned = event.shiftKey && event.deltaY === 0 ? event.deltaX : event.deltaY;
+      const key = keyForWheel(turned);
       if (key === null) return;
       this.input.keyDown(key);
       this.input.keyUp(key);

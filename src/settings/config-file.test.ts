@@ -1,15 +1,18 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { keptFile } from '../../scripts/q3config-route.mjs';
 import {
   CONFIG_ROUTE,
   downloadFile,
   FAVORITES_TXT,
+  homeRoute,
   homeStores,
   keepFile,
   opfsFile,
   pickConfigFile,
   Q3CONFIG_CFG,
+  Q3HISTORY,
   readKeptFile,
   routeFile,
   type FileStore
@@ -131,6 +134,12 @@ describe('the stores', () => {
     expect(await read(homeStores(FAVORITES_TXT, false, true))).toEqual([route]);
     expect(await read(homeStores(FAVORITES_TXT, true))).toEqual([route, 'opfs favourites']);
     expect(await read(homeStores(FAVORITES_TXT, false))).toEqual(['opfs favourites']);
+  });
+
+  it('keeps each file at a route the dev server and the shell answer', () => {
+    for (const name of [Q3CONFIG_CFG, FAVORITES_TXT, Q3HISTORY]) {
+      expect(keptFile(homeRoute(name)), name).toBe(name);
+    }
   });
 
   it('keeps the file in OPFS', async () => {

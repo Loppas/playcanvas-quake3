@@ -15,6 +15,7 @@ import {
   keepFile,
   pickConfigFile,
   Q3CONFIG_CFG,
+  Q3HISTORY,
   readKeptFile
 } from './settings/config-file';
 import { GameConfig } from './settings/game-config';
@@ -39,14 +40,17 @@ const GAME_DATA_WEIGHT = 70;
 
 // The settings and the binds: the defaults, then the saved `q3config.cfg`, then the query
 // string's. The file is read where `homeStores` keeps it, and every change is written back. The
-// favourite servers' file beside it is read with it, for the client to take up once it is built.
+// favourite servers' file and the console's history beside it are read with it, for the client and
+// the console to take up once they are built.
 const stores = homeStores(Q3CONFIG_CFG, import.meta.env.DEV, shell);
 const favoriteStores = homeStores(FAVORITES_TXT, import.meta.env.DEV, shell);
+const historyStores = homeStores(Q3HISTORY, import.meta.env.DEV, shell);
 // The shell's launch, read with them: the vertical sync Chromium was started with holds until the
 // next. A shell that can't say is taken as paced, as a browser is.
-const [saved, savedFavorites, launch] = await Promise.all([
+const [saved, savedFavorites, savedHistory, launch] = await Promise.all([
   readKeptFile(stores),
   readKeptFile(favoriteStores),
+  readKeptFile(historyStores),
   shell
     ? shellLaunch().catch((err: unknown) => {
         console.warn('The shell did not say how it was launched:', err);
@@ -180,6 +184,7 @@ try {
     home,
     dumps: dumpFolder(import.meta.env.DEV, shell),
     favorites: { saved: savedFavorites, stores: favoriteStores },
+    history: { saved: savedHistory, stores: historyStores },
     host,
     launchVsync: launch?.vsync,
     screens,

@@ -363,6 +363,52 @@ describe('EditField', () => {
   });
 });
 
+// ioquake3 copies a whole `field_t` in and out of its history, so these have no twin.
+describe("EditField's line, as the console's history keeps it", () => {
+  it('gives its line and takes one back, its own width kept', () => {
+    const { field } = edit(10);
+    type(field, 'abcdefghijklmno');
+    press(field, K.LEFTARROW);
+    const line = field.line();
+    expect(line).toEqual({ text: 'abcdefghijklmno', cursor: 14, scroll: 6 });
+
+    const other = edit(20).field;
+    other.restore(line);
+    expect([...state(other), other.widthInChars]).toEqual(['abcdefghijklmno', 14, 6, 20]);
+    // A scroll below 0 comes back as it was, as the draw reads it.
+    other.restore({ text: 'abc', cursor: 3, scroll: -17 });
+    expect(state(other)).toEqual(['abc', 3, -17]);
+  });
+
+  it('brings a cursor outside the line it takes back to its nearer end', () => {
+    const { field } = edit();
+    field.restore({ text: 'abc', cursor: 9, scroll: 0 });
+    expect(state(field)).toEqual(['abc', 3, 0]);
+    field.restore({ text: 'abc', cursor: -4, scroll: 0 });
+    expect(state(field)).toEqual(['abc', 0, 0]);
+  });
+
+  it('takes no more characters on a line taken back longer than it types', () => {
+    const { field, mode } = edit();
+    const long = `\\${'a'.repeat(MAX_FIELD_LENGTH)}`;
+    field.restore({ text: long, cursor: long.length, scroll: 0 });
+    expect(field.char('b')).toBe(true);
+    expect(field.text).toBe(long);
+    press(field, K.HOME);
+    field.char('b');
+    expect(field.text).toBe(long);
+    // Overstrike writes over what is there short of the limit, and nothing at it or past it.
+    mode.overstrike = true;
+    field.char('/');
+    expect(field.text).toBe(`/${long.slice(1)}`);
+    field.restore({ text: long, cursor: MAX_FIELD_LENGTH, scroll: 0 });
+    field.char('b');
+    field.restore({ ...field.line(), cursor: long.length });
+    field.char('b');
+    expect(field.text).toBe(long);
+  });
+});
+
 describe('typedColors', () => {
   it('colours from white, each code from its caret on, the code drawn', () => {
     expect(typedColors('a^1bc^7d')).toEqual([7, 1, 1, 1, 1, 7, 7, 7]);

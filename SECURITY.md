@@ -17,10 +17,10 @@ The code in this repository, wherever it runs:
   commands, info strings and the server browser's lists.
 - **The dev server's routes** (`npm run dev`), as the shell's `app://` scheme answers them too:
   `/baseq3/`, which lists the install's pk3s and reads them by `Range`; `/homepath/`, which reads
-  and replaces `q3config.cfg` and `favorites.txt` in `fs_homepath` and reads its other cfgs; and
-  `/maps/paks.json`. The dev server listens on `localhost` alone unless it is started with
-  `--host`, and then trusts the network it is opened to; a route reached from another origin, or
-  past Vite's check of the `Host` header, is in scope.
+  and replaces `q3config.cfg`, `favorites.txt` and `q3history` in `fs_homepath` and reads its
+  other cfgs; and `/maps/paks.json`. The dev server listens on `localhost` alone unless it is
+  started with `--host`, and then trusts the network it is opened to; a route reached from another
+  origin, or past Vite's check of the `Host` header, is in scope.
 - **The desktop shell**: its `app://` scheme, with the shell's own `/install` and `/launch`, and
   its folder picker.
 - **The servers**: the Node dedicated server (its connectionless packets and data channels on

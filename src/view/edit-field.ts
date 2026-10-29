@@ -9,8 +9,8 @@ import { K } from '../formats/q3-keys';
  */
 
 /**
- * The longest line: `MAX_EDIT_LINE` less two, "to leave room for the leading slash and trailing \0"
- * (`:572–573`).
+ * The longest line typed: `MAX_EDIT_LINE` less two, "to leave room for the leading slash and
+ * trailing \0" (`:572–573`). A line the console's history recalls can be longer, and takes no more.
  */
 export const MAX_FIELD_LENGTH = 254;
 
@@ -30,6 +30,13 @@ const ctrl = (letter: string) => String.fromCharCode(letter.charCodeAt(0) - 0x60
  */
 export interface EditMode {
   overstrike: boolean;
+}
+
+/** A field's line as the console's history keeps it: its text, cursor and scroll, not its width. */
+export interface FieldLine {
+  text: string;
+  cursor: number;
+  scroll: number;
 }
 
 /** The part of a field's line its draw shows: `length` characters from `start`. */
@@ -76,6 +83,21 @@ export class EditField {
   /** Whether a character typed writes over the one at the cursor: the mode it shares. */
   get overstrike(): boolean {
     return this.mode.overstrike;
+  }
+
+  /** The line, its cursor and its scroll. */
+  line(): FieldLine {
+    return { text: this.buffer, cursor: this.cursorAt, scroll: this.scrolled };
+  }
+
+  /**
+   * A line put back, as the console's history recalls one, in this field's width. A cursor outside
+   * the line comes back to its nearer end, where ioquake3 would edit outside its buffer.
+   */
+  restore(line: FieldLine): void {
+    this.buffer = line.text;
+    this.cursorAt = Math.min(Math.max(line.cursor, 0), line.text.length);
+    this.scrolled = line.scroll;
   }
 
   /** `Field_Clear` (`common.c:3318–3322`): an empty line, its cursor and scroll at the start. */
@@ -165,10 +187,10 @@ export class EditField {
     if (code < 32 || code > 126) return false;
 
     if (this.mode.overstrike) {
-      if (this.cursorAt === MAX_FIELD_LENGTH) return true;
+      if (this.cursorAt >= MAX_FIELD_LENGTH) return true;
       this.buffer = this.buffer.slice(0, this.cursorAt) + ch + this.buffer.slice(this.cursorAt + 1);
     } else {
-      if (len === MAX_FIELD_LENGTH) return true;
+      if (len >= MAX_FIELD_LENGTH) return true;
       this.buffer = this.buffer.slice(0, this.cursorAt) + ch + this.buffer.slice(this.cursorAt);
     }
     this.cursorAt++;

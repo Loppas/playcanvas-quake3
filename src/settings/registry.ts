@@ -151,6 +151,11 @@ export interface Settings {
   conScale: number;
   /** `con_autoclear`: `toggleconsole` clears the line being typed. */
   conAutoclear: boolean;
+  /**
+   * `con_autochat`: a console line with no leading slash is said in a match, and run as commands
+   * out of one.
+   */
+  conAutochat: boolean;
   /** `cg_teamChatsOnly`: in a team game, only team chat is shown and heard. */
   teamChatsOnly: boolean;
   /** `cg_teamChatHeight`: how many lines the team chat box shows, up to 8; 0 hides it. */
@@ -683,6 +688,8 @@ export const SETTINGS: SettingDefs = {
     section: null
   },
   conAutoclear: { cvar: 'con_autoclear', default: '1', read: flag, section: null },
+  // Archived, and only a program with a client has it (`common.c:2808–2810`).
+  conAutochat: { cvar: 'con_autochat', default: '1', read: flag, section: null },
   // cgame's chat, with ioquake3's defaults, archived (`cg_main.c:265–266, 278`), on no page.
   teamChatsOnly: { cvar: 'cg_teamChatsOnly', default: '0', read: flag, section: null },
   teamChatHeight: {

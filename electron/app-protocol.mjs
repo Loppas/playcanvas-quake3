@@ -2,8 +2,8 @@
  * The shell's `app:` scheme. It answers the routes the dev server answers in the browser, so the
  * page runs unchanged:
  * - `/baseq3/` lists the install's paks, and `/baseq3/<name>.pk3` answers `Range` over one;
- * - `/homepath/q3config.cfg` and `/homepath/favorites.txt` read and replace those files in
- *   `fs_homepath`;
+ * - `/homepath/q3config.cfg`, `/homepath/favorites.txt` and `/homepath/q3history` read and
+ *   replace those files in `fs_homepath`;
  * - `/homepath/<path>.cfg` reads another cfg there, and `/homepath/<dir>/` lists a folder's; a
  *   `.cfg` or `.txt` there is written;
  * - `/install`, the shell's own: the install this launch reads and the one kept for the next, and
@@ -204,8 +204,8 @@ function launch(request, route) {
 }
 
 /**
- * A kept file, `q3config.cfg` or `favorites.txt`, read or replaced. Only the shell's own page can
- * reach the scheme, so the dev server's origin check has nothing to refuse here.
+ * A kept file, `q3config.cfg`, `favorites.txt` or `q3history`, read or replaced. Only the shell's
+ * own page can reach the scheme, so the dev server's origin check has nothing to refuse here.
  *
  * @param {Request} request
  * @param {string} file

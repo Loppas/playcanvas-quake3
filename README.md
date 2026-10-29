@@ -202,8 +202,17 @@ A line is typed after the console's `]` prompt and edited as Quake 3 edits it: t
 End move along it, Backspace and Delete take a character, Insert swaps to writing over the one at
 the cursor (in the menu's fields too, as in Quake 3), Ctrl+A and Ctrl+E go to its ends, Ctrl+C
 clears it, and Ctrl+V or Shift+Insert pastes the clipboard's first line. A colour code shows as
-typed, colouring what follows it. Enter doesn't run the line yet. It is cleared each time the
-console drops, unless `con_autoclear` is 0.
+typed, colouring what follows it. It is cleared each time the console drops, unless
+`con_autoclear` is 0.
+
+Enter echoes the line and runs it as Quake 3 does. A line that starts with `/` or `\` is run as
+console commands. While `con_autochat` is 1, its default, any other line is said to everyone in a
+match, and run as commands out of one; with it at 0, every line is run as commands. Up brings back
+the lines entered before, the last 32 of them, and Down goes on again; Ctrl+P and Ctrl+N, and Shift
+with the wheel, do the same, though Ctrl+N only in the desktop shell, as a browser keeps it for
+itself. The lines are kept between runs in `q3history`, beside `q3config.cfg`. PgUp and PgDn
+scroll the console's text, as the wheel does (faster with Ctrl), Ctrl+Home and Ctrl+End go to its
+top and bottom, and Ctrl+L clears it.
 
 `writeconfig <name>` writes the config to `<name>.cfg` beside `q3config.cfg`, where `exec <name>`
 reads it back. `condump <name>` writes the console's text to `<name>.txt` there; a build in the
@@ -345,8 +354,9 @@ says whose the game is, and links the source at the commit built, the licence, `
 ## The desktop shell
 
 The shell is an Electron window around the same web build. It reads the Quake 3 install where it
-sits, and keeps `q3config.cfg` and `favorites.txt` in `%LOCALAPPDATA%\playcanvas-quake3`, the
-folder the dev server writes them to (`~/Library/Application Support/playcanvas-quake3` on macOS,
+sits, and keeps `q3config.cfg`, `favorites.txt` and `q3history` in
+`%LOCALAPPDATA%\playcanvas-quake3`, the folder the dev server writes them to
+(`~/Library/Application Support/playcanvas-quake3` on macOS,
 `$XDG_CONFIG_HOME/playcanvas-quake3` or `~/.config/playcanvas-quake3` on Linux).
 
 On its first start it asks where Quake 3 is installed: pick the folder that holds `baseq3`, or

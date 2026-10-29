@@ -259,6 +259,11 @@ export class ClientInput {
     return this.catcher()?.paste?.(text) ?? false;
   }
 
+  /** `Key_IsDown`: whether a key is held. */
+  isDown(key: number): boolean {
+    return this.down.has(key);
+  }
+
   /** Let every key down go, as `Key_ClearStates` does (`cl_keys.c:1420–1434`). */
   clear(): void {
     for (const key of [...this.down]) this.keyUp(key);
