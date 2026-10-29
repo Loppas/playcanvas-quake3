@@ -86,6 +86,7 @@ const FRESH = [
   'seta con_scale "1"',
   'seta con_autoclear "1"',
   'seta con_autochat "1"',
+  'seta cl_consoleKeys "~ ` 0x7e 0x60"',
   'seta cg_teamChatsOnly "0"',
   'seta cg_teamChatHeight "0"',
   'seta cg_teamChatTime "3000"',

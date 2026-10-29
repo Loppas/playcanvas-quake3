@@ -156,6 +156,11 @@ export interface Settings {
    * out of one.
    */
   conAutochat: boolean;
+  /**
+   * `cl_consoleKeys`: the keys, by name, and the characters, by `0x` code, that toggle the
+   * console.
+   */
+  consoleKeys: string;
   /** `cg_teamChatsOnly`: in a team game, only team chat is shown and heard. */
   teamChatsOnly: boolean;
   /** `cg_teamChatHeight`: how many lines the team chat box shows, up to 8; 0 hides it. */
@@ -690,6 +695,8 @@ export const SETTINGS: SettingDefs = {
   conAutoclear: { cvar: 'con_autoclear', default: '1', read: flag, section: null },
   // Archived, and only a program with a client has it (`common.c:2808–2810`).
   conAutochat: { cvar: 'con_autochat', default: '1', read: flag, section: null },
+  // Archived (`cl_main.c:3660`).
+  consoleKeys: { cvar: 'cl_consoleKeys', default: '~ ` 0x7e 0x60', read: text, section: null },
   // cgame's chat, with ioquake3's defaults, archived (`cg_main.c:265–266, 278`), on no page.
   teamChatsOnly: { cvar: 'cg_teamChatsOnly', default: '0', read: flag, section: null },
   teamChatHeight: {

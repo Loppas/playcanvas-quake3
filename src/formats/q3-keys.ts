@@ -234,7 +234,7 @@ export function keyToString(key: number): string {
 }
 
 /** `Com_HexStrToInt` (`q_shared.c:683–715`): `0x` and at least one hex digit, or −1. */
-function hexToInt(text: string): number {
+export function hexToInt(text: string): number {
   if (text[0] !== '0' || text[1] !== 'x' || text.length < 3) return -1;
   let value = 0;
   for (const char of text.slice(2).toLowerCase()) {

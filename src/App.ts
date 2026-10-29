@@ -938,6 +938,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     if (settings.conAutoclear) consoleField.clear();
     consoleText.clearNotify();
     input.setCatcher(input.catchers ^ KEYCATCH.CONSOLE);
+    keys?.followConsole();
   });
   addCondump(commands, {
     consoleText,
@@ -1735,7 +1736,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       canvas,
       input,
       () => openMenu(false),
-      controller !== null || mapPreview !== null
+      controller !== null || mapPreview !== null,
+      () => settings.consoleKeys
     );
     began = true;
   };

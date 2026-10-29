@@ -73,8 +73,8 @@ The game plays against bots, on Quake 3's maps and the port's own:
   dedicated server; and a master to find them by.
 - **The desktop shell:** an Electron window that reads your install where it sits.
 
-Not yet: typing at the console, or a line to type chat on; bot AI, so a bot stands where it
-spawned; recording demos; votes; and the single-player ladder and Team Arena's modes.
+Not yet: the chat line `messagemode` opens; bot AI, so a bot stands where it spawned; recording
+demos; votes; and the single-player ladder and Team Arena's modes.
 
 ## Requirements
 
@@ -191,12 +191,17 @@ lets a script that runs itself go on, a frame at a time; without one it stops 16
 would hang or overflow its command buffer. `togglemenu` is an Escape pressed and let go, so a key
 bound to it opens the menu, and goes back a page while the menu is up, as Escape does.
 
-`toggleconsole` drops Quake 3's console over the top half of the screen: the console's text from
-the bottom up, in the colours it was printed in, with the port's version in the corner. Nothing
-binds it by default; `bind <key> toggleconsole` puts it on a key. As in Quake 3, a bound key doesn't
-lift it again while it is down: Escape does, and opens the menu as it goes. The notify lines hide
-while it shows. `scr_conspeed` sets how fast it slides, and `con_scale` how large its characters
-are, the notify lines' with them.
+The key left of 1 drops Quake 3's console over the top half of the screen, over a menu too, and
+lifts it again, and Shift+Escape does the same on any keyboard layout. It shows the console's text
+from the bottom up, in the colours it was printed in, with the port's version in the corner.
+`cl_consoleKeys` names the keys that toggle it, and the characters, as `0x` codes, whose keys do:
+by default `` ` `` and `~`, which can't be typed while it names them. No bind can take a console
+key. `toggleconsole` toggles it from a bind or a cfg, though, as in Quake 3, a key bound to it
+doesn't lift it again while it is down. Escape lifts it too, and opens the menu as it goes. The
+mouse is free while the console is down, and in a match it is taken back as the console lifts,
+though after Shift+Escape dropped the console in a match the browser may want a click first. The
+notify lines hide while it shows. `scr_conspeed` sets how fast it slides, and `con_scale` how
+large its characters are, the notify lines' with them.
 
 A line is typed after the console's `]` prompt and edited as Quake 3 edits it: the arrows, Home and
 End move along it, Backspace and Delete take a character, Insert swaps to writing over the one at
@@ -225,8 +230,8 @@ tells the player of that name, its colours left off, and `tell_attacker <text>` 
 who hurt you. Each line plays the talk sound and shows on the notify lines in its colours, a team
 line with where its speaker is. `cg_teamChatsOnly 1` keeps a team game to team chat.
 `cg_teamChatHeight` shows up to 8 team lines over a band above the status bar, each for
-`cg_teamChatTime` milliseconds; at its default of 0 the band stays hidden. There is no line to type
-chat on yet.
+`cg_teamChatTime` milliseconds; at its default of 0 the band stays hidden. The chat line
+`messagemode` opens is not there yet, though a line typed at the console is said.
 
 ## Quake 3 assets
 

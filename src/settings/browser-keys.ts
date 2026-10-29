@@ -1,4 +1,5 @@
-import { K } from '../formats/q3-keys';
+import { comParse, parseCursor } from '../formats/com-parse';
+import { hexToInt, K, stringToKey } from '../formats/q3-keys';
 
 /**
  * The browser's keys and buttons as Q3 numbers them: what
@@ -25,6 +26,9 @@ const PRINTABLE = new Map([
   ['Period', '.'],
   ['Slash', '/']
 ]);
+
+/** `MAX_CONSOLE_KEYS` (`sdl_input.c:95`): the most words `cl_consoleKeys` is read for. */
+const MAX_CONSOLE_KEYS = 16;
 
 /** The keys that type nothing, by their codes (`sdl_input.c:218–296`). */
 const NAMED = new Map<string, number>([
@@ -101,6 +105,36 @@ export function keyForCode(code: string, layout?: ReadonlyMap<string, string>, a
   if (f && Number(f[1]) >= 1 && Number(f[1]) <= 15) return K.F1 + Number(f[1]) - 1;
   if (code === 'MetaLeft' || code === 'MetaRight') return apple ? K.COMMAND : K.SUPER;
   return NAMED.get(code) ?? null;
+}
+
+/**
+ * `IN_IsConsoleKey` (`sdl_input.c:106–189`): whether a key, or a character typed, toggles the
+ * console, by `cl_consoleKeys`. Its words are cut as `COM_Parse` cuts them, up to 16: a `0x` code
+ * above 0 names a character, and any other word a key, as `bind` names one. A word that names no
+ * key counts for nothing.
+ *
+ * @param consoleKeys - `cl_consoleKeys`.
+ * @param key - The key, or 0 to ask of a character alone.
+ * @param character - The character's code, or 0 to ask of a key alone.
+ */
+export function isConsoleKey(consoleKeys: string, key: number, character: number): boolean {
+  // "If the character is the same as the key, prefer the character"
+  if (key === character) key = 0;
+  const cursor = parseCursor(consoleKeys);
+  for (let read = 0; read < MAX_CONSOLE_KEYS; ) {
+    const word = comParse(cursor);
+    if (word === '') break;
+    const code = hexToInt(word);
+    if (code > 0) {
+      if (code === character) return true;
+    } else {
+      const named = stringToKey(word);
+      if (named <= 0) continue;
+      if (key !== 0 && named === key) return true;
+    }
+    read++;
+  }
+  return false;
 }
 
 /**
