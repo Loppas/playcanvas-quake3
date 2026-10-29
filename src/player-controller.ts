@@ -58,6 +58,7 @@ import {
 } from './view/player-view';
 import type { Scores } from './view/scores';
 import type { ServerInfo } from './view/server-info';
+import type { TeamChatState } from './view/team-chat';
 import { weaponCommand } from './view/weapon-select';
 
 /**
@@ -617,6 +618,11 @@ export class PlayerController {
     return this.view.rewards;
   }
 
+  /** The team chat box's lines, which the HUD moves on as it shows them. */
+  get teamChat(): TeamChatState {
+    return this.view.teamChat;
+  }
+
   /** The score plums' digits this frame, turned across the view from `eye`. */
   plumSprites(eye: Vec3): FloatSprite[] {
     return this.view.plumSprites(eye);
@@ -814,6 +820,9 @@ export class PlayerController {
   private applySettings(): void {
     this.view.thirdPerson = this.settings.thirdPerson;
     this.view.scorePlums = this.settings.scorePlums;
+    this.view.teamChatsOnly = this.settings.teamChatsOnly;
+    this.view.teamChatHeight = this.settings.teamChatHeight;
+    this.view.teamChatTime = this.settings.teamChatTime;
     this.view.deferPlayers = this.settings.deferPlayers;
     this.view.noPredict = this.settings.noPredict;
     this.view.errorDecay = this.settings.errorDecay;

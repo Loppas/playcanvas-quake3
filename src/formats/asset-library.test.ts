@@ -704,19 +704,19 @@ describe.skipIf(!haveFullSet)('extractAssets against the retail pak set', () => 
   });
 
   it('extracts a small subset, not the pak, reading each file once', async () => {
-    // 525 files and 13 MB measured, against a 457 MB pak0: the weapons' 204 files, the items and
+    // 527 files and 13 MB measured, against a 457 MB pak0: the weapons' 204 files, the items and
     // their icons and sounds, the hits' blood, the HUD's art — the four flag status icons past
-    // each side's first among it, the six medals, the lagometer's picture and the defer cross —
-    // the gibs, the player and menu sounds, the water's, the splashes, the clanks, the gurgles
-    // and the fry among them, the announcer's voices, which are 3 MB of it, the jump pad's boing,
-    // the teleport's two sounds, its model and its image, the held powerups' shells, the bubble,
-    // the three sprites over a head, and sarge.
+    // each side's first among it, the six medals, the lagometer's picture, the defer cross and
+    // the team chat's band — the gibs, the player and menu sounds, the water's, the splashes, the
+    // clanks, the gurgles and the fry among them, the announcer's voices, which are 3 MB of it,
+    // chat's talk sound, the jump pad's boing, the teleport's two sounds, its model and its
+    // image, the held powerups' shells, the bubble, the three sprites over a head, and sarge.
     const fs = await mountAll();
     const read = vi.spyOn(fs, 'read');
     const library = await extractAssets(fs);
-    expect(library.files.size).toBe(525);
+    expect(library.files.size).toBe(527);
     expect(library.byteLength).toBeLessThan(16 * 1024 * 1024);
-    expect(read).toHaveBeenCalledTimes(525);
+    expect(read).toHaveBeenCalledTimes(527);
   });
 
   it("brings a teleport's two sounds, and its model with the image its shader draws", async () => {

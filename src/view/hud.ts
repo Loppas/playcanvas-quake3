@@ -1,4 +1,11 @@
-import { PMF_FOLLOW, PMF_SCOREBOARD, PM_INTERMISSION, PM_SPECTATOR, TEAM } from '../sim/constants';
+import {
+  GT,
+  PMF_FOLLOW,
+  PMF_SCOREBOARD,
+  PM_INTERMISSION,
+  PM_SPECTATOR,
+  TEAM
+} from '../sim/constants';
 import { ITEMS, NUM_ITEMS } from '../sim/items';
 import { WP, type WeaponId } from '../sim/weapons/constants';
 import type { AnnouncerCue } from './announcer';
@@ -26,6 +33,7 @@ import {
 } from './hud-status';
 import { powerupTimers, type PowerupTimer } from './powerup-timers';
 import { drawReward, type RewardFrame, type RewardState } from './rewards';
+import { drawTeamChat, type TeamChatFrame, type TeamChatState } from './team-chat';
 import { fadeAlpha } from './weapon-bar';
 import {
   BIGCHAR_HEIGHT,
@@ -52,8 +60,8 @@ import { weaponBar, type WeaponBar } from './weapon-bar';
  * 640×480 grid, for the render layer to put on screen. Engine-free, so every rule of it is tested
  * without a device.
  *
- * Only what the port has is drawn. Q3's team, flag, reward, vote and attacker pieces have nothing
- * behind them. Its lagometer has nothing to measure in a local game (`cg_draw.c:1641`), so Quake
+ * Only what the port has is drawn. Q3's team overlay, vote and attacker pieces have nothing behind
+ * them. Its lagometer has nothing to measure in a local game (`cg_draw.c:1641`), so Quake
  * Live's speedometer takes its box there, and the one beside it where the lagometer draws.
  */
 
@@ -79,6 +87,10 @@ export interface HudSettings {
   centerTime: number;
   /** `cg_drawRewards`: the reward's medals at the top of the screen. */
   drawRewards: boolean;
+  /** `cg_teamChatHeight`: how many lines the team chat box shows; 0 hides it. */
+  teamChatHeight: number;
+  /** `cg_teamChatTime`: how long a line stays in the team chat box, in milliseconds. */
+  teamChatTime: number;
 }
 
 /** What the HUD reads this frame, all of it the player's. */
@@ -164,6 +176,13 @@ export interface HudInput {
   centerPrint: CenterPrintState;
   /** `cg.rewardStack` and its arrays: the rewards waiting to be shown, which the frame moves on. */
   rewards: RewardState;
+  /** `cgs.teamChatMsgs` and their ring: the team chat box's lines, which the frame moves on. */
+  teamChat: TeamChatState;
+  /**
+   * `cgs.clientinfo[cg.clientNum].team`: the player's own team, whoever they are following, which
+   * colours the team chat box.
+   */
+  ownTeam: number;
   /** The client's commands have outrun its buffer: the server has stopped answering. */
   interrupted: boolean;
   /** `cgs.localServer`: the server runs in this page, and the lagometer has nothing to measure. */
@@ -331,6 +350,8 @@ export interface HudFrame {
   centerPrint: HudText[];
   /** `CG_DrawReward`: the medals, and the reward's voice as it comes up. */
   reward: RewardFrame | null;
+  /** `CG_DrawTeamInfo`: the team chat box, in a team game. */
+  teamChat: TeamChatFrame | null;
   /** `CG_DrawLagometer`: the frame and snapshot graphs at the bottom right. */
   lagometer: HudLagometer | null;
   /** `CG_DrawDisconnect`: "Connection Interrupted", and the net icon blinking. */
@@ -386,6 +407,7 @@ export function hudFrame(state: HudState, input: HudInput, settings: HudSettings
       holdable: null,
       centerPrint: [],
       reward: null,
+      teamChat: null,
       lagometer: null,
       disconnect: null
     };
@@ -445,6 +467,12 @@ export function hudFrame(state: HudState, input: HudInput, settings: HudSettings
     // The last of the status block, so a reward waits — medals and voice — while the player is
     // dead or holding the scores key (`cg_draw.c:2583`).
     reward: own && settings.drawRewards ? drawReward(input.rewards, input.time) : null,
+    // Outside the status block, so drawn dead or spectating, in a team game alone
+    // (`cg_draw.c:2587–2591`); its lines go only as it draws.
+    teamChat:
+      input.gametype >= GT.TEAM && !boardOnly
+        ? drawTeamChat(input.teamChat, settings, input.time, input.ownTeam)
+        : null,
     // `CG_DrawCenterString`, the last of `CG_Draw2D`'s block: the message draws whether the
     // player is alive, and only the scoreboard hides it (`cg_draw.c:2615–2619`).
     centerPrint: centrePrint(input, settings)

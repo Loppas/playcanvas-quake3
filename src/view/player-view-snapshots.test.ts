@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CONFIGSTRING, SNAPFLAG } from '../net/commands';
+import { CHAT_ESCAPE as EC, CONFIGSTRING, SNAPFLAG } from '../net/commands';
 import { ClientClock, UserCmdRing } from '../net/client-clock';
 import { ServerDisconnect } from '../net/connection';
 import {
@@ -506,6 +506,101 @@ describe('the server commands a snapshot comes after', () => {
     frame(source, view, 108);
     expect(view.mapRestart).toBe(true);
     expect(view.respawned).toBe(true);
+  });
+});
+
+describe('chat and team chat, as cgame shows them', () => {
+  /** A view of a match in `gametype`, its first snapshot drawn. */
+  function playing(gametype: number = GT.FFA): { source: Scripted; view: PlayerView } {
+    const source = new Scripted();
+    source.configstrings[CONFIGSTRING.SERVERINFO] = `\\g_gametype\\${gametype}`;
+    source.send(11, 100);
+    const view = new PlayerView(source, createFlatWorldTrace());
+    frame(source, view, 100);
+    return { source, view };
+  }
+
+  /** The server's commands, carried by the next snapshot, 8 ms on. */
+  function hear(source: Scripted, view: PlayerView, commands: readonly string[]): void {
+    commands.forEach((command, i) => source.say(i + 1, command));
+    source.send(12, 108, { commands: commands.length });
+    frame(source, view, 108);
+  }
+
+  it("prints each of G_Say's lines without their markers, each with the talk sound", () => {
+    const { source, view } = playing(GT.TEAM);
+    const heard = listen(view);
+    hear(source, view, [
+      `chat "Alpha^7${EC}: ^2hello"`,
+      `tchat "${EC}(Alpha^7${EC}) (^3Red Armor^7)${EC}: ^5on me"`,
+      `tchat "${EC}(Alpha^7${EC})${EC}: ^5on me"`,
+      `chat "${EC}[Alpha^7${EC}]${EC}: ^6psst"`,
+      `chat "${EC}[Alpha^7${EC}] (Red Base)${EC}: ^6psst"`
+    ]);
+    expect(heard).toEqual([
+      'Alpha^7: ^2hello\n',
+      '(Alpha^7) (^3Red Armor^7): ^5on me\n',
+      '(Alpha^7): ^5on me\n',
+      '[Alpha^7]: ^6psst\n',
+      '[Alpha^7] (Red Base): ^6psst\n'
+    ]);
+    expect(view.voices).toEqual(['talk', 'talk', 'talk', 'talk', 'talk']);
+  });
+
+  it('cuts a line to 149 bytes, its markers counted, before taking them out', () => {
+    const { source, view } = playing();
+    const heard = listen(view);
+    hear(source, view, [`chat "${EC}${EC}${'x'.repeat(200)}"`, `tchat "${'y'.repeat(149)}z"`]);
+    expect(heard).toEqual([`${'x'.repeat(147)}\n`, `${'y'.repeat(149)}\n`]);
+  });
+
+  it('mutes chat in a team game under cg_teamChatsOnly, not team chat or free-for-all chat', () => {
+    const team = playing(GT.TEAM);
+    team.view.teamChatsOnly = true;
+    const heardInTeam = listen(team.view);
+    hear(team.source, team.view, [
+      `chat "Alpha^7${EC}: ^2hi"`,
+      `tchat "${EC}(Alpha^7${EC})${EC}: ^5hi"`
+    ]);
+    expect(heardInTeam).toEqual(['(Alpha^7): ^5hi\n']);
+    expect(team.view.voices).toEqual(['talk']);
+
+    const ffa = playing(GT.FFA);
+    ffa.view.teamChatsOnly = true;
+    const heardInFfa = listen(ffa.view);
+    hear(ffa.source, ffa.view, [`chat "Alpha^7${EC}: ^2hi"`]);
+    expect(heardInFfa).toEqual(['Alpha^7: ^2hi\n']);
+    expect(ffa.view.voices).toEqual(['talk']);
+  });
+
+  it("keeps team chat in the box at cgame's time, through a restart, until a new gamestate", () => {
+    const { source, view } = playing(GT.TEAM);
+    view.teamChatHeight = 4;
+    hear(source, view, [`tchat "${EC}(Alpha^7${EC})${EC}: ^5on me"`, `chat "Alpha^7${EC}: ^2hi"`]);
+    expect(view.teamChat).toMatchObject({ pos: 1, lastPos: 0 });
+    expect(view.teamChat.msgs[0]).toBe('(Alpha^7): ^5on me');
+    expect(view.teamChat.times[0]).toBe(108);
+
+    source.say(3, 'map_restart');
+    source.send(13, 116, { commands: 3 });
+    frame(source, view, 116);
+    expect(view.teamChat.pos).toBe(1);
+
+    source.gamestateMessageNum = 20;
+    source.send(21, 50);
+    frame(source, view, 50);
+    expect(view.teamChat).toMatchObject({ pos: 0, lastPos: 0, msgs: new Array(8).fill('') });
+  });
+
+  it("prints a command cgame doesn't know, and passes over one with no name", () => {
+    const { source, view } = playing();
+    const heard = listen(view);
+    hear(source, view, ['tinfo 1 2 3', '""', 'vchat x']);
+    expect(heard).toEqual([
+      'Unknown client game command: tinfo\n',
+      'Unknown client game command: vchat\n'
+    ]);
+    expect(view.voices).toEqual([]);
   });
 });
 

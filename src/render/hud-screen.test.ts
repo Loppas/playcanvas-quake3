@@ -22,6 +22,7 @@ import type { HudInput, HudSettings } from '../view/hud';
 import { createCenterPrint } from '../view/center-print';
 import { ConsoleBuffer } from '../view/console-buffer';
 import { createRewardState } from '../view/rewards';
+import { addToTeamChat, createTeamChat } from '../view/team-chat';
 import { screenRect, type HudAnchor, type HudRect } from '../view/hud-layout';
 import { Lagometer } from '../view/lagometer';
 import { notifyRows, type NotifyRow } from '../view/notify-lines';
@@ -71,7 +72,8 @@ function library(): AssetLibrary {
     ...ITEMS.slice(1).map((item) => `${item.icon}.tga`),
     'models/players/sarge/icon_default.tga',
     'gfx/2d/net.tga',
-    'gfx/2d/lag.tga'
+    'gfx/2d/lag.tga',
+    'gfx/2d/colorbar.tga'
   ];
   return new AssetLibrary(
     new Map<string, Uint8Array>([
@@ -131,6 +133,8 @@ function input(overrides: Partial<HudInput> = {}): HudInput {
     pickupTime: 0,
     centerPrint: createCenterPrint(),
     rewards: createRewardState(),
+    teamChat: createTeamChat(),
+    ownTeam: TEAM.FREE,
     interrupted: false,
     localServer: true,
     lagometer: new Lagometer(),
@@ -148,7 +152,9 @@ const SETTINGS: HudSettings = {
   noPredict: false,
   speedometer: 0,
   centerTime: 3,
-  drawRewards: true
+  drawRewards: true,
+  teamChatHeight: 0,
+  teamChatTime: 3000
 };
 
 const CHARSET = 'gfx/2d/bigchars.tga';
@@ -530,6 +536,18 @@ describe('HudScreen', () => {
     // "Connection Interrupted", in the middle, after its shadow.
     const line = of(CHARSET).filter((char) => char.rect[1] < 300);
     expectAt(line['ConnectionInterrupted'.length], { x: 144, y: 100, w: 16, h: 16 }, 'centre');
+  });
+
+  it("lays the team chat's band across a wide screen, its lines from the left edge", async () => {
+    await create({ teamChatHeight: 4 });
+    app.graphicsDevice.resizeCanvas(1920, 1080);
+    const teamChat = createTeamChat();
+    addToTeamChat(teamChat, 'Hi', { teamChatHeight: 4, teamChatTime: 3000 }, 4000);
+    hud.update(input({ gametype: GT.TEAM, ownTeam: TEAM.RED, teamChat }), []);
+    const [band] = of('gfx/2d/colorbar.tga');
+    expect(band.rect).toEqual([0, 412 * 2.25, 1920, 8 * 2.25]);
+    const [first] = of(CHARSET).filter((char) => char.rect[1] === 412 * 2.25);
+    expectAt(first, { x: 8, y: 412, w: 8, h: 8 }, 'left');
   });
 
   it("gives the menu a crosshair's image by its shader's name", () => {

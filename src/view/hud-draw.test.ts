@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { WEAPON_ASSETS } from '../formats/asset-manifest';
+import { TEAM_STATUS_BAR_SHADER, WEAPON_ASSETS } from '../formats/asset-manifest';
 import { MAX_POWERUPS } from '../net/protocol';
 import { GT, SCORE_NOT_PRESENT, TEAM } from '../sim/constants';
 import { ARMOR_TIER, findItem, itemIndex, PW } from '../sim/items';
@@ -29,6 +29,7 @@ import type { HudAnchor } from './hud-layout';
 import { Lagometer } from './lagometer';
 import { notifyRows } from './notify-lines';
 import { REWARD_TIME, createRewardState, pushReward } from './rewards';
+import { addToTeamChat, createTeamChat } from './team-chat';
 
 /** One picture written: its shader, rectangle on Q3's grid, anchor, texture corners and colour. */
 interface Written {
@@ -134,6 +135,8 @@ function input(overrides: Partial<HudInput> = {}): HudInput {
     pickupTime: 0,
     centerPrint: createCenterPrint(),
     rewards: createRewardState(),
+    teamChat: createTeamChat(),
+    ownTeam: TEAM.FREE,
     interrupted: false,
     localServer: true,
     lagometer: new Lagometer(),
@@ -152,7 +155,9 @@ const SETTINGS: HudSettings = {
   noPredict: false,
   speedometer: 0,
   centerTime: 3,
-  drawRewards: true
+  drawRewards: true,
+  teamChatHeight: 0,
+  teamChatTime: 3000
 };
 
 /** A HUD's frames, each written as it is drawn, with its state kept from one to the next. */
@@ -193,6 +198,28 @@ const placed = (pics: readonly Written[]) => pics.map(({ shader, rect, anchor })
 const WHOLE = [0, 0, 1, 1];
 
 describe('drawHud', () => {
+  it('writes the team chat box: the band across the screen, tinted, then its lines', () => {
+    const teamChat = createTeamChat();
+    addToTeamChat(teamChat, 'Hi ^5go', { teamChatHeight: 4, teamChatTime: 3000 }, 4000);
+    const pics = draw({ gametype: GT.TEAM, ownTeam: TEAM.BLUE, teamChat }, { teamChatHeight: 4 });
+    const band = pics.findIndex((pic) => pic.shader === TEAM_STATUS_BAR_SHADER);
+    expect(pics[band]).toEqual({
+      shader: TEAM_STATUS_BAR_SHADER,
+      rect: [0, 412, 640, 8],
+      anchor: 'stretch',
+      st: WHOLE,
+      color: [0, 0, 1, 0.33]
+    });
+    const line = of(pics, CHARSET_SHADER).filter((pic) => pic.rect[1] === 412);
+    expect(line.map(({ rect, anchor, color }) => [rect, anchor, color])).toEqual([
+      [[8, 412, 8, 8], 'left', [1, 1, 1, 1]],
+      [[16, 412, 8, 8], 'left', [1, 1, 1, 1]],
+      [[32, 412, 8, 8], 'left', [0, 1, 1, 1]],
+      [[40, 412, 8, 8], 'left', [0, 1, 1, 1]]
+    ]);
+    expect(pics.indexOf(line[0])).toBeGreaterThan(band);
+  });
+
   it("writes the status bar's numbers on Q3's grid, 32×48 a digit, the ammo's to the left edge", () => {
     const pics = draw({ ammo: ammoOf(50) });
     expect(placed(pics.filter((pic) => pic.rect[1] === 432))).toEqual([

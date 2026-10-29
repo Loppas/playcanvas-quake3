@@ -28,6 +28,7 @@ import {
   type CenterPrintState
 } from './center-print';
 import { createRewardState, pushReward } from './rewards';
+import { addToTeamChat, createTeamChat } from './team-chat';
 import { ICON_SIZE, STATUS_COLORS } from './hud-status';
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from './hud-layout';
 import {
@@ -90,6 +91,8 @@ function input(overrides: Partial<HudInput> = {}): HudInput {
     pickupTime: 0,
     centerPrint: createCenterPrint(),
     rewards: createRewardState(),
+    teamChat: createTeamChat(),
+    ownTeam: TEAM.FREE,
     interrupted: false,
     localServer: true,
     lagometer: new Lagometer(),
@@ -115,7 +118,9 @@ const DEFAULTS: HudSettings = {
   noPredict: false,
   speedometer: 0,
   centerTime: 3,
-  drawRewards: true
+  drawRewards: true,
+  teamChatHeight: 0,
+  teamChatTime: 3000
 };
 
 /** One frame from a fresh HUD. */
@@ -267,6 +272,48 @@ describe('the reward', () => {
     const rewards = waiting();
     expect(frame({ rewards, time: 5000 }, { drawRewards: false }).reward).toBeNull();
     expect(rewards.stack).toBe(1);
+  });
+});
+
+describe('the team chat box', () => {
+  const FOUR_LINES: Partial<HudSettings> = { teamChatHeight: 4 };
+
+  /** A box with one line in it, said at `time`. */
+  function box(time = 4500) {
+    const teamChat = createTeamChat();
+    addToTeamChat(teamChat, 'on me', { teamChatHeight: 4, teamChatTime: 3000 }, time);
+    return teamChat;
+  }
+
+  it('draws in a team game, the player alive, dead, spectating or holding the scores key', () => {
+    for (const over of [{}, { health: 0 }, { team: TEAM.SPECTATOR }, { showScores: true }]) {
+      const chat = frame({ gametype: GT.TEAM, teamChat: box(), ...over }, FOUR_LINES).teamChat;
+      expect(chat?.lines.map(({ text }) => text)).toEqual(['on me']);
+    }
+  });
+
+  it("is tinted by the player's own team, not the followed player's", () => {
+    const following = { team: TEAM.RED, pmFlags: PMF_FOLLOW, ownTeam: TEAM.SPECTATOR };
+    const chat = frame({ gametype: GT.TEAM, teamChat: box(), ...following }, FOUR_LINES).teamChat;
+    expect(chat?.color).toEqual([0, 1, 0, 0.33]);
+  });
+
+  it('draws nothing, and lets nothing go, below a team game, at the intermission, or off', () => {
+    const cases: [Partial<HudInput>, Partial<HudSettings>][] = [
+      [{ gametype: GT.FFA }, FOUR_LINES],
+      [{ gametype: GT.TEAM, pmType: PM_INTERMISSION }, FOUR_LINES],
+      [{ gametype: GT.TEAM }, { teamChatHeight: 0 }],
+      [{ gametype: GT.TEAM }, { ...FOUR_LINES, draw2D: false }]
+    ];
+    for (const [over, settings] of cases) {
+      const teamChat = box(1000);
+      expect(frame({ ...over, teamChat }, settings).teamChat).toBeNull();
+      expect(teamChat.lastPos).toBe(0);
+    }
+    // Drawn, the line said long enough ago goes.
+    const teamChat = box(1000);
+    expect(frame({ gametype: GT.TEAM, teamChat }, FOUR_LINES).teamChat).toBeNull();
+    expect(teamChat.lastPos).toBe(1);
   });
 });
 

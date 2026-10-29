@@ -17,6 +17,7 @@ import {
   LAGOMETER_SHADER,
   MEDAL_SHADERS,
   NET_SHADER,
+  TEAM_STATUS_BAR_SHADER,
   WEAPON_ASSETS,
   playerModelDir
 } from '../formats/asset-manifest';
@@ -41,7 +42,7 @@ import {
   type PicShader,
   type PicWriter
 } from '../view/hud-draw';
-import { anchorOrigin, hudScale, type HudAnchor } from '../view/hud-layout';
+import { anchorOrigin, anchorScale, hudScale, type HudAnchor } from '../view/hud-layout';
 import type { Rgba } from '../view/hud-status';
 import type { NotifyRow } from '../view/notify-lines';
 import { stageGain } from '../view/overbright';
@@ -104,11 +105,12 @@ const HUD_SHADERS: readonly string[] = [
     LAGOMETER_SHADER,
     // `CG_DrawDisconnect` registers it as it draws; the port loads it with the rest.
     NET_SHADER,
-    DEFER_SHADER
+    DEFER_SHADER,
+    TEAM_STATUS_BAR_SHADER
   ])
 ];
 
-const ANCHORS: readonly HudAnchor[] = ['left', 'centre', 'right'];
+const ANCHORS: readonly HudAnchor[] = ['left', 'centre', 'right', 'stretch'];
 
 const WHITE: Rgba = [1, 1, 1, 1];
 
@@ -238,16 +240,31 @@ export class HudScreen {
     stretchPic: (shader, x, y, w, h, anchor, s1, t1, s2, t2, color) => {
       const pic = this.pic(shader);
       if (!pic) return;
-      const { scale } = this;
-      const across = this.origins[anchor] + x * scale;
-      this.batch.stretchPic(pic.material, across, y * scale, w * scale, h * scale, s1, t1, s2, t2, color);
+      const { scale, batch } = this;
+      const across = this.across[anchor];
+      const left = this.origins[anchor] + x * across;
+      batch.stretchPic(pic.material, left, y * scale, w * across, h * scale, s1, t1, s2, t2, color);
     }
   };
-  /** The canvas the camera is fitted to, its pixels to a unit of the grid, and each anchor's origin. */
+  /**
+   * The canvas the camera is fitted to, its pixels to a unit of the grid, and each anchor's origin
+   * and its pixels to a unit across.
+   */
   private width = 0;
   private height = 0;
   private scale = 1;
-  private readonly origins: Record<HudAnchor, number> = { left: 0, centre: 0, right: 0 };
+  private readonly origins: Record<HudAnchor, number> = {
+    left: 0,
+    centre: 0,
+    right: 0,
+    stretch: 0
+  };
+  private readonly across: Record<HudAnchor, number> = {
+    left: 1,
+    centre: 1,
+    right: 1,
+    stretch: 1
+  };
   private destroyed = false;
 
   private constructor(
@@ -461,6 +478,9 @@ export class HudScreen {
     this.camera.camera!.orthoHeight = height / 2;
     this.node.setLocalPosition(-width / 2, height / 2, -1);
     this.scale = hudScale(height);
-    for (const anchor of ANCHORS) this.origins[anchor] = anchorOrigin(anchor, width, height);
+    for (const anchor of ANCHORS) {
+      this.origins[anchor] = anchorOrigin(anchor, width, height);
+      this.across[anchor] = anchorScale(anchor, width, height);
+    }
   }
 }

@@ -1,7 +1,14 @@
 import type { Gender } from '../formats/animation-config';
 import { atoi } from '../formats/c-scan';
 import { tokenize } from '../formats/q3config';
-import { CONFIGSTRING, MAX_CONFIGSTRINGS, MAX_SOUNDS, SNAPFLAG } from '../net/commands';
+import {
+  CHAT_ESCAPE,
+  CONFIGSTRING,
+  MAX_CONFIGSTRINGS,
+  MAX_SAY_TEXT,
+  MAX_SOUNDS,
+  SNAPFLAG
+} from '../net/commands';
 import { CMD_BACKUP, type UserCmdRing } from '../net/client-clock';
 import { ServerDisconnect } from '../net/connection';
 import { copyPlayerState, copyTrajectory } from '../net/delta';
@@ -25,6 +32,7 @@ import {
   EF_FIRING,
   EF_NODRAW,
   EF_TELEPORT_BIT,
+  GT,
   MASK,
   PERS,
   PITCH_LIMIT_SHORT,
@@ -132,6 +140,7 @@ import type { RewardState } from './rewards';
 import type { FloatSprite } from './player-sprites';
 import { LocalEntities } from './local-entities';
 import { ScorePlums } from './score-plums';
+import { addToTeamChat, createTeamChat, type TeamChatState } from './team-chat';
 import { thirdPersonView } from './third-person';
 import { flashVisible } from './viewmodel';
 import { OPEN_AREAS } from './world-vis';
@@ -569,6 +578,8 @@ export class PlayerView {
   private registeredGamestate = -1;
   /** `cg.scores` and `cg.numScores`: the board the last `scores` command carried. */
   private board: Scores = EMPTY_SCORES;
+  /** `cgs.teamChatMsgs` and the ring they are kept in, which the team chat box draws. */
+  private teamChatBox: TeamChatState = createTeamChat();
   /** `cg.killerName`: who killed the player during the last {@link advance}, or `null`. */
   private killedByThisFrame: string | null = null;
 
@@ -612,6 +623,15 @@ export class PlayerView {
 
   /** `cg_scorePlums`: whether a score this client makes floats its points where it happened. */
   scorePlums = true;
+
+  /** `cg_teamChatsOnly`: in a team game, a `chat` line is neither printed nor heard. */
+  teamChatsOnly = false;
+
+  /** `cg_teamChatHeight`: how many team lines the box keeps, up to 8; 0 keeps none. */
+  teamChatHeight = 0;
+
+  /** `cg_teamChatTime`: how long a team line stays in the box, in milliseconds. */
+  teamChatTime = 3000;
 
   /**
    * `cg_deferPlayers`: a look nobody loaded wears is put off until the scoreboard is up, and a
@@ -856,6 +876,14 @@ export class PlayerView {
    */
   get rewards(): RewardState {
     return this.announcer.rewards;
+  }
+
+  /**
+   * `cgs.teamChatMsgs` and their ring: the team lines the server has sent, waiting for the HUD's
+   * box to show them, which it does by moving this on.
+   */
+  get teamChat(): TeamChatState {
+    return this.teamChatBox;
   }
 
   /**
@@ -1728,6 +1756,8 @@ export class PlayerView {
       this.firedAt = Number.NEGATIVE_INFINITY;
       this.railFiredAt = Number.NEGATIVE_INFINITY;
       this.board = EMPTY_SCORES;
+      // And its memset of `cgs`, the team chat box's lines among it.
+      this.teamChatBox = createTeamChat();
       this.newGamestate = true;
       // The client's load has registered its clients already, where there is one.
       if (this.registeredGamestate !== gamestate) {
@@ -2199,14 +2229,16 @@ export class PlayerView {
 
   /**
    * `CG_ServerCommand` (`cg_servercmds.c:995–1115`), for the commands the port's server sends
-   * that cgame acts on: a configstring, a restart, a print, a centre print, and the scores. A
-   * `disconnect` is the client's own, taken as cgame asks for it, so the `print` before it is
-   * printed first; it ends the match (`CL_GetServerCommand`, `cl_cgame.c:290–297`).
+   * that cgame acts on: a configstring, a restart, a print, a centre print, the scores, and chat
+   * and team chat. A `disconnect` is the client's own, taken as cgame asks for it, so the `print`
+   * before it is printed first; it ends the match (`CL_GetServerCommand`, `cl_cgame.c:290–297`).
+   * Any other is printed as unknown, and one with no name passed over.
    *
    * @param argv - The command, split as `Cmd_TokenizeString` splits it.
    */
   private serverCommand(argv: readonly string[]): void {
-    switch (argv[0]) {
+    const cmd = argv[0] ?? '';
+    switch (cmd) {
       case 'disconnect':
         throw new ServerDisconnect(argv);
       case 'cs': {
@@ -2256,6 +2288,24 @@ export class PlayerView {
       case 'scores':
         this.board = parseScores(argv);
         break;
+      case 'chat':
+        // ioquake3's mute, in a team game alone; id's release mutes it in every game.
+        if (this.parsedServerInfo.gametype >= GT.TEAM && this.teamChatsOnly) break;
+        this.announcer.talk();
+        this.console.print(`${chatText(argv[1] ?? '')}\n`);
+        break;
+      case 'tchat': {
+        this.announcer.talk();
+        const text = chatText(argv[1] ?? '');
+        addToTeamChat(this.teamChatBox, text, this, this.cgTime);
+        this.console.print(`${text}\n`);
+        break;
+      }
+      // "server claimed the command"
+      case '':
+        break;
+      default:
+        this.console.print(`Unknown client game command: ${cmd}\n`);
     }
   }
 
@@ -2701,6 +2751,14 @@ function copyInto(from: Vec3, to: Vec3): void {
 /** The entity types unlagged's early transition draws from the next snapshot at once. */
 function isEarlyType(state: EntityState): boolean {
   return state.eType === ET.MISSILE || state.eType === ET.GENERAL;
+}
+
+/**
+ * A chat line as cgame prints it: cut to `MAX_SAY_TEXT` less its NUL, markers and all, then the
+ * markers taken out (`Q_strncpyz`, `CG_RemoveChatEscapeChar`; `cg_servercmds.c:975–985, 1036`).
+ */
+function chatText(line: string): string {
+  return line.slice(0, MAX_SAY_TEXT - 1).replaceAll(CHAT_ESCAPE, '');
 }
 
 /**

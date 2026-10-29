@@ -24,6 +24,7 @@ import { GT, SCORE_NOT_PRESENT, TEAM } from '../sim/constants';
 import { ARMOR_TIER, GREEN_ARMOR_TINT, findItemForArmorTier } from '../sim/items';
 import { createCenterPrint } from '../view/center-print';
 import { createRewardState } from '../view/rewards';
+import { createTeamChat } from '../view/team-chat';
 import { DAMAGE_TIME } from '../view/damage-feedback';
 import { anglesToAxis } from '../view/hand-pose';
 import { Lagometer } from '../view/lagometer';
@@ -147,6 +148,8 @@ function statusBar(
     pickupTime: 0,
     centerPrint: createCenterPrint(),
     rewards: createRewardState(),
+    teamChat: createTeamChat(),
+    ownTeam: TEAM.FREE,
     interrupted: false,
     localServer: true,
     lagometer: new Lagometer(),
@@ -163,6 +166,8 @@ function statusBar(
     speedometer: 0,
     centerTime: 3,
     drawRewards: true,
+    teamChatHeight: 0,
+    teamChatTime: 3000,
     ...settings
   }).statusBar;
 }

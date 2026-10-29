@@ -2264,6 +2264,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
         pickupTime: controller.itemPickupTime,
         centerPrint: controller.centerPrint,
         rewards: controller.rewards,
+        teamChat: controller.teamChat,
+        ownTeam: controller.clientInfo(controller.game.clientNum)?.team ?? TEAM.FREE,
         interrupted: controller.connectionInterrupted,
         // `cgs.localServer`: the match is this page's own server's.
         localServer: !controller.game.remote,

@@ -743,12 +743,13 @@ export class SoundBus {
   }
 
   /**
-   * One of the announcer's voices, or a hit beep: `S_StartLocalSound` as the menu's are, the
-   * voices on `CHAN_ANNOUNCER` and the beeps on `CHAN_LOCAL_SOUND` (`cg_playerstate.c:318-328`).
+   * One of the announcer's voices, a hit beep or the talk sound: `S_StartLocalSound` as the menu's
+   * are, the voices on `CHAN_ANNOUNCER`, and the beeps and the talk sound on `CHAN_LOCAL_SOUND`
+   * (`cg_playerstate.c:318-328`, `cg_servercmds.c:1035`).
    */
   playAnnouncer(cue: AnnouncerCue): void {
-    const beep = cue === 'hit' || cue === 'hitTeam';
-    this.playLocal(ANNOUNCER_SOUNDS[cue], beep ? CHAN.LOCAL_SOUND : CHAN.ANNOUNCER);
+    const local = cue === 'hit' || cue === 'hitTeam' || cue === 'talk';
+    this.playLocal(ANNOUNCER_SOUNDS[cue], local ? CHAN.LOCAL_SOUND : CHAN.ANNOUNCER);
   }
 
   /**

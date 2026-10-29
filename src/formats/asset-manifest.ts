@@ -356,6 +356,11 @@ export const LAGOMETER_SHADER = 'lagometer';
 export const DEFER_SHADER = 'gfx/2d/defer';
 
 /**
+ * `teamStatusBar` (`cg_main.c:949`): the band under the team chat box, drawn in a team's colour.
+ */
+export const TEAM_STATUS_BAR_SHADER = 'gfx/2d/colorbar.tga';
+
+/**
  * The HUD's own art. Each 2D name is registered as `CG_RegisterGraphics` does,
  * scripted or not, so it brings whatever its script draws, or else the image of that name.
  */
@@ -379,7 +384,8 @@ export const HUD_ASSETS = {
     ...Object.values(MEDAL_SHADERS),
     NET_SHADER,
     LAGOMETER_SHADER,
-    DEFER_SHADER
+    DEFER_SHADER,
+    TEAM_STATUS_BAR_SHADER
   ],
   /** The 3D icons: the armor (`cg_main.c:955`) and the eight ammo boxes. */
   models: [ARMOR_MODEL, ...AMMO_MODELS.values()]
@@ -456,10 +462,10 @@ export const MENU_SOUND_FILES = {
 export const MENU_SOUNDS: string[] = Object.values(MENU_SOUND_FILES);
 
 /**
- * The match's voices, the rewards' and the hit beeps, as `CG_RegisterSounds` registers them
- * (`cg_main.c:550–610, 649–669`), each under the name cgame's media keeps it by. All of them are
- * played as local sounds: unplaced, at full volume, under `s_volume`. The capture's reward is the
- * same file as the team's capture news.
+ * The match's voices, the rewards', the hit beeps and chat's talk sound, as `CG_RegisterSounds`
+ * registers them (`cg_main.c:550–610, 646–669`), each under the name cgame's media keeps it by.
+ * All of them are played as local sounds: unplaced, at full volume, under `s_volume`. The capture's
+ * reward is the same file as the team's capture news.
  *
  * `flagtaken_yourteam` and `flagtaken_opponent` are registered too, and never played.
  */
@@ -490,6 +496,7 @@ export const ANNOUNCER_SOUNDS = {
   enemyTookYourFlag: 'sound/teamplay/voc_enemy_flag.wav',
   yourTeamTookEnemyFlag: 'sound/teamplay/voc_team_flag.wav',
   youHaveFlag: 'sound/teamplay/voc_you_flag.wav',
+  talk: 'sound/player/talk.wav',
   hit: 'sound/feedback/hit.wav',
   takenLead: 'sound/feedback/takenlead.wav',
   tiedLead: 'sound/feedback/tiedlead.wav',

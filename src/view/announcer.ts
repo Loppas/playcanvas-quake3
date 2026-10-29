@@ -11,8 +11,9 @@ import {
 } from './rewards';
 
 /**
- * cgame's announcer: the match's voices, the rewards and the hit beeps, which Quake 3 plays as
- * local sounds — unplaced, at full volume — rather than from anywhere in the world. Engine-free.
+ * cgame's announcer: the match's voices, the rewards, the hit beeps and chat's talk sound, which
+ * Quake 3 plays as local sounds — unplaced, at full volume — rather than from anywhere in the
+ * world. Engine-free.
  *
  * Some start at once. The news queues in `cg.soundBuffer`, which lets one out every 750 ms, so that
  * two pieces of it never talk over each other (`cg_view.c:720–750`); a reward waits on its own
@@ -92,6 +93,11 @@ export class Announcer {
     const started = this.started;
     this.started = [];
     return started;
+  }
+
+  /** `CG_ServerCommand`'s talk sound, started at once as a chat line comes in. */
+  talk(): void {
+    this.started.push('talk');
   }
 
   /**
