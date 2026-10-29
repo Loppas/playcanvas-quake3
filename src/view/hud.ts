@@ -9,6 +9,7 @@ import {
 import { ITEMS, NUM_ITEMS } from '../sim/items';
 import { WP, type WeaponId } from '../sim/weapons/constants';
 import type { AnnouncerCue } from './announcer';
+import { expireAttacker, type AttackerState } from './attacker';
 import { centerPrintLines, type CenterPrintState } from './center-print';
 import type { ClientInfo } from './client-info';
 import { FPS_RIGHT, FPS_Y, FpsCounter } from './fps-counter';
@@ -117,6 +118,10 @@ export interface HudInput {
   weaponSelectTime: number;
   /** The last hurt: when, and `damageX`. */
   damage: { time: number; x: number };
+  /** `cg.attackerTime`: when the last hurt came, which the frame lets go as it would draw it. */
+  attacker: AttackerState;
+  /** `PERS_ATTACKER`: who caused it, a slot or the world's number. */
+  attackerNum: number;
   /** `cg.renderingThirdPerson`: no crosshair. */
   thirdPerson: boolean;
   /** Horizontal speed, and its peak since the player last stood still, in ups. */
@@ -384,7 +389,8 @@ export function hasAmmoModel(weapon: number): boolean {
  * screen somebody watching still has. The follow line takes the warmup text's place rather than
  * sharing the top of the screen with it (`:2611–2613`).
  *
- * Moves `state` on: the head's look-around, the frame count and the speed graph.
+ * Moves `state` on: the head's look-around, the frame count and the speed graph; and the input's
+ * rewards, team chat box and attacker, as Q3's drawing moves them.
  */
 export function hudFrame(state: HudState, input: HudInput, settings: HudSettings): HudFrame {
   // The graph's history runs whether it is drawn or not, as the lagometer's does.
@@ -437,6 +443,8 @@ export function hudFrame(state: HudState, input: HudInput, settings: HudSettings
     input.pmType === PM_INTERMISSION || (spectating && (input.pmFlags & PMF_SCOREBOARD) !== 0);
   // "if ( !cg_lagometer.integer || cgs.localServer )" (`cg_draw.c:1641`).
   const lagometer = settings.lagometer && !input.localServer;
+  // In the upper right, which draws dead, spectating or scoreboarded too (`cg_draw.c:2600`).
+  if (!boardOnly) expireAttacker(input.attacker, input);
   return {
     statusBar: own ? statusBar(state, input, settings) : null,
     ammoWarning: own ? ammoWarning(input) : null,

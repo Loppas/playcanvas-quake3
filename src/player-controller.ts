@@ -27,6 +27,7 @@ import {
 import { vec3, type Vec3 } from './sim/vec3';
 import { WP, type WeaponId } from './sim/weapons/constants';
 import type { AnnouncerCue } from './view/announcer';
+import type { AttackerState } from './view/attacker';
 import type { BrushModelPose } from './view/brush-models';
 import type { WorldEffect } from './view/entity-events';
 import type { CameraFeel, FirstPersonView, ViewSample } from './view/camera-feel';
@@ -641,6 +642,21 @@ export class PlayerController {
   /** The view's reaction to the last hurt: the kick, the blob and the HUD head's flinch. */
   get damage(): Readonly<DamageFeedback> {
     return this.view.damage;
+  }
+
+  /** When the last hurt came, which the HUD lets go as it would draw the attacker. */
+  get attacker(): AttackerState {
+    return this.view.attacker;
+  }
+
+  /**
+   * `tell_attacker`: tell the last attacker the words after it, or nobody with none kept.
+   *
+   * @param argv - `tell_attacker` and its words.
+   */
+  tellAttacker(argv: readonly string[]): void {
+    const command = this.view.tellAttacker(argv);
+    if (command !== null) this.game.sendClientCommand(command);
   }
 
   /** When the last pain sound played, and which way the torso twitches for it. */

@@ -28,6 +28,7 @@ import {
   type CenterPrintState
 } from './center-print';
 import { createRewardState, pushReward } from './rewards';
+import { createAttacker } from './attacker';
 import { addToTeamChat, createTeamChat } from './team-chat';
 import { ICON_SIZE, STATUS_COLORS } from './hud-status';
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from './hud-layout';
@@ -62,6 +63,8 @@ function input(overrides: Partial<HudInput> = {}): HudInput {
     weaponSelect: WP.MACHINEGUN,
     weaponSelectTime: Number.NEGATIVE_INFINITY,
     damage: { time: Number.NEGATIVE_INFINITY, x: 0 },
+    attacker: createAttacker(),
+    attackerNum: 0,
     thirdPerson: false,
     speed: 0,
     peak: 0,
@@ -314,6 +317,30 @@ describe('the team chat box', () => {
     const teamChat = box(1000);
     expect(frame({ gametype: GT.TEAM, teamChat }, FOUR_LINES).teamChat).toBeNull();
     expect(teamChat.lastPos).toBe(1);
+  });
+});
+
+describe('the last attacker', () => {
+  /** Bones, in slot 3, hurt the player at 1000; what is left of the time after a frame at 20 s. */
+  function after(over: Partial<HudInput> = {}, settings: Partial<HudSettings> = {}): number {
+    const attacker = { time: 1000 };
+    const bones = (clientNum: number) =>
+      clientNum === 3 ? ({ name: 'Bones' } as ClientInfo) : null;
+    frame({ attacker, attackerNum: 3, clientInfo: bones, time: 20_000, ...over }, settings);
+    return attacker.time;
+  }
+
+  it('is let go where the upper right draws: alive, spectating or holding the scores key', () => {
+    for (const over of [{}, { team: TEAM.SPECTATOR }, { showScores: true }]) {
+      expect(after(over)).toBe(0);
+    }
+    expect(after({ time: 11_000 })).toBe(1000);
+  });
+
+  it("is kept at the intermission, at a spectator's board, or with cg_draw2D off", () => {
+    expect(after({ pmType: PM_INTERMISSION })).toBe(1000);
+    expect(after({ team: TEAM.SPECTATOR, pmFlags: PMF_SCOREBOARD })).toBe(1000);
+    expect(after({}, { draw2D: false })).toBe(1000);
   });
 });
 

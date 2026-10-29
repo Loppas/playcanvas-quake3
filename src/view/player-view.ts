@@ -141,6 +141,7 @@ import type { FloatSprite } from './player-sprites';
 import { LocalEntities } from './local-entities';
 import { ScorePlums } from './score-plums';
 import { addToTeamChat, createTeamChat, type TeamChatState } from './team-chat';
+import { lastAttacker, tellAttackerCommand, type AttackerState } from './attacker';
 import { thirdPersonView } from './third-person';
 import { flashVisible } from './viewmodel';
 import { OPEN_AREAS } from './world-vis';
@@ -914,6 +915,24 @@ export class PlayerView {
   /** The view's reaction to the last hurt: its kick, the blood blob and the HUD head's flinch. */
   get damage(): Readonly<DamageFeedback> {
     return this.playerEvents.damage;
+  }
+
+  /** `cg.attackerTime`: when the last hurt came, which the HUD lets go as it would draw it. */
+  get attacker(): AttackerState {
+    return this.playerEvents.attacker;
+  }
+
+  /**
+   * `CG_TellAttacker_f`: the command that tells the last attacker the words after
+   * `tell_attacker`, or `null` with nobody to tell. A cut command is said to the console.
+   *
+   * @param argv - `tell_attacker` and its words.
+   */
+  tellAttacker(argv: readonly string[]): string | null {
+    const attacker = this.snap?.ps.persistant[PERS.ATTACKER] ?? -1;
+    return tellAttackerCommand(lastAttacker(this.playerEvents.attacker, attacker), argv, (text) =>
+      this.console.print(text)
+    );
   }
 
   /** `cent->pe.painTime` and `painDirection`, which twist the body's torso after a hurt. */

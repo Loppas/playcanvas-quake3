@@ -592,6 +592,41 @@ describe('chat and team chat, as cgame shows them', () => {
     expect(view.teamChat).toMatchObject({ pos: 0, lastPos: 0, msgs: new Array(8).fill('') });
   });
 
+  it('tells whoever last hurt the player, through a restart, until a new gamestate', () => {
+    const fine = createPlayerState();
+    fine.stats[STAT.HEALTH] = 100;
+    const source = new Scripted();
+    source.send(11, 100, { ps: fine });
+    const view = new PlayerView(source, createFlatWorldTrace());
+    // Without a prediction, a snapshot's hurt is heard as it is made current.
+    view.noPredict = true;
+    frame(source, view, 100);
+    const words = ['tell_attacker', 'nice', 'shot'];
+    expect(view.tellAttacker(words)).toBeNull();
+
+    const hurt = createPlayerState();
+    hurt.stats[STAT.HEALTH] = 90;
+    hurt.persistant[PERS.ATTACKER] = 2;
+    hurt.damageEvent = 1;
+    hurt.damageCount = 10;
+    source.send(12, 108, { ps: hurt });
+    frame(source, view, 108);
+    expect(view.tellAttacker(words)).toBe('tell 2 nice shot');
+    const heard = listen(view);
+    view.tellAttacker(['tell_attacker', 'a'.repeat(121)]);
+    expect(heard).toEqual(['Com_sprintf: Output length 128 too short, require 129 bytes.\n']);
+
+    source.say(1, 'map_restart');
+    source.send(13, 116, { ps: hurt, commands: 1 });
+    frame(source, view, 116);
+    expect(view.tellAttacker(words)).toBe('tell 2 nice shot');
+
+    source.gamestateMessageNum = 20;
+    source.send(21, 50, { ps: hurt });
+    frame(source, view, 50);
+    expect(view.tellAttacker(words)).toBeNull();
+  });
+
   it("prints a command cgame doesn't know, and passes over one with no name", () => {
     const { source, view } = playing();
     const heard = listen(view);

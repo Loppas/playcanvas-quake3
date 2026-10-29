@@ -359,10 +359,20 @@ describe('transitionPlayerEvents: damage feedback', () => {
     expect(events.damage.time).toBe(1000);
   });
 
+  it("stamps the attacker time with the hurt, on cg.time's clock in whole milliseconds", () => {
+    const events = watching(125);
+    expect(events.attacker.time).toBe(0);
+    const hurt = player(100, { damageEvent: 1, damageCount: 25, damageYaw: 255, damagePitch: 255 });
+    transitionPlayerEvents(events, hurt, [], 1000.75, 950);
+    expect(events.attacker.time).toBe(1000);
+    expect(events.damage.time).toBe(950);
+  });
+
   it('does nothing for a moved damageEvent with no count', () => {
     const events = watching(125);
     transitionPlayerEvents(events, player(125, { damageEvent: 1, damageCount: 0 }), [], 1000);
     expect(events.damage.time).toBe(Number.NEGATIVE_INFINITY);
+    expect(events.attacker.time).toBe(0);
   });
 
   it('hears no hurt in a respawn', () => {
@@ -370,6 +380,7 @@ describe('transitionPlayerEvents: damage feedback', () => {
     const out = transitionPlayerEvents(events, player(125), [], 5000);
     expect(out.sounds).toEqual([]);
     expect(events.damage.time).toBe(Number.NEGATIVE_INFINITY);
+    expect(events.attacker.time).toBe(0);
   });
 });
 

@@ -330,6 +330,28 @@ describe('the settings, read each frame', () => {
     expect(chat({ cg_teamChatsOnly: '1' })).toEqual({ said: ['^5to red\n'], kept: 0 });
   });
 
+  it('tells whoever last hurt the player: nobody, then themself, then the world', () => {
+    const { controller } = controlled();
+    controller.update(1 / 60);
+    const sent = vi.spyOn(controller.game, 'sendClientCommand');
+    const words = ['tell_attacker', 'ow'];
+    controller.tellAttacker(words);
+    expect(sent).not.toHaveBeenCalled();
+
+    const { game, clientNum } = controller.game;
+    const me = game.level.gentities[clientNum];
+    damage(game.level, me, me, me, null, 10, 0, MOD.ROCKET_SPLASH);
+    until(controller, () => controller.attacker.time !== 0);
+    controller.tellAttacker(words);
+    expect(sent).toHaveBeenLastCalledWith(`tell ${clientNum} ow`);
+
+    damage(game.level, me, null, null, null, 10, 0, MOD.FALLING);
+    until(controller, () => {
+      controller.tellAttacker(words);
+      return sent.mock.lastCall?.[0] === `tell ${ENTITYNUM_WORLD} ow`;
+    });
+  });
+
   it('holds each plum among the local entities it is given', () => {
     const pool = new LocalEntities();
     const { controller } = controlled({}, 0, pool);
