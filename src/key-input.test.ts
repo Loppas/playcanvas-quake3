@@ -6,6 +6,8 @@ import { KeyInput } from './key-input';
 import { BUTTON_ATTACK, BUTTON_TALK } from './sim/constants';
 import { KEYCATCH, type ClientInput } from './settings/client-input';
 import { routedInput } from './settings/input-test-fixtures';
+import { ConsoleHistory } from './view/console-history';
+import { consoleKey, type ConsoleLine } from './view/console-key';
 import { EditField } from './view/edit-field';
 
 /**
@@ -155,6 +157,18 @@ describe('keys, the wheel and the mouse', () => {
     canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: 100, cancelable: true }));
     expect(input.takeCommands()).toEqual([['weapprev'], ['weapnext']]);
     expect(up.defaultPrevented).toBe(true);
+  });
+
+  it('reads a turn with Shift held by its sideways part, where it has no vertical one', () => {
+    lock();
+    const turn = (init: WheelEventInit) =>
+      canvas.dispatchEvent(new WheelEvent('wheel', { cancelable: true, ...init }));
+    turn({ deltaX: -100, shiftKey: true });
+    turn({ deltaX: 100, shiftKey: true });
+    // Without Shift a sideways turn is no key, and with it a vertical part still leads.
+    turn({ deltaX: -100 });
+    turn({ deltaX: -100, deltaY: 100, shiftKey: true });
+    expect(input.takeCommands()).toEqual([['weapprev'], ['weapnext'], ['weapnext']]);
   });
 
   it("stops a bound key's browser default while the game takes input, and only then", () => {
@@ -358,13 +372,24 @@ describe('the menu', () => {
 
 describe("the console's line", () => {
   let field: EditField;
+  let line: ConsoleLine & { run: ReturnType<typeof vi.fn<(text: string) => void>> };
 
   beforeEach(() => {
     keys.destroy();
     field = new EditField({ overstrike: false }, 78);
+    line = {
+      field,
+      history: new ConsoleHistory(() => {}),
+      scrollback: { pageUp: vi.fn(), pageDown: vi.fn(), top: vi.fn(), bottom: vi.fn() },
+      isDown: (key) => input.isDown(key),
+      active: () => false,
+      autochat: () => true,
+      print: () => {},
+      run: vi.fn()
+    };
     input = routedInput(undefined, undefined, {
       console: {
-        key: (key) => field.keyDown(key),
+        key: (key) => consoleKey(key, line),
         char: (ch) => field.char(ch),
         paste: (text) => {
           field.paste(text);
@@ -433,6 +458,42 @@ describe("the console's line", () => {
     document.dispatchEvent(event);
     expect(field.text).toBe('abcd');
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('enters the line on Enter, and brings it back on Up, stopping both defaults', () => {
+    type('kill');
+    const enter = keyDown('Enter', { key: 'Enter' });
+    expect(line.run.mock.calls).toEqual([['kill']]);
+    expect(field.text).toBe('');
+    const up = keyDown('ArrowUp', { key: 'ArrowUp' });
+    expect(field.text).toBe('\\kill');
+    expect([enter.defaultPrevented, up.defaultPrevented]).toEqual([true, true]);
+  });
+
+  it('holds Ctrl from its own key for Ctrl+L and Ctrl+P, and stops their defaults', () => {
+    type('kill');
+    keyDown('Enter', { key: 'Enter' });
+    keyDown('ControlLeft', { key: 'Control', ctrlKey: true });
+    const l = ctrl('l');
+    const p = ctrl('p');
+    expect(line.run.mock.calls).toEqual([['kill'], ['clear']]);
+    expect(field.text).toBe('\\kill');
+    expect([l.defaultPrevented, p.defaultPrevented]).toEqual([true, true]);
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'ControlLeft' }));
+    type('l');
+    expect(field.text).toBe('\\killl');
+  });
+
+  it('scrolls the text on the wheel, and brings back a line on a sideways turn with Shift', () => {
+    canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, cancelable: true }));
+    expect(line.scrollback.pageUp).toHaveBeenCalledTimes(1);
+    type('kill');
+    keyDown('Enter', { key: 'Enter' });
+    keyDown('ShiftLeft', { key: 'Shift', shiftKey: true });
+    const sideways = { deltaX: -100, shiftKey: true, cancelable: true };
+    canvas.dispatchEvent(new WheelEvent('wheel', sideways));
+    expect(field.text).toBe('\\kill');
+    expect(line.scrollback.pageUp).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -154,6 +154,14 @@ export class CommandRouter implements CommandTable {
     if (held || this.queue.length > 0) this.startDrain(held);
   }
 
+  /**
+   * `Cbuf_AddText` and the buffer's run: text cut into commands as the command buffer cuts it, at
+   * line breaks and semicolons, each run as {@link execute} runs it.
+   */
+  executeText(text: string): void {
+    for (const argv of configCommands(text)) this.execute(argv);
+  }
+
   /** `Com_Frame`'s turn at the buffer: a `wait` counts this frame. */
   frame(): void {
     const waiting = this.frames;

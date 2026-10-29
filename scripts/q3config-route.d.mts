@@ -8,6 +8,9 @@ export declare const Q3CONFIG_CFG: 'q3config.cfg';
 /** The favourite servers, which the game keeps beside the config. */
 export declare const FAVORITES_TXT: 'favorites.txt';
 
+/** `CONSOLE_HISTORY_FILE` (`cl_keys.c:1462`): the lines entered at the console. */
+export declare const Q3HISTORY: 'q3history';
+
 /** The files the game keeps in `fs_homepath`, each at `/homepath/<name>`. */
 export declare const KEPT_FILES: readonly string[];
 

@@ -1,6 +1,6 @@
 /**
  * The desktop shell: the web build in a window of its own, reading the Quake 3 install where it
- * sits and keeping `q3config.cfg` and `favorites.txt` in `fs_homepath`.
+ * sits and keeping `q3config.cfg`, `favorites.txt` and `q3history` in `fs_homepath`.
  *
  * The page is served on the `app:` scheme (`app-protocol.mjs`), registered standard and secure so
  * `fetch`, OPFS and pointer lock behave as on a web origin. There is no application menu, so no

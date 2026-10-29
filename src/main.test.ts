@@ -262,7 +262,8 @@ it("hands the app the favourite servers as favorites.txt's stores keep them", as
   const kept = (text: string): FileStore => ({ read: async () => text, write: async () => true });
   const stores: Record<string, FileStore[]> = {
     'q3config.cfg': [kept('seta cg_fov "110"\n')],
-    'favorites.txt': [kept('10.0.0.5:27960 "Office"\n')]
+    'favorites.txt': [kept('10.0.0.5:27960 "Office"\n')],
+    q3history: []
   };
   homeStores.mockImplementation((name: string) => stores[name]);
   begins(fakeHandle());
@@ -270,6 +271,22 @@ it("hands the app the favourite servers as favorites.txt's stores keep them", as
 
   expect(setup().favorites.saved).toBe('10.0.0.5:27960 "Office"\n');
   expect(setup().favorites.stores).toBe(stores['favorites.txt']);
+});
+
+it("hands the app the console's history as q3history's stores keep it", async () => {
+  /** A store holding a file. */
+  const kept = (text: string): FileStore => ({ read: async () => text, write: async () => true });
+  const stores: Record<string, FileStore[]> = {
+    'q3config.cfg': [],
+    'favorites.txt': [],
+    q3history: [kept('4 0 4 map1 ')]
+  };
+  homeStores.mockImplementation((name: string) => stores[name]);
+  begins(fakeHandle());
+  await bootPage();
+
+  expect(setup().history.saved).toBe('4 0 4 map1 ');
+  expect(setup().history.stores).toBe(stores.q3history);
 });
 
 it("hands the app none of the player's paks when the boot fails before mounting any", async () => {

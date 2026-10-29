@@ -85,6 +85,7 @@ const FRESH = [
   'seta scr_conspeed "3"',
   'seta con_scale "1"',
   'seta con_autoclear "1"',
+  'seta con_autochat "1"',
   'seta cg_teamChatsOnly "0"',
   'seta cg_teamChatHeight "0"',
   'seta cg_teamChatTime "3000"',

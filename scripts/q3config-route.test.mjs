@@ -10,16 +10,22 @@ describe('keptFile', () => {
   it('names the files the game keeps in fs_homepath, and nothing below it', () => {
     expect(keptFile('/homepath/q3config.cfg')).toBe('q3config.cfg');
     expect(keptFile('/homepath/favorites.txt')).toBe('favorites.txt');
-    for (const path of ['/homepath/presets/q3config.cfg', '/homepath/other.txt', '/favorites.txt']) {
-      expect(keptFile(path), path).toBeUndefined();
-    }
+    expect(keptFile('/homepath/q3history')).toBe('q3history');
+    const paths = [
+      '/homepath/presets/q3config.cfg',
+      '/homepath/other.txt',
+      '/favorites.txt',
+      '/q3history'
+    ];
+    for (const path of paths) expect(keptFile(path), path).toBeUndefined();
   });
 
   it('names a file by its whole path, not a longer one that starts with it', () => {
     const paths = [
       '/homepath/q3config.cfg.1.tmp',
       '/homepath/q3config.cfg/other.cfg',
-      '/homepath/favorites.txt.bak'
+      '/homepath/favorites.txt.bak',
+      '/homepath/q3history.txt'
     ];
     for (const path of paths) expect(keptFile(path), path).toBeUndefined();
   });

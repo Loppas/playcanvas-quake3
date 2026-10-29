@@ -419,6 +419,22 @@ describe('ClientInput: the key catchers', () => {
     expect(heard).toEqual([`-probe ${key('w')}`]);
   });
 
+  it('says which keys are held, as Key_IsDown does, none once the catchers change', () => {
+    const { input } = catching();
+    input.setCatcher(KEYCATCH.CONSOLE);
+    input.keyDown(K.CTRL);
+    input.keyDown(key('l'));
+    expect([input.isDown(K.CTRL), input.isDown(key('l')), input.isDown(K.SHIFT)]).toEqual([
+      true,
+      true,
+      false
+    ]);
+    input.keyUp(key('l'));
+    expect([input.isDown(K.CTRL), input.isDown(key('l'))]).toEqual([true, false]);
+    input.setCatcher(0);
+    expect(input.isDown(K.CTRL)).toBe(false);
+  });
+
   it('turns the view with the mouse unless the menu is up, as CL_MouseEvent does', () => {
     const { input } = catching();
     for (const catchers of [0, KEYCATCH.CONSOLE, KEYCATCH.MESSAGE]) {

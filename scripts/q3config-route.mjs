@@ -1,7 +1,8 @@
 /**
  * The pure parts of the route to the files the game keeps in `fs_homepath`, which the dev server
- * (`vite.config.ts`) and the shell's `app:` scheme both answer: `q3config.cfg` and the favourite
- * servers' `favorites.txt`, where they can be opened in an editor, and which dev reads first.
+ * (`vite.config.ts`) and the shell's `app:` scheme both answer: `q3config.cfg`, the favourite
+ * servers' `favorites.txt` and the console's `q3history`, where they can be opened in an editor,
+ * and which dev reads first.
  *
  * `GET` answers a file, or 204 and nothing before there is one, and `PUT` replaces it. It touches no
  * other file, and the dev server answers only the page's own origin: it listens on every interface,
@@ -17,8 +18,11 @@ export const Q3CONFIG_CFG = 'q3config.cfg';
 /** The favourite servers, which the game keeps beside the config. */
 export const FAVORITES_TXT = 'favorites.txt';
 
+/** `CONSOLE_HISTORY_FILE` (`cl_keys.c:1462`): the lines entered at the console. */
+export const Q3HISTORY = 'q3history';
+
 /** The files the game keeps in `fs_homepath`, each at `/homepath/<name>`. */
-export const KEPT_FILES = [Q3CONFIG_CFG, FAVORITES_TXT];
+export const KEPT_FILES = [Q3CONFIG_CFG, FAVORITES_TXT, Q3HISTORY];
 
 /**
  * The kept file a URL's path names.

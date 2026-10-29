@@ -41,7 +41,6 @@ import { bspPath, mapKind as kindOfMap, mapNames, readBsp, type MapKind } from '
 import { atoi } from './formats/c-scan';
 import { cleanStr } from './formats/color-codes';
 import { readEntities, readEntityText } from './formats/entity-text';
-import { configCommands } from './formats/q3config';
 import type { ShaderScript } from './formats/shader-script';
 import { readOctree, splatMapFiles, wholeBuffer } from './formats/splat-map';
 import { frameCap, paceFrames, unpacedWake, vsyncInForce } from './frame-pacer';
@@ -144,6 +143,8 @@ import type { WeaponId } from './sim/weapons/constants';
 import { brushModelsAtRest, type BrushModelPose } from './view/brush-models';
 import type { FirstPersonView } from './view/camera-feel';
 import { DEFAULT_CONSOLE_WIDTH } from './view/console-buffer';
+import { ConsoleHistory } from './view/console-history';
+import { consoleKey, type ConsoleLine } from './view/console-key';
 import type { ConsoleText } from './view/console-print';
 import { damageBlob } from './view/damage-feedback';
 import { SceneLights, type DynamicLight } from './view/dynamic-lights';
@@ -317,6 +318,8 @@ export interface SetupOptions {
   dumps: FileWriter;
   /** `favorites.txt` as it was read at start, and where it is kept. */
   favorites: { saved: string | undefined; stores: readonly FileStore[] };
+  /** `q3history` as it was read at start, and where it is kept. */
+  history: { saved: string | undefined; stores: readonly FileStore[] };
   /** What the menu and the console do beyond the game. */
   host: MenuHost;
   /**
@@ -483,6 +486,10 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   const editMode: EditMode = { overstrike: false };
   // `g_consoleField`: the line typed at the console, as wide as the console's lines.
   const consoleField = new EditField(editMode, DEFAULT_CONSOLE_WIDTH);
+  // The lines entered at it, from their file, which is written again after each.
+  const consoleHistory = new ConsoleHistory(print);
+  consoleHistory.load(setup.history.saved);
+  keepFile(consoleHistory, setup.history.stores, consoleHistory.text());
   // The console, drawn over them, out of sight until `toggleconsole` drops it.
   const consoleScreen = new ConsoleScreen(app, camera, consoleText, consoleField, settings, {
     font: monoFont
@@ -723,6 +730,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   // `map` starts one, and none again after `disconnect`; the map is in before the program starts.
   let map: GameMap | BspGameMap | null = null;
   let controller: PlayerController | null = null;
+  /** Whether this client is in the match: `clc.state == CA_ACTIVE`. */
+  const clientActive = () => controller?.game.connection.state === CA.ACTIVE;
   /** The match's map from here on: the one just loaded, its world clearing as its kind does. */
   const playOn = (loaded: GameMap | BspGameMap) => {
     map = loaded;
@@ -914,8 +923,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   // `CL_ForwardToServer_f` (`cl_main.c:1645–1655`): the rest of the line to the server as a client
   // command, once this client is in the match.
   commands.add('cmd', (argv) => {
-    if (controller?.game.connection.state === CA.ACTIVE) {
-      if (argv.length > 1) controller.game.sendClientCommand(argv.slice(1).join(' '));
+    if (clientActive()) {
+      if (argv.length > 1) controller!.game.sendClientCommand(argv.slice(1).join(' '));
     } else {
       print('Not connected to a server.\n');
     }
@@ -983,14 +992,25 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       };
       app.on('update', look);
     });
+  // What `Console_Key` reads and changes: the line and its history, the console's text, the keys
+  // held, the client's state and `con_autochat`; and where a line entered goes.
+  const consoleLine: ConsoleLine = {
+    field: consoleField,
+    history: consoleHistory,
+    scrollback: consoleText,
+    isDown: (key) => input.isDown(key),
+    active: clientActive,
+    autochat: () => settings.conAutochat,
+    print,
+    run: (text) => commands.executeText(text)
+  };
   // The player's keys and mouse, through the binds, each bound command run as the console runs it;
-  // the console's while it is down, `Console_Key` handing each to its line; and the menu's while it
-  // is up.
+  // the console's while it is down, through `Console_Key`; and the menu's while it is up.
   const input = new ClientInput(config.binds, {
     command: (argv) => commands.execute(argv),
     warn,
     console: {
-      key: (key) => consoleField.keyDown(key),
+      key: (key) => consoleKey(key, consoleLine),
       char: (ch) => consoleField.char(ch),
       paste: (text) => {
         consoleField.paste(text);
@@ -1745,9 +1765,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     Object.defineProperty(window, 'pcqController', { configurable: true, get: () => controller });
     (window as unknown as { pcqInput: unknown }).pcqInput = input;
     // `pcqConsole('disconnect')` runs a console line, as a script can't type one.
-    (window as unknown as { pcqConsole: unknown }).pcqConsole = (line: string) => {
-      for (const argv of configCommands(line)) commands.execute(argv);
-    };
+    (window as unknown as { pcqConsole: unknown }).pcqConsole = (line: string) =>
+      commands.executeText(line);
     (window as unknown as { pcqMenu: unknown }).pcqMenu = {
       menu,
       open: () => openMenu(true),

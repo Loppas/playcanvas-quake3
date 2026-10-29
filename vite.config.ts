@@ -202,8 +202,8 @@ interface Answer {
 }
 
 /**
- * Dev-only route for the copies of `q3config.cfg` and `favorites.txt` kept in `fs_homepath`,
- * which the game reads first in dev and writes on every change.
+ * Dev-only route for the copies of `q3config.cfg`, `favorites.txt` and `q3history` kept in
+ * `fs_homepath`, which the game reads first in dev and writes on every change.
  *
  * `apply: 'serve'`, like the pak route: a production build has no route, and keeps its files in
  * OPFS alone. Only the page's own origin is answered (`scripts/q3config-route.mjs`), since the
