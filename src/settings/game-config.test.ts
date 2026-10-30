@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { K } from '../formats/q3-keys';
+import {
+  completeBind,
+  completeCvarName,
+  completeUnbind,
+  type ArgumentCompleter
+} from '../view/field-complete';
 import type { CommandFunction } from './command-router';
 import { GameConfig } from './game-config';
 import { DEFAULT_SETTINGS, SETTING_KEYS } from './registry';
@@ -313,10 +319,30 @@ describe('GameConfig as it runs', () => {
 });
 
 describe('GameConfig at the console', () => {
+  it("gives Tab a cvar's name after the cvar commands, and a key's after bind and unbind", () => {
+    const config = new GameConfig({ debugMode: true });
+    const given = new Map<string, ArgumentCompleter>();
+    config.addCommands({
+      add: () => {},
+      setCompletion: (name, complete) => void given.set(name, complete)
+    });
+    expect(Object.fromEntries(given)).toEqual({
+      toggle: completeCvarName,
+      set: completeCvarName,
+      sets: completeCvarName,
+      setu: completeCvarName,
+      seta: completeCvarName,
+      reset: completeCvarName,
+      unset: completeCvarName,
+      bind: completeBind,
+      unbind: completeUnbind
+    });
+  });
+
   it("puts its commands in the console's table, as Cvar_Init and CL_InitKeyCommands do", () => {
     const config = new GameConfig({ debugMode: true });
     const table = new Map<string, CommandFunction | undefined>();
-    config.addCommands({ add: (name, run) => void table.set(name, run) });
+    config.addCommands({ add: (name, run) => void table.set(name, run), setCompletion: () => {} });
     expect([...table.keys()].sort()).toEqual(
       [
         'bind',

@@ -8,7 +8,7 @@ import { CommandRouter, commandLine } from '../settings/command-router';
 import { addWriteConfig } from '../settings/file-commands';
 import type { GameConfig } from '../settings/game-config';
 import type { HomeFolder } from '../settings/home-folder';
-import { readCfg } from '../settings/presets';
+import { listCfgs, readCfg } from '../settings/presets';
 import { BOT_LIST, BOTS_FILE } from '../sim/bots';
 import { isGameCommand } from '../sim/game';
 import { HOST_COMMANDS } from './host';
@@ -145,6 +145,7 @@ export class DedicatedServer {
         return true;
       },
       readCfg: (path) => readCfg(path, options.home),
+      listCfgs: () => listCfgs(options.home),
       print: options.print
     });
     config.addCommands(this.router);
@@ -161,6 +162,7 @@ export class DedicatedServer {
     addWriteConfig(this.router, {
       text: () => writeConfig(undefined, config.cvars.archived()),
       home: options.home,
+      listCfgs: () => listCfgs(options.home),
       print: options.print
     });
   }

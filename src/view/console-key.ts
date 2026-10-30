@@ -29,7 +29,7 @@ export interface ConsoleLine {
    * one.
    */
   autochat(): boolean;
-  /** What Tab completes a word from: the commands, then the cvars. */
+  /** What Tab completes a word from: the commands, then the cvars, or a command's completer. */
   names(): CompletionNames;
   /** `Com_Printf`. */
   print(text: string): void;
@@ -60,8 +60,7 @@ export function consoleKey(key: number, line: ConsoleLine): boolean {
     return true;
   }
   if (key === K.TAB) {
-    const print = (text: string) => line.print(text);
-    field.restore(autoComplete(field.line(), line.names(), line.autochat(), print));
+    tab(line);
     return true;
   }
   if (
@@ -129,4 +128,18 @@ function enter(line: ConsoleLine): void {
   field.clear();
   // After the line is kept and cleared, as Q3's command buffer runs it after the key's event.
   line.run(commands);
+}
+
+/**
+ * Tab (`cl_keys.c:673–676`): the line completed, put back once the completion is in. One that
+ * lists files waits for the listing, and a key that changes the line meanwhile keeps its line;
+ * the matches found are printed all the same. Any other is in before the next key.
+ */
+function tab(line: ConsoleLine): void {
+  const { field } = line;
+  const typed = field.line();
+  const print = (text: string) => line.print(text);
+  void autoComplete(typed, line.names(), line.autochat(), print).then((done) => {
+    if (field.text === typed.text && field.cursor === typed.cursor) field.restore(done);
+  });
 }

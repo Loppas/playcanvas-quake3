@@ -22,8 +22,19 @@ describe('the home folder on a disk', () => {
     expect(await home.write('sub/deeper/server.cfg', 'seta b "2"\n')).toBe(true);
     expect(readFileSync(join(root, 'home', 'sub', 'deeper', 'server.cfg'), 'utf8')).toBe('seta b "2"\n');
     expect(await home.read('mine.cfg')).toBe('seta a "1"\n');
-    expect(await home.list('')).toEqual(['mine.cfg']);
-    expect(await home.list('sub/deeper')).toEqual(['server.cfg']);
+    expect(await home.list('', '.cfg')).toEqual(['mine.cfg']);
+    expect(await home.list('sub/deeper', '.cfg')).toEqual(['server.cfg']);
+  });
+
+  it('lists the files with an extension, in any case, directly in a folder', async () => {
+    const home = diskHome(root);
+    for (const name of ['a.cfg', 'B.CFG', 'dump.txt', 'Notes.TXT', 'cfg', 'sub/c.cfg']) {
+      await home.write(name, '');
+    }
+    mkdirSync(join(root, 'folder.txt'));
+    expect(await home.list('', '.cfg')).toEqual(['B.CFG', 'a.cfg']);
+    expect(await home.list('', '.txt')).toEqual(['Notes.TXT', 'dump.txt']);
+    expect(await home.list('missing', '.txt')).toEqual([]);
   });
 
   it("writes nothing where a file can't be written", async () => {

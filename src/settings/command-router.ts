@@ -1,6 +1,7 @@
 import { atoi } from '../formats/c-scan';
 import { comFilter } from '../formats/com-filter';
 import { configCommands } from '../formats/q3config';
+import { completeCvarName, completeFileName, type ArgumentCompleter } from '../view/field-complete';
 
 /**
  * How deep `exec` and `vstr` may nest before a frame passes, each running its text in front of
@@ -23,6 +24,11 @@ export interface CommandTable {
    * game's: a line under that name goes on to the cvars, cgame, the game and the server.
    */
   add(name: string, run?: CommandFunction): void;
+  /**
+   * `Cmd_SetCommandCompletionFunc` (`cmd.c:664–673`): how Tab completes the arguments of the
+   * command of that name, matched without regard to case. A name not added takes none.
+   */
+  setCompletion(name: string, complete: ArgumentCompleter): void;
 }
 
 /** What `Cmd_ExecuteString` tries after the registered commands, in its order. */
@@ -46,6 +52,8 @@ export interface CommandRouterOptions {
   forward?(line: string, argv: readonly string[]): boolean;
   /** A cfg's text by its path, or `undefined` where there is none. */
   readCfg(path: string): Promise<string | undefined>;
+  /** The cfgs Tab lists for `exec`, by the paths {@link readCfg} reads them by. */
+  listCfgs(): Promise<readonly string[]>;
   /** Print to the console. */
   print(text: string): void;
 }
@@ -62,10 +70,14 @@ interface Queued {
 /** A registered command as the router runs it: handed its depth, which only the router's own read. */
 type Run = (argv: readonly string[], depth: number) => void | Promise<void>;
 
-/** `cmd_function_t`: a name as it was added, and its function, or none for completion alone. */
+/**
+ * `cmd_function_t`: a name as it was added, its function, or none for completion alone, and how
+ * Tab completes its arguments.
+ */
 interface Registered {
   name: string;
   run: Run | null;
+  complete?: ArgumentCompleter;
 }
 
 /** What Quake 3 prints of a command nothing takes (`cl_main.c:1502`). */
@@ -105,7 +117,8 @@ const succeeded = (held: Promise<void>) => held.then(() => true, () => false);
  * server, in that order.
  *
  * The router is `cmd.c`, so `Cmd_Init`'s commands are its own (`cmd.c:860–870`): `cmdlist`,
- * `exec`, `execq`, `vstr`, `echo` and `wait`. Quake 3 reads a file at once and puts its commands in
+ * `exec`, `execq`, `vstr`, `echo` and `wait`, Tab completing a cfg's name after `exec` and
+ * `execq` and a cvar's after `vstr`. Quake 3 reads a file at once and puts its commands in
  * front of whatever is queued behind it (`Cbuf_InsertText`, `cmd.c:113–135`), as `vstr` does a
  * cvar's, and loads a map before the next command runs. The port reads files and loads maps
  * asynchronously, so while a file is read, a `wait` counts its frames or a map loads, every command
@@ -130,7 +143,11 @@ export class CommandRouter implements CommandTable {
     this.register('cmdlist', (argv) => this.list(argv));
     this.register('exec', (argv, depth) => this.exec(argv, depth));
     this.register('execq', (argv, depth) => this.exec(argv, depth));
+    const completeCfgName = completeFileName(() => options.listCfgs());
+    this.setCompletion('exec', completeCfgName);
+    this.setCompletion('execq', completeCfgName);
     this.register('vstr', (argv, depth) => this.vstr(argv, depth));
+    this.setCompletion('vstr', completeCvarName);
     this.register('echo', (argv) => void options.print(`${argv.slice(1).join(' ')}\n`));
     this.register('wait', (argv) => this.wait(argv));
   }
@@ -141,6 +158,19 @@ export class CommandRouter implements CommandTable {
    */
   add(name: string, run?: CommandFunction): void {
     this.register(name, run ? (argv) => run(argv) : null);
+  }
+
+  setCompletion(name: string, complete: ArgumentCompleter): void {
+    const registered = this.commands.get(name.toLowerCase());
+    if (registered) registered.complete = complete;
+  }
+
+  /**
+   * `Cmd_CompleteArgument`'s find (`cmd.c:741–752`): the completer of the command of that name,
+   * matched without regard to case, which moves nothing in the commands' order.
+   */
+  completer(name: string): ArgumentCompleter | undefined {
+    return this.commands.get(name.toLowerCase())?.complete;
   }
 
   /** Run a command: at once, unless something is ahead of it, when it waits its turn. */

@@ -4,17 +4,25 @@ import { configCommands } from '../formats/q3config';
 import { GAME_CVARS } from '../sim/game';
 import { RULE_CVARS } from '../sim/rules';
 import type { HomeFolder } from './home-folder';
-import { PRESET_DIR, SHIPPED_PRESETS, listPresets, readCfg, shippedCfg } from './presets';
+import {
+  PRESET_DIR,
+  SHIPPED_PRESETS,
+  listCfgs,
+  listPresets,
+  readCfg,
+  shippedCfg
+} from './presets';
 import { SETTINGS, settingForCvar } from './registry';
 
 /** A home folder holding these files, by path. */
 function home(files: Record<string, string> = {}): HomeFolder {
   return {
     read: async (path) => files[path],
-    list: async (dir) =>
+    list: async (dir, extension) =>
       Object.keys(files)
-        .filter((path) => path.startsWith(`${dir}/`))
-        .map((path) => path.slice(dir.length + 1)),
+        .filter((path) => dir === '' || path.startsWith(`${dir}/`))
+        .map((path) => (dir === '' ? path : path.slice(dir.length + 1)))
+        .filter((name) => !name.includes('/') && name.toLowerCase().endsWith(extension)),
     write: async () => false
   };
 }
@@ -100,6 +108,23 @@ describe('readCfg', () => {
     expect(await readCfg('sub\\mine.cfg', home(files))).toBe('seta a 1');
     expect(await readCfg('/sub//mine.cfg', home(files))).toBe('seta a 1');
     expect(await readCfg('\\presets\\cpm.cfg', home())).toBe(shippedCfg('presets/cpm.cfg'));
+  });
+});
+
+describe('listCfgs', () => {
+  it("lists the home folder's cfgs directly in it, then the port's own by path", async () => {
+    const files = { 'autoexec.cfg': '', 'Mine.CFG': '', 'notes.txt': '', 'presets/zeta.cfg': '' };
+    const listed = await listCfgs(home(files));
+    expect(listed.slice(0, 2)).toEqual(['autoexec.cfg', 'Mine.CFG']);
+    const shipped = SHIPPED_PRESETS.map((name) => `${PRESET_DIR}/${name}.cfg`);
+    expect(listed.slice(2).sort()).toEqual(shipped.sort());
+  });
+
+  it('lists each cfg by a path readCfg reads it by', async () => {
+    const files = { 'autoexec.cfg': 'seta a 1', 'presets/cpm.cfg': 'mine' };
+    for (const path of await listCfgs(home(files))) {
+      expect(await readCfg(path, home(files)), path).toBeDefined();
+    }
   });
 });
 

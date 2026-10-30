@@ -26,6 +26,7 @@ export function routedInput(
     game: () => false,
     forward: () => false,
     readCfg: () => Promise.resolve(undefined),
+    listCfgs: () => Promise.resolve([]),
     print: (text) => void printed.push(text)
   });
   const input = new ClientInput(config.binds, {

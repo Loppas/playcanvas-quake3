@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIGSTRING } from './commands';
-import { fieldStringToPlayerName, sayto } from './sayto';
+import {
+  fieldStringToPlayerName,
+  otherPlayerNames,
+  playerNameToFieldString,
+  sayto
+} from './sayto';
 
 /**
- * A client in a match whose slots hold these names, `sv_maxclients` of them looked in; an empty
- * slot's configstring is empty.
+ * A client in slot `clientNum` of a match whose slots hold these names, `sv_maxclients` of them
+ * looked in; an empty slot's configstring is empty.
  */
-function inMatch(names: Record<number, string>, maxclients = 8) {
+function inMatch(names: Record<number, string>, maxclients = 8, clientNum = 0) {
   const sent: string[] = [];
   const client = {
     configstring: (index: number) => {
@@ -14,6 +19,7 @@ function inMatch(names: Record<number, string>, maxclients = 8) {
       const name = names[index - CONFIGSTRING.PLAYERS];
       return name === undefined ? '' : `n\\${name}\\t\\0\\model\\sarge`;
     },
+    clientNum,
     sendClientCommand: (text: string) => sent.push(text)
   };
   return { client, sent };
@@ -99,5 +105,43 @@ describe('fieldStringToPlayerName', () => {
   it('ends at a coded NUL, and keeps at most 32 characters', () => {
     expect(fieldStringToPlayerName('ab\\0x00cd')).toBe('ab');
     expect(fieldStringToPlayerName('y'.repeat(40))).toBe('y'.repeat(32));
+  });
+});
+
+describe('playerNameToFieldString', () => {
+  it('writes each character from the space down as \\0x and two lower-case hex digits', () => {
+    expect(playerNameToFieldString('Big Bob')).toBe('Big\\0x20Bob');
+    expect(playerNameToFieldString('a\x1fb\x21')).toBe('a\\0x1fb!');
+    expect(playerNameToFieldString('a\x05')).toBe('a\\0x05');
+    expect(playerNameToFieldString('  ')).toBe('\\0x20\\0x20');
+  });
+
+  it('writes what fieldStringToPlayerName reads back', () => {
+    for (const name of ['Big Bob', ' lead', 'trail ', 'a  b', 'plain']) {
+      expect(fieldStringToPlayerName(playerNameToFieldString(name))).toBe(name);
+    }
+  });
+});
+
+describe('otherPlayerNames', () => {
+  it("lists the players below sv_maxclients but the client's own, sorted by code unit", () => {
+    const { client } = inMatch({ 0: 'zed', 1: 'Me', 2: 'Bravo', 3: 'alpha', 7: 'Out' }, 6, 1);
+    expect(otherPlayerNames(client)).toEqual(['Bravo', 'alpha', 'zed']);
+  });
+
+  it('skips a slot with no name, and keeps one that loses all of it to its colours', () => {
+    const { client } = inMatch({ 0: '', 1: '^1^2', 2: 'Al^3pha' }, 8, 5);
+    expect(otherPlayerNames(client)).toEqual(['', 'Alpha']);
+  });
+
+  it('lists each name as sayto finds it: cut to 31 characters, then its colours taken off', () => {
+    const long = `^1${'x'.repeat(30)}`;
+    const { client, sent } = inMatch({ 1: long, 2: '^1Big Bob' }, 8, 0);
+    const names = otherPlayerNames(client);
+    expect(names).toEqual(['Big Bob', 'x'.repeat(29)]);
+    for (const name of names) {
+      sayto(['sayto', playerNameToFieldString(name), 'hi'], client, () => {});
+    }
+    expect(sent).toEqual(['tell 2 "hi"', 'tell 1 "hi"']);
   });
 });

@@ -108,10 +108,16 @@ import type { WorldEffect } from './view/entity-events';
 import { ClientInput, KEYCATCH } from './settings/client-input';
 import { CommandRouter, commandLine } from './settings/command-router';
 import { keepFile, type FileStore } from './settings/config-file';
-import { addCondump, addWriteConfig, lineEndFor, type FileWriter } from './settings/file-commands';
+import {
+  addCondump,
+  addWriteConfig,
+  lineEndFor,
+  listTxts,
+  type FileWriter
+} from './settings/file-commands';
 import { GameConfig } from './settings/game-config';
 import type { HomeFolder } from './settings/home-folder';
-import { SHIPPED_PRESETS, listPresets, readCfg } from './settings/presets';
+import { SHIPPED_PRESETS, listCfgs, listPresets, readCfg } from './settings/presets';
 import {
   EF_FIRING,
   PERS,
@@ -150,6 +156,7 @@ import { damageBlob } from './view/damage-feedback';
 import { SceneLights, type DynamicLight } from './view/dynamic-lights';
 import { EditField, type EditMode } from './view/edit-field';
 import { setSunDirection } from './view/entity-light';
+import { completeMapName, completePlayerName } from './view/field-complete';
 import { sceneStyle } from './view/overbright';
 import { Explosions } from './view/explosions';
 import { horizontalFov, verticalFov } from './view/fov';
@@ -910,6 +917,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       return true;
     },
     readCfg: (path) => readCfg(path, setup.home),
+    listCfgs: () => listCfgs(setup.home),
     print
   });
   // The client's own, which run with no match as well.
@@ -931,6 +939,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   });
   // `CL_Sayto_f`, which only a program with a client registers (`cl_main.c:3740–3743`).
   commands.add('sayto', (argv) => sayto(argv, controller?.game ?? null, print));
+  commands.setCompletion('sayto', completePlayerName(() => controller?.game ?? null));
   commands.add('vid_restart', () => host.vidRestart());
   commands.add('clear', () => consoleText.clear());
   // `Con_ToggleConsole_f` (`cl_console.c:73–90`).
@@ -944,9 +953,15 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     consoleText,
     dumps: setup.dumps,
     lineEnd: lineEndFor(navigator.platform),
+    listTxts: () => listTxts(setup.home, fs),
     print
   });
-  addWriteConfig(commands, { text: () => config.text(), home: setup.home, print });
+  addWriteConfig(commands, {
+    text: () => config.text(),
+    home: setup.home,
+    listCfgs: () => listCfgs(setup.home),
+    print
+  });
   // `Com_Quit_f` (`common.c:376–392`): EXIT GAME's way out, the rest of the line the reason the
   // server's clients are given. Nothing behind it runs, as `Sys_Quit` never returns.
   commands.add('quit', (argv) => {
@@ -971,6 +986,10 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     print('Server is not running.\n');
   };
   for (const name of HOST_COMMANDS) commands.add(name, hostCommand);
+  // `SV_AddOperatorCommands` (`sv_ccmds.c:1543–1546`).
+  const completeMap = completeMapName(() => mapNames(fs));
+  commands.setCompletion('map', completeMap);
+  commands.setCompletion('devmap', completeMap);
   /**
    * Resolves once the host has run the commands it was sent, and read any map they asked for: a
    * `map` holds the command buffer as Q3's load holds the program. The host runs them at the top of
@@ -1003,7 +1022,11 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     isDown: (key) => input.isDown(key),
     active: clientActive,
     autochat: () => settings.conAutochat,
-    names: () => ({ commands: commands.names(), cvars: config.cvars.listed() }),
+    names: () => ({
+      commands: commands.names(),
+      cvars: config.cvars.listed(),
+      completer: (name) => commands.completer(name)
+    }),
     print,
     run: (text) => commands.executeText(text)
   };

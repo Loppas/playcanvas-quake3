@@ -10,6 +10,7 @@ import {
   type ConsoleRun
 } from './console-key-test-fixtures';
 import { EditField, MAX_FIELD_LENGTH } from './edit-field';
+import { completeFileName } from './field-complete';
 
 /**
  * The corpus over three seeds, 6000 steps each, as ioquake3's own `Console_Key`, `Field_CharEvent`,
@@ -75,13 +76,20 @@ const DRAWS = [
   { name: 'cg_draw2D', value: '1' }
 ];
 
+/** Lets a Tab's completion in, as it comes in before the next key's event. */
+const nextKey = () => new Promise((resolve) => setTimeout(resolve));
+
 /**
  * The console's line at a console 78 wide, out of a match, with `con_autochat` 1, Tab completing
- * from two commands and {@link DRAWS}.
+ * from three commands and {@link DRAWS}, and `exec`'s cfgs once `state.listing` settles.
  */
 function console78() {
   const held = new Set<number>();
-  const state = { active: false, autochat: true };
+  const state = { active: false, autochat: true, listing: Promise.resolve() };
+  const completeCfgName = completeFileName(async () => {
+    await state.listing;
+    return ['autoexec.cfg', 'my.cfg'];
+  });
   const line = {
     field: new EditField({ overstrike: false }, 78),
     history: new ConsoleHistory(() => {}),
@@ -89,7 +97,11 @@ function console78() {
     isDown: (key: number) => held.has(key),
     active: () => state.active,
     autochat: () => state.autochat,
-    names: () => ({ commands: ['cmdlist', 'clear'], cvars: DRAWS }),
+    names: () => ({
+      commands: ['cmdlist', 'clear', 'exec'],
+      cvars: DRAWS,
+      completer: (name: string) => (name.toLowerCase() === 'exec' ? completeCfgName : undefined)
+    }),
     print: vi.fn(),
     run: vi.fn()
   } satisfies ConsoleLine;
@@ -209,19 +221,21 @@ describe('consoleKey: Enter', () => {
 });
 
 describe('consoleKey: Tab', () => {
-  it('completes the line ahead of the field, giving it a slash under con_autochat', () => {
+  it('completes the line ahead of the field, giving it a slash under con_autochat', async () => {
     const { line, press, type } = console78();
     type('cmdl');
     press(K.LEFTARROW);
     expect(press(K.TAB)).toBe(true);
+    await nextKey();
     expect(line.field.line()).toEqual({ text: '\\cmdlist ', cursor: 9, scroll: 0 });
     expect(line.print).not.toHaveBeenCalled();
   });
 
-  it('lists the matches under the line, each cvar with its value', () => {
+  it('lists the matches under the line, each cvar with its value', async () => {
     const { line, press, type } = console78();
     type('cg_d');
     press(K.TAB);
+    await nextKey();
     expect(line.field.line()).toEqual({ text: '\\cg_draw', cursor: 8, scroll: 0 });
     expect(line.print.mock.calls).toEqual([
       [']\\cg_draw\n'],
@@ -230,15 +244,58 @@ describe('consoleKey: Tab', () => {
     ]);
   });
 
-  it('reads con_autochat at the press, and leaves the scroll as it was', () => {
+  it('reads con_autochat at the press, and leaves the scroll as it was', async () => {
     const { line, state, press, type } = console78();
     state.autochat = false;
     const typed = `echo ${'x'.repeat(80)};`;
     type(`${typed}cmdl`);
     const { scroll } = line.field;
     press(K.TAB);
+    await nextKey();
     expect(line.field.line()).toEqual({ text: `${typed}cmdlist `, cursor: 94, scroll });
     expect(scroll).toBeGreaterThan(0);
+  });
+
+  it("completes a command's argument once the listing it waits for is in", async () => {
+    const { line, state, press, type } = console78();
+    let list!: () => void;
+    state.listing = new Promise((resolve) => (list = resolve));
+    type('exec a');
+    press(K.TAB);
+    await nextKey();
+    expect(line.field.text).toBe('exec a');
+    list();
+    await nextKey();
+    expect(line.field.line()).toEqual({ text: '\\exec autoexec.cfg ', cursor: 19, scroll: 0 });
+  });
+
+  it('keeps the line a key changed while the listing came in, and lists the matches', async () => {
+    const { line, state, press, type } = console78();
+    let list!: () => void;
+    state.listing = new Promise((resolve) => (list = resolve));
+    type('exec ');
+    press(K.TAB);
+    type('m');
+    list();
+    await nextKey();
+    expect(line.field.line()).toEqual({ text: 'exec m', cursor: 6, scroll: 0 });
+    expect(line.print.mock.calls).toEqual([
+      [']\\exec \n'],
+      ['    autoexec.cfg\n'],
+      ['    my.cfg\n']
+    ]);
+  });
+
+  it('keeps the line where a key moved the cursor while the listing came in', async () => {
+    const { line, state, press, type } = console78();
+    let list!: () => void;
+    state.listing = new Promise((resolve) => (list = resolve));
+    type('exec a');
+    press(K.TAB);
+    press(K.LEFTARROW);
+    list();
+    await nextKey();
+    expect(line.field.line()).toEqual({ text: 'exec a', cursor: 5, scroll: 0 });
   });
 });
 

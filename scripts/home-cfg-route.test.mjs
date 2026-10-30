@@ -79,11 +79,11 @@ describe('homeCfgResponse', () => {
     }
   });
 
-  it('lists the cfgs directly in a folder, and none for a folder there is none of', async () => {
+  it('lists the cfgs and .txt files directly in a folder, and none in a missing one', async () => {
     const answer = await homeCfgResponse('GET', 'presets/', home);
     expect(answer.status).toBe(200);
     expect(answer.headers['Content-Type']).toBe('application/json; charset=utf-8');
-    expect(JSON.parse(answer.body)).toEqual(['Mine.CFG', 'cpm.cfg']);
+    expect(JSON.parse(answer.body)).toEqual(['Mine.CFG', 'cpm.cfg', 'notes.txt']);
 
     expect(JSON.parse((await homeCfgResponse('GET', '', home)).body)).toEqual(['autoexec.cfg']);
     expect(JSON.parse((await homeCfgResponse('GET', 'presets/old/', home)).body)).toEqual(['vq3.cfg']);
