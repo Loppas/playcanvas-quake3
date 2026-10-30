@@ -142,6 +142,12 @@ import { LocalEntities } from './local-entities';
 import { ScorePlums } from './score-plums';
 import { addToTeamChat, createTeamChat, type TeamChatState } from './team-chat';
 import { lastAttacker, tellAttackerCommand, type AttackerState } from './attacker';
+import {
+  createCrosshairPlayer,
+  crosshairPlayer,
+  scanForCrosshairEntity,
+  type CrosshairPlayer
+} from './crosshair-player';
 import { thirdPersonView } from './third-person';
 import { flashVisible } from './viewmodel';
 import { OPEN_AREAS } from './world-vis';
@@ -581,6 +587,8 @@ export class PlayerView {
   private board: Scores = EMPTY_SCORES;
   /** `cgs.teamChatMsgs` and the ring they are kept in, which the team chat box draws. */
   private teamChatBox: TeamChatState = createTeamChat();
+  /** `cg.crosshairClientNum` and `cg.crosshairClientTime`: who was last under the crosshair. */
+  private crosshair: CrosshairPlayer = createCrosshairPlayer();
   /** `cg.killerName`: who killed the player during the last {@link advance}, or `null`. */
   private killedByThisFrame: string | null = null;
 
@@ -933,6 +941,29 @@ export class PlayerView {
     return tellAttackerCommand(lastAttacker(this.playerEvents.attacker, attacker), argv, (text) =>
       this.console.print(text)
     );
+  }
+
+  /**
+   * `CG_ScanForCrosshairEntity` from the view this frame is drawn from, with everyone where it
+   * draws them: who is under the crosshair, kept for {@link crosshairPlayer}. Nothing is scanned
+   * before the first snapshot.
+   *
+   * @param origin - `cg.refdef.vieworg`.
+   * @param angles - The angles its axis is built from.
+   */
+  scanCrosshair(origin: Vec3, angles: Vec3): Readonly<CrosshairPlayer> {
+    const { snap } = this;
+    if (snap === null) return this.crosshair;
+    const { trace, pointContents, currentState } = this;
+    const { clientNum } = snap.ps;
+    const scan = { trace, pointContents, currentState, origin, angles, clientNum };
+    scanForCrosshairEntity(this.crosshair, scan, this.cgTime);
+    return this.crosshair;
+  }
+
+  /** `CG_CrosshairPlayer`: who was under the crosshair in the last second, or −1 for nobody. */
+  crosshairPlayer(): number {
+    return crosshairPlayer(this.crosshair, this.cgTime);
   }
 
   /** `cent->pe.painTime` and `painDirection`, which twist the body's torso after a hurt. */
@@ -1775,6 +1806,7 @@ export class PlayerView {
       this.firedAt = Number.NEGATIVE_INFINITY;
       this.railFiredAt = Number.NEGATIVE_INFINITY;
       this.board = EMPTY_SCORES;
+      this.crosshair = createCrosshairPlayer();
       // And its memset of `cgs`, the team chat box's lines among it.
       this.teamChatBox = createTeamChat();
       this.newGamestate = true;

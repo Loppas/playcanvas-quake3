@@ -89,6 +89,8 @@ export interface Settings {
   drawCrosshair: number;
   /** `cg_crosshairSize`, on Q3's 640×480 grid. */
   crosshairSize: number;
+  /** `cg_drawCrosshairNames`: the name of the player under the crosshair, under it. */
+  drawCrosshairNames: boolean;
   /** `cg_marks`: off, cgame makes no mark on a wall, and no shadow under a player. */
   marks: boolean;
   /** `r_dynamiclight`: off, the renderer takes none of the frame's dynamic lights. */
@@ -608,6 +610,9 @@ export const SETTINGS: SettingDefs = {
   centerTime: { cvar: 'cg_centertime', default: '3', read: decimal(), section: null },
   drawCrosshair: { cvar: 'cg_drawCrosshair', default: '4', read: wholeNumber(), section: 'game' },
   crosshairSize: { cvar: 'cg_crosshairSize', default: '24', read: decimal(), section: 'game' },
+  // q3_ui's Identify Target (`ui_preferences.c:140–141`), cgame's `cg_drawCrosshairNames`
+  // (`cg_main.c:229`).
+  drawCrosshairNames: { cvar: 'cg_drawCrosshairNames', default: '1', read: flag, section: 'game' },
   // q3_ui's Marks on Walls (`ui_preferences.c:132-134`), cgame's `cg_marks` (`cg_main.c:237`).
   marks: { cvar: 'cg_marks', default: '1', read: flag, section: 'game' },
   // q3_ui's Game Options set the renderer's `r_dynamiclight` (`ui_preferences.c:137`), which

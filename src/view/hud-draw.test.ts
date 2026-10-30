@@ -30,6 +30,7 @@ import { Lagometer } from './lagometer';
 import { notifyRows } from './notify-lines';
 import { REWARD_TIME, createRewardState, pushReward } from './rewards';
 import { createAttacker } from './attacker';
+import { createCrosshairPlayer } from './crosshair-player';
 import { addToTeamChat, createTeamChat } from './team-chat';
 
 /** One picture written: its shader, rectangle on Q3's grid, anchor, texture corners and colour. */
@@ -110,6 +111,7 @@ function input(overrides: Partial<HudInput> = {}): HudInput {
     attacker: createAttacker(),
     attackerNum: 0,
     thirdPerson: false,
+    scanCrosshair: () => createCrosshairPlayer(),
     speed: 0,
     peak: 0,
     time: 5000,
@@ -153,6 +155,7 @@ const SETTINGS: HudSettings = {
   draw3dIcons: true,
   drawCrosshair: 4,
   crosshairSize: 24,
+  drawCrosshairNames: true,
   drawFPS: false,
   lagometer: true,
   noPredict: false,
@@ -719,6 +722,26 @@ describe('drawHud', () => {
     expect(pics[18].shader).toBe('gfx/2d/crosshaire');
   });
 
+  it('writes the name under the crosshair after it, shadows first, its colours faded', () => {
+    const scanCrosshair = () => ({ clientNum: 3, time: 5_000 });
+    const clientInfo = (n: number) => (n === 3 ? ({ name: '^1Bo^7b' } as ClientInfo) : null);
+    for (const team of [TEAM.FREE, TEAM.SPECTATOR]) {
+      // 900 ms on: half strength, halved again by the fade.
+      const pics = draw({ team, scanCrosshair, clientInfo, time: 5_900 });
+      const crosshair = pics.findIndex((pic) => pic.shader === 'gfx/2d/crosshaire');
+      const name = pics.slice(crosshair + 1, crosshair + 7);
+      expect(name.map(({ shader, rect, color }) => [shader, rect, color])).toEqual([
+        [CHARSET_SHADER, [298, 172, 16, 16], [0, 0, 0, 0.25]],
+        [CHARSET_SHADER, [314, 172, 16, 16], [0, 0, 0, 0.25]],
+        [CHARSET_SHADER, [330, 172, 16, 16], [0, 0, 0, 0.25]],
+        [CHARSET_SHADER, [296, 170, 16, 16], [1, 0, 0, 0.25]],
+        [CHARSET_SHADER, [312, 170, 16, 16], [1, 0, 0, 0.25]],
+        [CHARSET_SHADER, [328, 170, 16, 16], [1, 1, 1, 0.25]]
+      ]);
+      expect(name.every((pic) => pic.anchor === 'centre')).toBe(true);
+    }
+  });
+
   it("writes the HUD in CG_Draw2D's order", () => {
     const samples = new Lagometer();
     samples.addFrame(-30);
@@ -747,6 +770,8 @@ describe('drawHud', () => {
         pickupTime: 4_500,
         warmup: 12_000,
         centerPrint: message,
+        scanCrosshair: () => ({ clientNum: 3, time: 5_000 }),
+        clientInfo: (n) => (n === 3 ? ({ name: 'Bones' } as ClientInfo) : null),
         time: 5_120
       });
     // The frame rate shows from the fifth frame it counts.
@@ -759,6 +784,7 @@ describe('drawHud', () => {
       64: 'warning',
       70: 'warmup',
       100: 'disconnect',
+      170: 'names',
       192: 'centre',
       358: 'weapons',
       400: 'pickup',
@@ -786,6 +812,7 @@ describe('drawHud', () => {
       'status',
       'warning',
       'crosshair',
+      'names',
       'weapons',
       'holdable',
       'reward',

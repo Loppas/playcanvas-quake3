@@ -47,6 +47,7 @@ import type { FirstPersonView } from './view/camera-feel';
 import { createCenterPrint } from './view/center-print';
 import { BIGCHAR_WIDTH } from './view/hud-text';
 import { LocalEntities } from './view/local-entities';
+import { PlayerView } from './view/player-view';
 
 /** No key held. The keys themselves go through the binds: `settings/client-input.test.ts`. */
 const STILL = { forwardmove: 0, rightmove: 0, upmove: 0 };
@@ -855,6 +856,23 @@ describe('a new gamestate', () => {
     // The new world's frames after it start nothing over.
     for (let i = 0; i < 5; i++) controller.update(FRAME);
     expect(controller.centerPrint.text).toBe('Welcome');
+  });
+});
+
+describe('the player under the crosshair', () => {
+  it("is scanned for from where the camera is placed this frame, cg.refdef's view", () => {
+    const { controller } = controlled();
+    controller.update(1 / 60);
+    const scan = vi.spyOn(PlayerView.prototype, 'scanCrosshair');
+    try {
+      controller.scanCrosshair();
+      expect(scan).toHaveBeenCalledOnce();
+      const [origin, angles] = scan.mock.calls[0];
+      expect(origin).toBe(controller.viewOrigin);
+      expect(angles).toBe(controller.viewAngles);
+    } finally {
+      scan.mockRestore();
+    }
   });
 });
 

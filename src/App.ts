@@ -2315,6 +2315,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
         attacker: controller.attacker,
         attackerNum: player.persistant[PERS.ATTACKER],
         thirdPerson,
+        scanCrosshair: () => controller.scanCrosshair(),
         speed,
         peak,
         time,

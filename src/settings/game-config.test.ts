@@ -72,6 +72,7 @@ const FRESH = [
   'seta cg_centertime "3"',
   'seta cg_drawCrosshair "4"',
   'seta cg_crosshairSize "24"',
+  'seta cg_drawCrosshairNames "1"',
   'seta cg_marks "1"',
   'seta r_dynamiclight "1"',
   'seta cg_shadows "1"',

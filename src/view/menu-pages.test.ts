@@ -846,6 +846,7 @@ describe("Setup's pages", () => {
       'Crosshair size',
       'Marks on walls',
       'Dynamic lights',
+      'Identify target',
       'High quality sky',
       '3D icons',
       'Draw 2D',
@@ -867,6 +868,14 @@ describe("Setup's pages", () => {
     // q3_ui's Marks on Walls, `cg_marks` (`ui_preferences.c:132-134`).
     press(menu, 'Marks on walls', K.ENTER);
     expect(config.cvars.string('cg_marks')).toBe('0');
+    // q3_ui's Identify Target, `cg_drawCrosshairNames` (`ui_preferences.c:97, 140–141`): on while
+    // the cvar is anything but 0.
+    const identify = item(menu, 'Identify target');
+    expect(identify.value).toBe('on');
+    press(menu, 'Identify target', K.ENTER);
+    expect([config.cvars.string('cg_drawCrosshairNames'), identify.value]).toEqual(['0', 'off']);
+    config.command(['cg_drawCrosshairNames', '2']);
+    expect(identify.value).toBe('on');
   });
 
   it('shows High quality sky on while r_fastsky is off, and writes it the other way round', () => {

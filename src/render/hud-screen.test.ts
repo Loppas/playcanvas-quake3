@@ -23,6 +23,7 @@ import { createCenterPrint } from '../view/center-print';
 import { ConsoleBuffer } from '../view/console-buffer';
 import { createRewardState } from '../view/rewards';
 import { createAttacker } from '../view/attacker';
+import { createCrosshairPlayer } from '../view/crosshair-player';
 import { addToTeamChat, createTeamChat } from '../view/team-chat';
 import { screenRect, type HudAnchor, type HudRect } from '../view/hud-layout';
 import { Lagometer } from '../view/lagometer';
@@ -108,6 +109,7 @@ function input(overrides: Partial<HudInput> = {}): HudInput {
     attacker: createAttacker(),
     attackerNum: 0,
     thirdPerson: false,
+    scanCrosshair: () => createCrosshairPlayer(),
     speed: 0,
     peak: 0,
     time: 5000,
@@ -150,6 +152,7 @@ const SETTINGS: HudSettings = {
   draw3dIcons: true,
   drawCrosshair: 4,
   crosshairSize: 24,
+  drawCrosshairNames: true,
   drawFPS: false,
   lagometer: true,
   noPredict: false,

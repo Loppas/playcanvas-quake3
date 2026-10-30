@@ -12,6 +12,7 @@ import type { AnnouncerCue } from './announcer';
 import { expireAttacker, type AttackerState } from './attacker';
 import { centerPrintLines, type CenterPrintState } from './center-print';
 import type { ClientInfo } from './client-info';
+import { CROSSHAIR_CLIENT_TIME, type CrosshairPlayer } from './crosshair-player';
 import { FPS_RIGHT, FPS_Y, FpsCounter } from './fps-counter';
 import { disconnectFrame, type HudDisconnect } from './hud-disconnect';
 import { createHeadMotion, statusBarHead, type HeadMotion, type StatusBarHead } from './hud-head';
@@ -76,6 +77,8 @@ export interface HudSettings {
   drawCrosshair: number;
   /** `cg_crosshairSize`, on Q3's grid. */
   crosshairSize: number;
+  /** `cg_drawCrosshairNames`: the name of the player under the crosshair, under it. */
+  drawCrosshairNames: boolean;
   /** `cg_drawFPS`: the frame rate at the top right. */
   drawFPS: boolean;
   /** `cg_lagometer`: the frame and snapshot graphs at the bottom right, on a remote server. */
@@ -124,6 +127,11 @@ export interface HudInput {
   attackerNum: number;
   /** `cg.renderingThirdPerson`: no crosshair. */
   thirdPerson: boolean;
+  /**
+   * `CG_ScanForCrosshairEntity`: who is under the crosshair, sighted afresh. Called only where the
+   * names under the crosshair draw, as Quake 3 scans only there.
+   */
+  scanCrosshair: () => Readonly<CrosshairPlayer>;
   /** Horizontal speed, and its peak since the player last stood still, in ups. */
   speed: number;
   peak: number;
@@ -234,6 +242,9 @@ export const NUM_CROSSHAIRS = 10;
 /** The ammo warning's line (`cg_draw.c:2304`). */
 export const AMMO_WARNING_Y = 64;
 
+/** The line of the name under the crosshair (`cg_draw.c:2071`). */
+export const CROSSHAIR_NAME_Y = 170;
+
 /** A number on the status bar: its digits, all on `STATUS_Y`, in one colour. */
 export interface HudField {
   digits: Digit[];
@@ -332,6 +343,8 @@ export interface HudFrame {
   statusBar: StatusBar | null;
   ammoWarning: HudText | null;
   crosshair: HudCrosshair | null;
+  /** `CG_DrawCrosshairNames`: the name of the player under the crosshair, fading. */
+  crosshairName: HudText | null;
   weaponBar: WeaponBar | null;
   speedometer: HudSpeedometer | null;
   fps: HudText | null;
@@ -390,7 +403,7 @@ export function hasAmmoModel(weapon: number): boolean {
  * sharing the top of the screen with it (`:2611–2613`).
  *
  * Moves `state` on: the head's look-around, the frame count and the speed graph; and the input's
- * rewards, team chat box and attacker, as Q3's drawing moves them.
+ * rewards, team chat box, attacker and player under the crosshair, as Q3's drawing moves them.
  */
 export function hudFrame(state: HudState, input: HudInput, settings: HudSettings): HudFrame {
   // The graph's history runs whether it is drawn or not, as the lagometer's does.
@@ -400,6 +413,7 @@ export function hudFrame(state: HudState, input: HudInput, settings: HudSettings
       statusBar: null,
       ammoWarning: null,
       crosshair: null,
+      crosshairName: null,
       weaponBar: null,
       speedometer: null,
       fps: null,
@@ -445,10 +459,15 @@ export function hudFrame(state: HudState, input: HudInput, settings: HudSettings
   const lagometer = settings.lagometer && !input.localServer;
   // In the upper right, which draws dead, spectating or scoreboarded too (`cg_draw.c:2600`).
   if (!boardOnly) expireAttacker(input.attacker, input);
+  const crosshairFrame = spectating || flying || own ? crosshair(input, settings) : null;
   return {
     statusBar: own ? statusBar(state, input, settings) : null,
     ammoWarning: own ? ammoWarning(input) : null,
-    crosshair: spectating || flying || own ? crosshair(input, settings) : null,
+    crosshair: crosshairFrame,
+    // Called straight after the crosshair, in both branches, and stopped where it is: so where the
+    // crosshair draws, but not where the board alone draws.
+    crosshairName:
+      crosshairFrame && settings.drawCrosshairNames && !boardOnly ? crosshairName(input) : null,
     weaponBar: own
       ? weaponBar(input.weapons, input.ammo, input.weaponSelect, input.weaponSelectTime, input.time)
       : null,
@@ -607,6 +626,20 @@ function crosshair(input: HudInput, settings: HudSettings): HudCrosshair | null 
     size: settings.crosshairSize,
     color: colorForHealth(input.health, input.armor)
   };
+}
+
+/**
+ * `CG_DrawCrosshairNames` (`cg_draw.c:2039–2074`): the scan, then the name of whoever it last
+ * sighted, centred under the crosshair at half the fade's strength, its colours kept. So the name
+ * holds 800 ms after the last sighting, and fades over the last 200.
+ */
+function crosshairName(input: HudInput): HudText | null {
+  const { clientNum, time } = input.scanCrosshair();
+  // A time of 0 is "never sighted", which `CG_FadeColor` refuses outright.
+  const alpha = time ? fadeAlpha(time, CROSSHAIR_CLIENT_TIME, input.time) : null;
+  if (alpha === null) return null;
+  const name = input.clientInfo(clientNum)?.name ?? '';
+  return { ...centred(name, CROSSHAIR_NAME_Y, 'big'), color: [1, 1, 1, alpha * 0.5] };
 }
 
 /** The speedometer's number and graph for a mode, the graph clear of a lagometer drawn. */

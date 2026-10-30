@@ -25,6 +25,7 @@ import { ARMOR_TIER, GREEN_ARMOR_TINT, findItemForArmorTier } from '../sim/items
 import { createCenterPrint } from '../view/center-print';
 import { createRewardState } from '../view/rewards';
 import { createAttacker } from '../view/attacker';
+import { createCrosshairPlayer } from '../view/crosshair-player';
 import { createTeamChat } from '../view/team-chat';
 import { DAMAGE_TIME } from '../view/damage-feedback';
 import { anglesToAxis } from '../view/hand-pose';
@@ -123,6 +124,7 @@ function statusBar(
     attacker: createAttacker(),
     attackerNum: 0,
     thirdPerson: false,
+    scanCrosshair: () => createCrosshairPlayer(),
     speed: 0,
     peak: 0,
     time: 5000,
@@ -163,6 +165,7 @@ function statusBar(
     draw3dIcons: true,
     drawCrosshair: 4,
     crosshairSize: 24,
+    drawCrosshairNames: true,
     drawFPS: false,
     lagometer: true,
     noPredict: false,
