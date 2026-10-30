@@ -204,7 +204,9 @@ describe("Setup's pages in q3_ui's placement", () => {
   it("stands Game Options' rows at x=360 on q3_ui's places: 144, 166, 182, then 18 apart", () => {
     const options = at('GAME OPTIONS');
     const rows = options.placed.items.filter((_, index) => !options.page.items[index].role);
-    expect(rows.map(({ bar }) => bar.y)).toEqual([144, 166, 182, 200, 218, 236, 254, 272, 290]);
+    expect(rows.map(({ bar }) => bar.y)).toEqual([
+      144, 166, 182, 200, 218, 236, 254, 272, 290, 308
+    ]);
     expect(rows[0].text).toMatchObject({ kind: 'row', x: 360 });
   });
 

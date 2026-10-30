@@ -29,6 +29,7 @@ import { WP, type WeaponId } from './sim/weapons/constants';
 import type { AnnouncerCue } from './view/announcer';
 import type { AttackerState } from './view/attacker';
 import type { BrushModelPose } from './view/brush-models';
+import type { CrosshairPlayer } from './view/crosshair-player';
 import type { WorldEffect } from './view/entity-events';
 import type { CameraFeel, FirstPersonView, ViewSample } from './view/camera-feel';
 import {
@@ -657,6 +658,19 @@ export class PlayerController {
   tellAttacker(argv: readonly string[]): void {
     const command = this.view.tellAttacker(argv);
     if (command !== null) this.game.sendClientCommand(command);
+  }
+
+  /**
+   * `CG_ScanForCrosshairEntity` from where the camera is placed this frame: who is under the
+   * crosshair. Quake 3 scans only where it draws the names under the crosshair.
+   */
+  scanCrosshair(): Readonly<CrosshairPlayer> {
+    return this.view.scanCrosshair(this.placed.origin, this.placed.angles);
+  }
+
+  /** `CG_CrosshairPlayer`: who was under the crosshair in the last second, or −1 for nobody. */
+  crosshairPlayer(): number {
+    return this.view.crosshairPlayer();
   }
 
   /** When the last pain sound played, and which way the torso twitches for it. */

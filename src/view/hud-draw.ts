@@ -173,6 +173,7 @@ export function drawHud(
   statusBar(draw, frame.statusBar);
   text(draw, frame.ammoWarning);
   crosshair(draw, frame.crosshair);
+  text(draw, frame.crosshairName);
   weaponBar(draw, frame.weaponBar);
   holdable(draw, frame.holdable);
   reward(draw, frame.reward);

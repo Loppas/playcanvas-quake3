@@ -29,6 +29,7 @@ import {
 } from './center-print';
 import { createRewardState, pushReward } from './rewards';
 import { createAttacker } from './attacker';
+import { createCrosshairPlayer } from './crosshair-player';
 import { addToTeamChat, createTeamChat } from './team-chat';
 import { ICON_SIZE, STATUS_COLORS } from './hud-status';
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from './hud-layout';
@@ -66,6 +67,7 @@ function input(overrides: Partial<HudInput> = {}): HudInput {
     attacker: createAttacker(),
     attackerNum: 0,
     thirdPerson: false,
+    scanCrosshair: () => createCrosshairPlayer(),
     speed: 0,
     peak: 0,
     time: 5000,
@@ -116,6 +118,7 @@ const DEFAULTS: HudSettings = {
   draw3dIcons: true,
   drawCrosshair: 4,
   crosshairSize: 24,
+  drawCrosshairNames: true,
   drawFPS: false,
   lagometer: true,
   noPredict: false,
@@ -476,6 +479,80 @@ describe('the crosshair', () => {
     expect(crosshairShader(10)).toBe('gfx/2d/crosshaira');
     expect(crosshairShader(13)).toBe('gfx/2d/crosshaird');
     expect(crosshairShader(-3)).toBe('gfx/2d/crosshaira');
+  });
+});
+
+describe('the name under the crosshair', () => {
+  /** Bones, in slot 3, last sighted at `at`: the frame's name, and how often it scanned. */
+  function sighted(over: Partial<HudInput> = {}, settings: Partial<HudSettings> = {}, at = 5000) {
+    let scans = 0;
+    const scanCrosshair = () => {
+      scans++;
+      return { clientNum: 3, time: at };
+    };
+    const bones = (clientNum: number) =>
+      clientNum === 3 ? ({ name: '^1Bo^7nes' } as ClientInfo) : null;
+    const drawn = frame({ scanCrosshair, clientInfo: bones, ...over }, settings);
+    return { name: drawn.crosshairName, scans };
+  }
+
+  it('draws the name big at 170, centred by what it prints, shadowed, colours kept', () => {
+    expect(sighted().name).toEqual({
+      text: '^1Bo^7nes',
+      x: SCREEN_WIDTH / 2 - (5 * BIGCHAR_WIDTH) / 2,
+      y: 170,
+      charWidth: 16,
+      charHeight: 16,
+      color: [1, 1, 1, 0.5],
+      shadow: true,
+      anchor: 'centre'
+    });
+  });
+
+  it('holds at half strength 800 ms after the sighting, then fades over the last 200', () => {
+    const alpha = (since: number) => sighted({ time: 5000 + since }).name?.color[3] ?? null;
+    expect([0, 799, 800, 900, 999, 999.9, 1000].map(alpha)).toEqual([
+      0.5,
+      0.5,
+      0.5,
+      0.25,
+      0.0025,
+      0.0025,
+      null
+    ]);
+  });
+
+  it('draws nothing for a time of 0, before anyone is sighted', () => {
+    expect(sighted({ time: 500 }, {}, 0).name).toBeNull();
+    expect(sighted({ time: 500 }, {}, 1).name).not.toBeNull();
+  });
+
+  it("draws an empty name for a slot nobody holds, as Quake 3 reads a cleared one's", () => {
+    expect(sighted({ clientInfo: () => null }).name).toMatchObject({ text: '', x: 320 });
+  });
+
+  it('scans and draws only where the crosshair draws, with cg_drawCrosshairNames on', () => {
+    for (const over of [{}, { team: TEAM.SPECTATOR }, { pmType: PM_SPECTATOR }]) {
+      const { name, scans } = sighted(over);
+      expect([name?.text, scans], JSON.stringify(over)).toEqual(['^1Bo^7nes', 1]);
+    }
+    const none = [
+      sighted({ thirdPerson: true }),
+      sighted({ health: 0 }),
+      sighted({ showScores: true }),
+      sighted({}, { drawCrosshair: 0 }),
+      sighted({}, { drawCrosshairNames: false }),
+      sighted({}, { draw2D: false })
+    ];
+    expect(none).toEqual(new Array(none.length).fill({ name: null, scans: 0 }));
+  });
+
+  it("neither scans nor draws at the intermission or a spectator's board", () => {
+    expect(sighted({ pmType: PM_INTERMISSION })).toEqual({ name: null, scans: 0 });
+    const board = sighted({ team: TEAM.SPECTATOR, pmFlags: PMF_SCOREBOARD });
+    expect(board).toEqual({ name: null, scans: 0 });
+    // A player's own scoreboard flag is no bar.
+    expect(sighted({ pmFlags: PMF_SCOREBOARD }).scans).toBe(1);
   });
 });
 

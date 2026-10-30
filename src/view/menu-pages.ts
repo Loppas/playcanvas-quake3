@@ -739,9 +739,9 @@ function graphicsRows(context: SetupContext): MenuItem[] {
 /**
  * Game options: the crosshair, as `Preferences_Event` writes it (`ui_preferences.c:113–115`),
  * then the HUD's settings q3_ui leaves to the console: the crosshair's size, the 3D icons, 2D
- * drawing, the frame rate and Quake Live's speedometer. Marks on walls and Dynamic lights sit after
- * the crosshair's two, as q3_ui has them after its crosshair (`ui_preferences.c:274–299`), and
- * High quality sky after them, as q3_ui has it after Identify Target (`:302–317`).
+ * drawing, the frame rate and Quake Live's speedometer. Marks on walls, Dynamic lights, Identify
+ * target and High quality sky sit after the crosshair's two, as q3_ui has them after its crosshair
+ * (`ui_preferences.c:274–317`).
  */
 function gameOptionsPage(context: SetupContext): MenuPage {
   const { menu, config } = context;
@@ -763,6 +763,7 @@ function gameOptionsPage(context: SetupContext): MenuPage {
       settingSlider(cvars, 'crosshairSize', 'Crosshair size', CROSSHAIR_SIZE_RANGE),
       settingSwitch(cvars, 'marks', 'Marks on walls'),
       settingSwitch(cvars, 'dynamicLight', 'Dynamic lights'),
+      settingSwitch(cvars, 'drawCrosshairNames', 'Identify target'),
       // On while `r_fastsky` is off, and writing the other way round (`ui_preferences.c:99, 121–123`).
       radioButton({
         ...settingOptions(cvars, 'fastSky', 'High quality sky'),

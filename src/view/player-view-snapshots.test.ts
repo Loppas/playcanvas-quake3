@@ -1342,6 +1342,29 @@ describe('the solids each frame traces through', () => {
     }
   });
 
+  it('scans for the player under the crosshair from a given view, till a new gamestate', () => {
+    // The player's own slot in the way, which the scan passes as the snapshot's `clientNum`.
+    const own = createIdlePlayerState({ clientNum: 2 });
+    const { source, view } = started({ ps: own, entities: [standing(2, 100), standing(5, 200)] });
+    const eye = vec3(0, 0, 50);
+    // Nothing to scan before the first snapshot is read.
+    expect(view.scanCrosshair(eye, vec3())).toEqual({ clientNum: 0, time: 0 });
+    frame(source, view, 100.5);
+    expect(view.scanCrosshair(eye, vec3())).toEqual({ clientNum: 5, time: 100 });
+    expect(view.crosshairPlayer()).toBe(5);
+    // Looking away keeps who was last sighted, for a second on the view's clock.
+    expect(view.scanCrosshair(eye, vec3(0, 90, 0))).toEqual({ clientNum: 5, time: 100 });
+    frame(source, view, 1100);
+    expect(view.crosshairPlayer()).toBe(5);
+    frame(source, view, 1101);
+    expect(view.crosshairPlayer()).toBe(-1);
+
+    source.gamestateMessageNum = 20;
+    source.send(21, 50, { ps: own });
+    frame(source, view, 50);
+    expect(view.scanCrosshair(eye, vec3())).toEqual({ clientNum: 0, time: 0 });
+  });
+
   it("stops another player's bolt at whoever is in the way, whoever was there before", () => {
     const { source, view } = started({ entities: [standing(2, 500), standing(3, 600)] });
     frame(source, view, 100);
