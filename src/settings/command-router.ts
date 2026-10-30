@@ -174,6 +174,14 @@ export class CommandRouter implements CommandTable {
     return this.drained;
   }
 
+  /**
+   * Every command's name as it was added, in `cmd_functions`' order, as `Cmd_CommandCompletion`
+   * and `cmdlist` walk it: the one most recently run or added first.
+   */
+  names(): string[] {
+    return [...this.commands.values()].reverse().map(({ name }) => name);
+  }
+
   private register(name: string, run: Run | null): void {
     const key = name.toLowerCase();
     if (this.commands.has(key)) {
@@ -235,12 +243,12 @@ export class CommandRouter implements CommandTable {
     this.queue.unshift(...commands.map((argv) => ({ argv, depth: depth + 1 })));
   }
 
-  /** `Cmd_List_f` (`cmd.c:822–842`): the names, newest first, that the word after it matches. */
+  /** `Cmd_List_f` (`cmd.c:822–842`): each name the word after it matches, in the list's order. */
   private list(argv: readonly string[]): void {
     const { print } = this.options;
     const match = argv[1];
     let count = 0;
-    for (const { name } of [...this.commands.values()].reverse()) {
+    for (const name of this.names()) {
       if (match !== undefined && !comFilter(match, name)) continue;
       print(`${name}\n`);
       count++;

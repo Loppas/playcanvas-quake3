@@ -219,6 +219,12 @@ itself. The lines are kept between runs in `q3history`, beside `q3config.cfg`. P
 scroll the console's text, as the wheel does (faster with Ctrl), Ctrl+Home and Ctrl+End go to its
 top and bottom, and Ctrl+L clears it.
 
+Tab completes the line's last word as Quake 3 does, without regard to case, from every command
+(cgame's among them once a match has loaded) and then every cvar. One match completes it with a
+space after it. Several complete it as far as they agree and are listed under the line, each cvar
+with its value. A word after a `;` is completed as a command of its own. While `con_autochat` is 1,
+Tab gives the line its `\` first.
+
 `writeconfig <name>` writes the config to `<name>.cfg` beside `q3config.cfg`, where `exec <name>`
 reads it back. `condump <name>` writes the console's text to `<name>.txt` there; a build in the
 browser keeps that folder in the browser's own storage, so it hands the file over as a download

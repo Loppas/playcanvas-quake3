@@ -211,6 +211,25 @@ describe('the command table', () => {
     expect(printed.slice(0, 5)).toEqual(['cmdlist\n', 'echo\n', 'a\n', 'c\n', 'b\n']);
   });
 
+  it('gives the names as they were added, in the order Cmd_CommandCompletion walks them', () => {
+    const { router } = table();
+    router.add('Weapon');
+    router.add('weapon', () => {});
+    router.execute(['B']);
+    expect(router.names()).toEqual([
+      'b',
+      'Weapon',
+      'c',
+      'a',
+      'wait',
+      'echo',
+      'vstr',
+      'execq',
+      'exec',
+      'cmdlist'
+    ]);
+  });
+
   it("lists the names Com_Filter's wildcards match, without regard to case, and counts those", () => {
     const { router, printed } = table();
     router.execute(['cmdlist', 'E*']);

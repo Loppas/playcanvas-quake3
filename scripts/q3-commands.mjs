@@ -64,9 +64,11 @@ export function commandLines(text) {
  * ends the line.
  *
  * @param {string} line
+ * @param {boolean} [ignoreQuotes] - `Cmd_TokenizeStringIgnoreQuotes`: a quote is a character of
+ *   its token like any other.
  * @returns {string[]}
  */
-export function tokenize(line) {
+export function tokenize(line, ignoreQuotes = false) {
   /** @type {string[]} */
   const argv = [];
   const end = line.length;
@@ -87,7 +89,7 @@ export function tokenize(line) {
       i += 2;
     }
 
-    if (line[i] === '"') {
+    if (!ignoreQuotes && line[i] === '"') {
       const start = ++i;
       while (i < end && line[i] !== '"') i++;
       argv.push(line.slice(start, i));
@@ -97,7 +99,7 @@ export function tokenize(line) {
     }
 
     const start = i;
-    while (i < end && !isSpace(i) && line[i] !== '"' && !opensComment(i)) i++;
+    while (i < end && !isSpace(i) && (ignoreQuotes || line[i] !== '"') && !opensComment(i)) i++;
     argv.push(line.slice(start, i));
     if (i >= end) return argv;
   }
@@ -112,6 +114,6 @@ export function tokenize(line) {
  */
 export function configCommands(text) {
   return commandLines(text)
-    .map(tokenize)
+    .map((line) => tokenize(line))
     .filter((argv) => argv.length > 0);
 }

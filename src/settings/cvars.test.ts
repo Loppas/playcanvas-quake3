@@ -718,6 +718,21 @@ describe("Cvars: the console's set, and the player's own cvars", () => {
     expect(names.slice(0, 3)).toEqual(['dmflags', 'sv_customRule', 'pmove_AirControl']);
     expect(names.at(-1)).toBe(SETTINGS[SETTING_KEYS[0]].cvar);
   });
+
+  it("gives every cvar in cvarlist's order, each with the string cvarlist shows", () => {
+    const { cvars } = store();
+    cvars.setFromConsole('my_first', 'a');
+    cvars.setFromConsole('My_Second', 'b');
+    cvars.set('r_picmip', '2');
+    const listed = cvars.listed();
+    expect(listed.slice(0, 2).map(({ name, value }) => [name, value])).toEqual([
+      ['My_Second', 'b'],
+      ['my_first', 'a']
+    ]);
+    // In force until the reload, as Q3's string is until its latch is taken up.
+    expect(listed.find(({ name }) => name === 'r_picmip')?.value).toBe('0');
+    expect(listed.at(-1)?.name).toBe(SETTINGS[SETTING_KEYS[0]].cvar);
+  });
 });
 
 describe('Cvars: a write-protected setting', () => {

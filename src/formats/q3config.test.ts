@@ -48,6 +48,22 @@ describe('tokenize', () => {
     expect(tokenize('   ')).toEqual([]);
     expect(tokenize('// KEY BINDINGS')).toEqual([]);
   });
+
+  it('takes a quote as a character like any other when told to ignore quotes', () => {
+    expect(tokenize('echo "a b"c', true)).toEqual(['echo', '"a', 'b"c']);
+    expect(tokenize('"" x', true)).toEqual(['""', 'x']);
+    expect(tokenize('a"b // c', true)).toEqual(['a"b']);
+    expect(tokenize('echo "a b"c')).toEqual(['echo', 'a b', 'c']);
+  });
+});
+
+describe('configCommands', () => {
+  it('reads every line with its quotes, whatever its place among the lines', () => {
+    expect(configCommands('bind a "x y"\nbind b "x y"')).toEqual([
+      ['bind', 'a', 'x y'],
+      ['bind', 'b', 'x y']
+    ]);
+  });
 });
 
 describe('writeConfig', () => {

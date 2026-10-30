@@ -385,6 +385,7 @@ describe("the console's line", () => {
       isDown: (key) => input.isDown(key),
       active: () => false,
       autochat: () => true,
+      names: () => ({ commands: ['cmdlist'], cvars: [] }),
       print: () => {},
       run: vi.fn()
     };
@@ -459,6 +460,13 @@ describe("the console's line", () => {
     document.dispatchEvent(event);
     expect(field.text).toBe('abcd');
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("completes the line on Tab, stopping the browser's move of the focus", () => {
+    type('cmdl');
+    const tab = keyDown('Tab', { key: 'Tab' });
+    expect([field.text, field.cursor]).toEqual(['\\cmdlist ', 9]);
+    expect(tab.defaultPrevented).toBe(true);
   });
 
   it('enters the line on Enter, and brings it back on Up, stopping both defaults', () => {
