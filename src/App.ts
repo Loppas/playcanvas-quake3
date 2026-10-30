@@ -994,7 +994,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       app.on('update', look);
     });
   // What `Console_Key` reads and changes: the line and its history, the console's text, the keys
-  // held, the client's state and `con_autochat`; and where a line entered goes.
+  // held, the client's state, `con_autochat` and the names Tab completes; and where a line entered
+  // goes.
   const consoleLine: ConsoleLine = {
     field: consoleField,
     history: consoleHistory,
@@ -1002,6 +1003,7 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     isDown: (key) => input.isDown(key),
     active: clientActive,
     autochat: () => settings.conAutochat,
+    names: () => ({ commands: commands.names(), cvars: config.cvars.listed() }),
     print,
     run: (text) => commands.executeText(text)
   };

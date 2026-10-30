@@ -2,6 +2,7 @@ import { K } from '../formats/q3-keys';
 import type { ConsoleHistory } from './console-history';
 import type { ConsoleText } from './console-print';
 import { MAX_FIELD_LENGTH, type EditField } from './edit-field';
+import { autoComplete, type CompletionNames } from './field-complete';
 
 /**
  * `Console_Key` (`cl_keys.c:613–746`): a key pressed at the console, which enters its line, brings
@@ -28,6 +29,8 @@ export interface ConsoleLine {
    * one.
    */
   autochat(): boolean;
+  /** What Tab completes a word from: the commands, then the cvars. */
+  names(): CompletionNames;
   /** `Com_Printf`. */
   print(text: string): void;
   /** `Cbuf_AddText`: text run as console commands. */
@@ -36,9 +39,10 @@ export interface ConsoleLine {
 
 /**
  * A key pressed at the console, in `Console_Key`'s order: Ctrl+L runs `clear`; Enter enters the
- * line; Up, Ctrl+P and Shift with the wheel up bring back the line before, and Down, Ctrl+N and
- * Shift with the wheel down the one after; PgUp and PgDn scroll the text two lines, and the wheel
- * two, or six with Ctrl; Ctrl+Home and Ctrl+End go to its ends; and any other key is the field's.
+ * line; Tab completes its last word; Up, Ctrl+P and Shift with the wheel up bring back the line
+ * before, and Down, Ctrl+N and Shift with the wheel down the one after; PgUp and PgDn scroll the
+ * text two lines, and the wheel two, or six with Ctrl; Ctrl+Home and Ctrl+End go to its ends; and
+ * any other key is the field's.
  *
  * @returns whether the key was taken, so its browser default is stopped
  */
@@ -53,6 +57,11 @@ export function consoleKey(key: number, line: ConsoleLine): boolean {
   }
   if (key === K.ENTER || key === K.KP_ENTER) {
     enter(line);
+    return true;
+  }
+  if (key === K.TAB) {
+    const print = (text: string) => line.print(text);
+    field.restore(autoComplete(field.line(), line.names(), line.autochat(), print));
     return true;
   }
   if (

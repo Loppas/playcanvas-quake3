@@ -69,7 +69,7 @@ interface OtherCvar {
 type OtherFlag = 'server' | 'user';
 
 /** A cvar as `cvarlist` lists it. */
-interface Listed {
+export interface ListedCvar {
   name: string;
   value: string;
   flags: string;
@@ -654,8 +654,11 @@ export class Cvars implements CvarStore {
     return def.latched === 'reload' ? this.slot(key).applied : this.string(def.cvar)!;
   }
 
-  /** Every cvar, newest first, as `cvarlist` lists it: the others, then the settings. */
-  private listed(): Listed[] {
+  /**
+   * Every cvar, newest first, as `cvarlist` lists it and `Cvar_CommandCompletion` walks it: the
+   * others, then the settings, each with Q3's `string`.
+   */
+  listed(): ListedCvar[] {
     const others = [...this.others.values()].reverse().map((other) => {
       const own = { readOnly: other.server, archive: other.archive, user: other.user };
       return { name: other.name, value: other.value, flags: flagColumns(other.name, own) };

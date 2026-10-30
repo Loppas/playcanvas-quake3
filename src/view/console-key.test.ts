@@ -69,7 +69,16 @@ const TWIN: Record<number, ConsoleRun> = {
   }
 };
 
-/** The console's line at a console 78 wide, out of a match, with `con_autochat` 1. */
+/** Cvars for Tab to complete. */
+const DRAWS = [
+  { name: 'cg_drawFPS', value: '0' },
+  { name: 'cg_draw2D', value: '1' }
+];
+
+/**
+ * The console's line at a console 78 wide, out of a match, with `con_autochat` 1, Tab completing
+ * from two commands and {@link DRAWS}.
+ */
 function console78() {
   const held = new Set<number>();
   const state = { active: false, autochat: true };
@@ -80,6 +89,7 @@ function console78() {
     isDown: (key: number) => held.has(key),
     active: () => state.active,
     autochat: () => state.autochat,
+    names: () => ({ commands: ['cmdlist', 'clear'], cvars: DRAWS }),
     print: vi.fn(),
     run: vi.fn()
   } satisfies ConsoleLine;
@@ -198,6 +208,40 @@ describe('consoleKey: Enter', () => {
   });
 });
 
+describe('consoleKey: Tab', () => {
+  it('completes the line ahead of the field, giving it a slash under con_autochat', () => {
+    const { line, press, type } = console78();
+    type('cmdl');
+    press(K.LEFTARROW);
+    expect(press(K.TAB)).toBe(true);
+    expect(line.field.line()).toEqual({ text: '\\cmdlist ', cursor: 9, scroll: 0 });
+    expect(line.print).not.toHaveBeenCalled();
+  });
+
+  it('lists the matches under the line, each cvar with its value', () => {
+    const { line, press, type } = console78();
+    type('cg_d');
+    press(K.TAB);
+    expect(line.field.line()).toEqual({ text: '\\cg_draw', cursor: 8, scroll: 0 });
+    expect(line.print.mock.calls).toEqual([
+      [']\\cg_draw\n'],
+      ['    cg_drawFPS = "0"\n'],
+      ['    cg_draw2D = "1"\n']
+    ]);
+  });
+
+  it('reads con_autochat at the press, and leaves the scroll as it was', () => {
+    const { line, state, press, type } = console78();
+    state.autochat = false;
+    const typed = `echo ${'x'.repeat(80)};`;
+    type(`${typed}cmdl`);
+    const { scroll } = line.field;
+    press(K.TAB);
+    expect(line.field.line()).toEqual({ text: `${typed}cmdlist `, cursor: 94, scroll });
+    expect(scroll).toBeGreaterThan(0);
+  });
+});
+
 describe('consoleKey: the history', () => {
   /** A console with three lines entered out of a match. */
   function entered() {
@@ -304,7 +348,7 @@ describe('consoleKey: the text and the field', () => {
     type('abc');
     expect(press(K.LEFTARROW)).toBe(true);
     expect(line.field.cursor).toBe(2);
-    expect(press(K.TAB)).toBe(false);
+    expect(press(K.PAUSE)).toBe(false);
     expect(press(K.KP_PGUP)).toBe(false);
     expect(line.scrollback.pageUp).not.toHaveBeenCalled();
   });

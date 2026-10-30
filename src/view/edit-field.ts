@@ -8,11 +8,14 @@ import { K } from '../formats/q3-keys';
  * Engine-free.
  */
 
+/** `MAX_EDIT_LINE` (`qcommon.h:748`): a field's buffer, its line one shorter for the `\0`. */
+export const MAX_EDIT_LINE = 256;
+
 /**
  * The longest line typed: `MAX_EDIT_LINE` less two, "to leave room for the leading slash and
  * trailing \0" (`:572–573`). A line the console's history recalls can be longer, and takes no more.
  */
-export const MAX_FIELD_LENGTH = 254;
+export const MAX_FIELD_LENGTH = MAX_EDIT_LINE - 2;
 
 /** `COLOR_WHITE`, which a field's text is drawn in from its first character. */
 const COLOR_WHITE = 7;
