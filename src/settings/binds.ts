@@ -12,6 +12,8 @@ const key = (char: string) => char.charCodeAt(0);
  * - The wheel goes as pak0's `default.cfg:31–32` binds it: up for the previous weapon, down for
  *   the next.
  * - F throws CorkScrew's off-hand grapple, which fires on `+button5`.
+ * - T opens the chat line, as pak0's `default.cfg:94` binds it, and Y the team's, which it leaves
+ *   unbound.
  * - Under `DEBUG_MODE`, C toggles the collision overlay, and P prints `viewpos`, which places a
  *   splat map's entities. pak0's `default.cfg` binds neither key.
  */
@@ -28,7 +30,9 @@ export function defaultBinds(debugMode: boolean = DEBUG_MODE): Map<number, strin
     [K.ENTER, '+button2'],
     [K.MWHEELUP, 'weapprev'],
     [K.MWHEELDOWN, 'weapnext'],
-    [key('f'), '+button5']
+    [key('f'), '+button5'],
+    [key('t'), 'messagemode'],
+    [key('y'), 'messagemode2']
   ]);
   for (let slot = 1; slot <= 9; slot++) binds.set(key(String(slot)), `weapon ${slot}`);
   if (debugMode) {

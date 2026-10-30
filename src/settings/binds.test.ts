@@ -8,7 +8,7 @@ const byName = (binds: Iterable<readonly [number, string]>) =>
   Object.fromEntries([...binds].map(([key, command]) => [keyToString(key), command]));
 
 describe('defaultBinds', () => {
-  it("binds the port's keys to Q3's commands, and the wheel as pak0's default.cfg does", () => {
+  it("binds the port's keys to Q3's commands, the wheel and T as pak0's default.cfg does", () => {
     expect(byName(defaultBinds(true))).toEqual({
       w: '+forward',
       s: '+back',
@@ -22,6 +22,9 @@ describe('defaultBinds', () => {
       MWHEELUP: 'weapprev',
       MWHEELDOWN: 'weapnext',
       f: '+button5',
+      // Chat, and team chat beside it; target and attacker chat are left unbound, as in Q3.
+      t: 'messagemode',
+      y: 'messagemode2',
       1: 'weapon 1',
       2: 'weapon 2',
       3: 'weapon 3',

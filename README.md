@@ -91,9 +91,9 @@ npm install && npm run dev
 Then open the printed URL, which starts on the main menu, as Quake 3 does. Add `?map=garage_rats`
 to the address to start straight in a map. In a match, click the canvas to capture the pointer.
 The default binds: `WASD` to move, `space` to jump, `shift` to crouch, the left button to fire,
-`1`–`9` and the wheel for the weapons, `Tab` for the scores, `Enter` to use the held item, and `F`
-for the grapple. `Esc` releases the pointer and opens the menu, and SETUP's CONTROLS binds the
-rest.
+`1`–`9` and the wheel for the weapons, `Tab` for the scores, `Enter` to use the held item, `T` to
+chat and `Y` to chat to your team, and `F` for the grapple. `Esc` releases the pointer and opens
+the menu, and SETUP's CONTROLS binds the rest.
 
 `npm run dev` serves PlayCanvas's debug build, whose checks around every WebGPU draw cost frames.
 `npm run play` serves the same game on the release build, the one a player gets: play on it, and
@@ -249,7 +249,8 @@ line with where its speaker is. `cg_teamChatsOnly 1` keeps a team game to team c
 `messagemode` opens a chat line under the notify lines, `messagemode2` one to your team, and
 `messagemode3` and `messagemode4` one to the player under your crosshair or the last who hurt you;
 `tell_target <text>` tells that player too. Enter says the line and Escape drops it, and the mouse
-stays with the game while it is open. No key is bound to them yet: `bind t messagemode`.
+stays with the game while it is open. `T` opens the first and `Y` the second, and SETUP's
+CONTROLS binds all four under MISC.
 
 ## Quake 3 assets
 

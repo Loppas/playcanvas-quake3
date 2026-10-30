@@ -66,13 +66,17 @@ const SHOOT: readonly Action[] = [
 ];
 
 /**
- * The Misc section's first two rows, which are Q3's own (`g_misc_controls`, `ui_controls2.c:331–334`),
- * under the commands and labels its bind table gives them (`:232–233`). The port's collision
- * overlay follows them under `DEBUG_MODE`; none of Q3's other Misc actions is the port's.
+ * The Misc section's rows that are Q3's own, in its order (`g_misc_controls`,
+ * `ui_controls2.c:331–340`), under the commands and labels its bind table gives them (`:232–233`,
+ * `:262–265`). The port's collision overlay follows them under `DEBUG_MODE`.
  */
 const MISC: readonly Action[] = [
   { command: '+scores', label: 'show scores' },
-  { command: '+button2', label: 'use item' }
+  { command: '+button2', label: 'use item' },
+  { command: 'messagemode', label: 'chat' },
+  { command: 'messagemode2', label: 'chat - team' },
+  { command: 'messagemode3', label: 'chat - target' },
+  { command: 'messagemode4', label: 'chat - attacker' }
 ];
 /** The port's own Misc row, under `DEBUG_MODE`. */
 const MISC_DEBUG: readonly Action[] = [{ command: 'toggle pcq_drawCollision', label: 'collision overlay' }];
