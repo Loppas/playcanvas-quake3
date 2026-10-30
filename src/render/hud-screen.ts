@@ -37,6 +37,7 @@ import {
   NUMBER_SHADERS,
   SELECT_SHADER,
   WHITE_SHADER,
+  drawChat,
   drawHud,
   drawNotify,
   type PicShader,
@@ -44,7 +45,7 @@ import {
 } from '../view/hud-draw';
 import { anchorOrigin, anchorScale, hudScale, type HudAnchor } from '../view/hud-layout';
 import type { Rgba } from '../view/hud-status';
-import type { NotifyRow } from '../view/notify-lines';
+import type { ChatRow, NotifyRow } from '../view/notify-lines';
 import { stageGain } from '../view/overbright';
 import { createTexture, loadTexture, type GammaVertexColorMaterial } from './md3-mesh';
 import { QuadBatch } from './quad-batch';
@@ -67,8 +68,8 @@ import type { Warmed } from './warm-up';
  * The quads draw in `LAYERID_UI`, from a camera of their own after the view weapon's, so the HUD
  * lies over everything, as Q3's 2D does.
  *
- * The console's notify lines draw here too, last and over the rest, though they are the client's
- * and not cgame's: this is the one 2D screen the port has.
+ * The console's notify lines and the chat line draw here too, last and over the rest, though they
+ * are the client's and not cgame's: this is the one 2D screen the port has.
  */
 
 /** The HUD's camera, after the eye's: the view weapon's is +1 and the 3D icons' +2. */
@@ -378,18 +379,20 @@ export class HudScreen {
   }
 
   /**
-   * Draw this frame's HUD, then `Con_DrawNotify`'s lines over it: the client's own, after cgame's
-   * 2D and whatever `cg_draw2D` says.
+   * Draw this frame's HUD, then `Con_DrawNotify`'s lines and chat line over it: the client's own,
+   * after cgame's 2D and whatever `cg_draw2D` says.
    *
    * @param notify - The notify lines, in the canvas's own pixels.
+   * @param chat - The chat line, if it is drawn.
    * @returns the frame drawn, whose status bar the 3D icons follow
    */
-  update(input: HudInput, notify: readonly NotifyRow[]): HudFrame {
+  update(input: HudInput, notify: readonly NotifyRow[], chat: ChatRow | null): HudFrame {
     const frame = hudFrame(this.state, input, this.settings);
     this.fit();
     this.batch.begin();
     drawHud(frame, this.state.speeds, this.scale, this.art, this.writer);
     drawNotify(notify, this.scale, this.art, this.writer);
+    drawChat(chat, this.art, this.writer);
     this.batch.end();
     return frame;
   }

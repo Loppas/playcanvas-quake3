@@ -603,6 +603,7 @@ describe('chat and team chat, as cgame shows them', () => {
     frame(source, view, 100);
     const words = ['tell_attacker', 'nice', 'shot'];
     expect(view.tellAttacker(words)).toBeNull();
+    expect(view.lastAttacker()).toBe(-1);
 
     const hurt = createPlayerState();
     hurt.stats[STAT.HEALTH] = 90;
@@ -612,6 +613,7 @@ describe('chat and team chat, as cgame shows them', () => {
     source.send(12, 108, { ps: hurt });
     frame(source, view, 108);
     expect(view.tellAttacker(words)).toBe('tell 2 nice shot');
+    expect(view.lastAttacker()).toBe(2);
     const heard = listen(view);
     view.tellAttacker(['tell_attacker', 'a'.repeat(121)]);
     expect(heard).toEqual(['Com_sprintf: Output length 128 too short, require 129 bytes.\n']);
@@ -625,6 +627,7 @@ describe('chat and team chat, as cgame shows them', () => {
     source.send(21, 50, { ps: hurt });
     frame(source, view, 50);
     expect(view.tellAttacker(words)).toBeNull();
+    expect(view.lastAttacker()).toBe(-1);
   });
 
   it("prints a command cgame doesn't know, and passes over one with no name", () => {
@@ -1363,6 +1366,23 @@ describe('the solids each frame traces through', () => {
     source.send(21, 50, { ps: own });
     frame(source, view, 50);
     expect(view.scanCrosshair(eye, vec3())).toEqual({ clientNum: 0, time: 0 });
+  });
+
+  it('tells the player under the crosshair, and nobody a second after they were last seen', () => {
+    const own = createIdlePlayerState({ clientNum: 2 });
+    const { source, view } = started({ ps: own, entities: [standing(5, 200)] });
+    const eye = vec3(0, 0, 50);
+    frame(source, view, 1500);
+    const words = ['tell_target', 'over', 'here'];
+    // Nobody seen, past the server's first second.
+    expect(view.tellTarget(words)).toBeNull();
+    view.scanCrosshair(eye, vec3());
+    expect(view.tellTarget(words)).toBe('tell 5 over here');
+    const heard = listen(view);
+    expect(view.tellTarget(['tell_target', 'a'.repeat(121)])).toBe(`tell 5 ${'a'.repeat(120)}`);
+    expect(heard).toEqual(['Com_sprintf: Output length 128 too short, require 129 bytes.\n']);
+    frame(source, view, 2501);
+    expect(view.tellTarget(words)).toBeNull();
   });
 
   it("stops another player's bolt at whoever is in the way, whoever was there before", () => {

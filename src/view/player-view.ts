@@ -141,7 +141,8 @@ import type { FloatSprite } from './player-sprites';
 import { LocalEntities } from './local-entities';
 import { ScorePlums } from './score-plums';
 import { addToTeamChat, createTeamChat, type TeamChatState } from './team-chat';
-import { lastAttacker, tellAttackerCommand, type AttackerState } from './attacker';
+import { lastAttacker, type AttackerState } from './attacker';
+import { tellCommand } from './tell-command';
 import {
   createCrosshairPlayer,
   crosshairPlayer,
@@ -930,6 +931,12 @@ export class PlayerView {
     return this.playerEvents.attacker;
   }
 
+  /** `CG_LastAttacker`: who last hurt the player, while the attacker time holds, or −1. */
+  lastAttacker(): number {
+    const attacker = this.snap?.ps.persistant[PERS.ATTACKER] ?? -1;
+    return lastAttacker(this.playerEvents.attacker, attacker);
+  }
+
   /**
    * `CG_TellAttacker_f`: the command that tells the last attacker the words after
    * `tell_attacker`, or `null` with nobody to tell. A cut command is said to the console.
@@ -937,10 +944,17 @@ export class PlayerView {
    * @param argv - `tell_attacker` and its words.
    */
   tellAttacker(argv: readonly string[]): string | null {
-    const attacker = this.snap?.ps.persistant[PERS.ATTACKER] ?? -1;
-    return tellAttackerCommand(lastAttacker(this.playerEvents.attacker, attacker), argv, (text) =>
-      this.console.print(text)
-    );
+    return tellCommand(this.lastAttacker(), argv, (text) => this.console.print(text));
+  }
+
+  /**
+   * `CG_TellTarget_f`: the command that tells the player under the crosshair the words after
+   * `tell_target`, or `null` with nobody to tell. A cut command is said to the console.
+   *
+   * @param argv - `tell_target` and its words.
+   */
+  tellTarget(argv: readonly string[]): string | null {
+    return tellCommand(this.crosshairPlayer(), argv, (text) => this.console.print(text));
   }
 
   /**

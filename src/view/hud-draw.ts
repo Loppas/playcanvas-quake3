@@ -44,7 +44,7 @@ import {
   type Glyph
 } from './hud-text';
 import { lagometerBars, type HudLagometer } from './lagometer';
-import type { NotifyRow } from './notify-lines';
+import type { ChatRow, NotifyGlyph, NotifyRow } from './notify-lines';
 import type { Rgb } from './player-color';
 import type { PowerupTimer } from './powerup-timers';
 import type { RewardFrame } from './rewards';
@@ -222,6 +222,20 @@ export function drawNotify(
 }
 
 /**
+ * Write `Con_DrawNotify`'s chat line (`cl_console.c:636–650`): the prompt, the field, then the
+ * cursor, each as `SCR_DrawStringExt` draws a line (`cl_scrn.c:199–243`), the shadow under all its
+ * characters first, black, 2 right and 2 down, then each character in its colour. They are big
+ * characters on Q3's grid, from the left edge as the notify lines are.
+ */
+export function drawChat(row: ChatRow | null, art: HudArt, out: PicWriter): void {
+  if (!row) return;
+  const draw: Draw = { art, out };
+  chatPart(draw, row.prompt, row.y);
+  chatPart(draw, row.field, row.y);
+  if (row.cursor) chatPart(draw, [row.cursor], row.y);
+}
+
+/**
  * One picture, in the colour its shader takes: `color` tints it only where the shader reads the
  * vertex colour, and fades it only where it reads the vertex alpha; `tint` multiplies it either
  * way. Nothing for a shader with no image.
@@ -328,6 +342,25 @@ function text(draw: Draw, line: HudText | null): void {
     set[2] = b;
     set[3] = color[3];
     char(draw, glyph, glyph.x, y, w, h, anchor, set);
+  }
+}
+
+/** A part of the chat line: its shadow, then its characters, each in its colour, fully opaque. */
+function chatPart(draw: Draw, glyphs: readonly NotifyGlyph[], y: number): void {
+  const w = BIGCHAR_WIDTH;
+  const h = BIGCHAR_HEIGHT;
+  set[0] = set[1] = set[2] = 0;
+  set[3] = 1;
+  for (const glyph of glyphs) {
+    char(draw, glyph, glyph.x + SHADOW_OFFSET, y + SHADOW_OFFSET, w, h, 'left', set);
+  }
+  for (const glyph of glyphs) {
+    const [r, g, b] = COLOR_TABLE[glyph.color];
+    set[0] = r;
+    set[1] = g;
+    set[2] = b;
+    set[3] = 1;
+    char(draw, glyph, glyph.x, y, w, h, 'left', set);
   }
 }
 

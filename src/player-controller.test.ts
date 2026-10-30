@@ -338,6 +338,7 @@ describe('the settings, read each frame', () => {
     const words = ['tell_attacker', 'ow'];
     controller.tellAttacker(words);
     expect(sent).not.toHaveBeenCalled();
+    expect(controller.lastAttacker()).toBe(-1);
 
     const { game, clientNum } = controller.game;
     const me = game.level.gentities[clientNum];
@@ -345,12 +346,28 @@ describe('the settings, read each frame', () => {
     until(controller, () => controller.attacker.time !== 0);
     controller.tellAttacker(words);
     expect(sent).toHaveBeenLastCalledWith(`tell ${clientNum} ow`);
+    expect(controller.lastAttacker()).toBe(clientNum);
 
     damage(game.level, me, null, null, null, 10, 0, MOD.FALLING);
     until(controller, () => {
       controller.tellAttacker(words);
       return sent.mock.lastCall?.[0] === `tell ${ENTITYNUM_WORLD} ow`;
     });
+  });
+
+  it('tells the crosshair player: slot 0 in the first second, as Q3 does, then nobody', () => {
+    const { controller } = controlled();
+    controller.update(1 / 60);
+    const sent = vi.spyOn(controller.game, 'sendClientCommand');
+    const words = ['tell_target', 'hi'];
+    expect(controller.time).toBeLessThan(1000);
+    controller.tellTarget(words);
+    expect(sent).toHaveBeenLastCalledWith('tell 0 hi');
+
+    for (let frame = 0; frame < 120 && controller.time <= 1000; frame++) controller.update(1 / 60);
+    sent.mockClear();
+    controller.tellTarget(words);
+    expect(sent).not.toHaveBeenCalled();
   });
 
   it('holds each plum among the local entities it is given', () => {

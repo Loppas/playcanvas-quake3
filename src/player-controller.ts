@@ -661,6 +661,21 @@ export class PlayerController {
   }
 
   /**
+   * `tell_target`: tell the player under the crosshair the words after it, or nobody with none.
+   *
+   * @param argv - `tell_target` and its words.
+   */
+  tellTarget(argv: readonly string[]): void {
+    const command = this.view.tellTarget(argv);
+    if (command !== null) this.game.sendClientCommand(command);
+  }
+
+  /** `CG_LastAttacker`: who last hurt the player, while it is kept, or −1 for nobody. */
+  lastAttacker(): number {
+    return this.view.lastAttacker();
+  }
+
+  /**
    * `CG_ScanForCrosshairEntity` from where the camera is placed this frame: who is under the
    * crosshair. Quake 3 scans only where it draws the names under the crosshair.
    */

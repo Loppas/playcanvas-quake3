@@ -73,8 +73,8 @@ The game plays against bots, on Quake 3's maps and the port's own:
   dedicated server; and a master to find them by.
 - **The desktop shell:** an Electron window that reads your install where it sits.
 
-Not yet: the chat line `messagemode` opens; bot AI, so a bot stands where it spawned; recording
-demos; votes; and the single-player ladder and Team Arena's modes.
+Not yet: bot AI, so a bot stands where it spawned; recording demos; votes; and the single-player
+ladder and Team Arena's modes.
 
 ## Requirements
 
@@ -244,8 +244,12 @@ tells the player of that name, its colours left off, and `tell_attacker <text>` 
 who hurt you. Each line plays the talk sound and shows on the notify lines in its colours, a team
 line with where its speaker is. `cg_teamChatsOnly 1` keeps a team game to team chat.
 `cg_teamChatHeight` shows up to 8 team lines over a band above the status bar, each for
-`cg_teamChatTime` milliseconds; at its default of 0 the band stays hidden. The chat line
-`messagemode` opens is not there yet, though a line typed at the console is said.
+`cg_teamChatTime` milliseconds; at its default of 0 the band stays hidden.
+
+`messagemode` opens a chat line under the notify lines, `messagemode2` one to your team, and
+`messagemode3` and `messagemode4` one to the player under your crosshair or the last who hurt you;
+`tell_target <text>` tells that player too. Enter says the line and Escape drops it, and the mouse
+stays with the game while it is open. No key is bound to them yet: `bind t messagemode`.
 
 ## Quake 3 assets
 

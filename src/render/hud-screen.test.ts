@@ -27,7 +27,7 @@ import { createCrosshairPlayer } from '../view/crosshair-player';
 import { addToTeamChat, createTeamChat } from '../view/team-chat';
 import { screenRect, type HudAnchor, type HudRect } from '../view/hud-layout';
 import { Lagometer } from '../view/lagometer';
-import { notifyRows, type NotifyRow } from '../view/notify-lines';
+import { notifyRows, type ChatRow, type NotifyRow } from '../view/notify-lines';
 import { createTestApp } from './engine-test-fixtures';
 import { HUD_CAMERA_PRIORITY, HudScreen } from './hud-screen';
 import type { GammaVertexColorMaterial } from './md3-mesh';
@@ -287,7 +287,7 @@ describe('HudScreen', () => {
     expect(camera.projection).toBe(PROJECTION_ORTHOGRAPHIC);
     expect(eye.camera!.layers).not.toContain(LAYERID_UI);
 
-    hud.update(input(), []);
+    hud.update(input(), [], null);
     expect(draws().length).toBeGreaterThan(0);
     hud.destroy();
     expect(app.root.findByName('hud')).toBeNull();
@@ -304,7 +304,7 @@ describe('HudScreen', () => {
       [2560, 1080]
     ]) {
       app.graphicsDevice.resizeCanvas(width, height);
-      hud.update(input(), []);
+      hud.update(input(), [], null);
       app.render();
       for (const [x, y] of [
         [0, 0],
@@ -327,7 +327,9 @@ describe('HudScreen', () => {
       [2560, 1080]
     ]) {
       app.graphicsDevice.resizeCanvas(width, height);
-      for (let frame = 0; frame < 3; frame++) hud.update(input({ ammo: ammoOf(50), speed: 320 }), []);
+      for (let frame = 0; frame < 3; frame++) {
+        hud.update(input({ ammo: ammoOf(50), speed: 320 }), [], null);
+      }
 
       // The ammo count keeps to the left edge, the health to the middle; a digit keeps its shape.
       const [ammo] = of('gfx/2d/numbers/five_32b.tga');
@@ -342,7 +344,7 @@ describe('HudScreen', () => {
 
   it("draws each shader in a material of its own, at its stage's brightness, times the vertex colour", async () => {
     // `rgbGen exactVertex`: the health's colour, at twice the brightness in classic Q3.
-    hud.update(input({ health: 45 }), []);
+    hud.update(input({ health: 45 }), [], null);
     const tinted = draws().find((draw) => imageOf(draw) === 'gfx/2d/crosshaire.tga')!;
     const material = tinted.material as GammaVertexColorMaterial;
     expect([material.emissive.r, material.emissive.g, material.emissive.b]).toEqual([2, 2, 2]);
@@ -365,20 +367,20 @@ describe('HudScreen', () => {
     const digits = draws().find((draw) => imageOf(draw) === 'gfx/2d/numbers/four_32b.tga')!;
     const { emissive } = digits.material as StandardMaterial;
     expect([emissive.r, emissive.g, emissive.b]).toEqual([1, 1, 1]);
-    hud.update(input({ health: 44 }), []);
+    hud.update(input({ health: 44 }), [], null);
     expect(draws().find((draw) => imageOf(draw) === 'gfx/2d/numbers/four_32b.tga')!.material).toBe(
       digits.material
     );
 
     // Retail's crosshair b, `rgbGen identity`: white in the vertex, its brightness the stage's.
     await create({ drawCrosshair: 1 });
-    hud.update(input({ health: 45 }), []);
+    hud.update(input({ health: 45 }), [], null);
     const [plain] = of('gfx/2d/crosshairb.tga');
     expect(plain.color).toEqual([255, 255, 255, 255]);
   });
 
   it("draws the graphs' columns and the score boxes in `white`, the image Q3 makes for itself", () => {
-    hud.update(input({ scores1: 12, score: 9 }), []);
+    hud.update(input({ scores1: 12, score: 9 }), [], null);
     const fills = of('*white');
     // The player's box in red, the leader's in grey, each at a third.
     expect(fills.map((fill) => fill.color)).toEqual([
@@ -399,7 +401,7 @@ describe('HudScreen', () => {
     const ammo = ammoOf(AMMO_INFINITE);
     ammo[WP.RAILGUN] = 0;
     // 1300 ms after the switch: half faded.
-    hud.update(input({ ammo, weaponSelectTime: 3700 }), []);
+    hud.update(input({ ammo, weaponSelectTime: 3700 }), [], null);
     const icons = WEAPON_ASSETS.filter((asset) => asset.id !== WP.GRAPPLING_HOOK).flatMap((asset) =>
       of(`${asset.icon}.tga`)
     );
@@ -411,7 +413,7 @@ describe('HudScreen', () => {
   });
 
   it('cuts each character from its bigchars cell, down from the top of the image', () => {
-    hud.update(input({ ammo: ammoOf(1) }), []);
+    hud.update(input({ ammo: ammoOf(1) }), [], null);
     // "LOW AMMO WARNING", its shadows first: 'L' is 76, row 4 and column 12.
     const warning = of(CHARSET).filter((char) => char.rect[1] < 200);
     expect(warning).toHaveLength(2 * 'LOWAMMOWARNING'.length);
@@ -426,7 +428,7 @@ describe('HudScreen', () => {
   });
 
   it('draws a run of pictures in one shader as one draw, in the order the list wrote them', () => {
-    hud.update(input({ ammo: ammoOf(50), health: 100 }), []);
+    hud.update(input({ ammo: ammoOf(50), health: 100 }), [], null);
     const runs = draws().map((draw) => ({ image: imageOf(draw), count: draw.mesh!.primitive[0].count / 6 }));
     // The ammo's 5 and 0, then the health's 1, 0 and 0, the noughts one draw.
     expect(runs.slice(0, 4)).toEqual([
@@ -443,7 +445,11 @@ describe('HudScreen', () => {
   it('makes nothing frame after frame once its draws are made', async () => {
     await create({ speedometer: 1 });
     const frame = () =>
-      hud.update(input({ ammo: ammoOf(5), speed: 300, weaponSelectTime: 4000, scores1: 3 }), printed('hi\n'));
+      hud.update(
+        input({ ammo: ammoOf(5), speed: 300, weaponSelectTime: 4000, scores1: 3 }),
+        printed('hi\n'),
+        null
+      );
     frame();
     frame();
     const added = vi.spyOn(layer, 'addMeshInstances');
@@ -455,12 +461,12 @@ describe('HudScreen', () => {
 
   it("shows the model's icon for the head only in 2D, and gives its last image back", async () => {
     await hud.setPlayerIcon('sarge');
-    hud.update(input(), []);
+    hud.update(input(), [], null);
     expect(of('models/players/sarge/icon_default.tga')).toEqual([]);
 
     await create({ draw3dIcons: false });
     await hud.setPlayerIcon('sarge');
-    hud.update(input(), []);
+    hud.update(input(), [], null);
     const [head] = of('models/players/sarge/icon_default.tga');
     expect(head.rect[2]).toBeCloseTo(60 * 1.6, 4);
     expect(head.rect[3]).toBeCloseTo(60 * 1.6, 4);
@@ -471,7 +477,7 @@ describe('HudScreen', () => {
 
     // A model with no icon: no head, the same material holding no icon of a model's.
     await hud.setPlayerIcon('grunt');
-    hud.update(input(), []);
+    hud.update(input(), [], null);
     expect(quads()).toHaveLength(drawn - 1);
     expect(quads().some((quad) => quad.image.startsWith('models/'))).toBe(false);
     expect(material.emissiveMap!.name).toBe('*white');
@@ -480,7 +486,7 @@ describe('HudScreen', () => {
 
   it('draws nothing but the notify lines with cg_draw2D 0', async () => {
     await create({ draw2D: false, drawFPS: true, speedometer: 2 });
-    hud.update(input({ weaponSelectTime: 4900, speed: 300 }), printed('over\n'));
+    hud.update(input({ weaponSelectTime: 4900, speed: 300 }), printed('over\n'), null);
     // All of it in `bigchars`, one draw.
     expect(draws()).toHaveLength(1);
     expect(quads().map((quad) => quad.image)).toEqual(new Array('over'.length).fill(CHARSET));
@@ -492,7 +498,7 @@ describe('HudScreen', () => {
       [2560, 1440]
     ]) {
       app.graphicsDevice.resizeCanvas(width, height);
-      hud.update(input({ health: 100 }), printed('Sarge was railed\nby Visor\n'));
+      hud.update(input({ health: 100 }), printed('Sarge was railed\nby Visor\n'), null);
 
       // After the rest of the HUD; the spaces are not drawn.
       const lines = quads().slice(-'SargewasrailedbyVisor'.length);
@@ -505,7 +511,7 @@ describe('HudScreen', () => {
   });
 
   it('draws each notify character in its own colour, cut from its cell, with no shadow', () => {
-    hud.update(input(), printed('^1Sarge^7 was railed\n'));
+    hud.update(input(), printed('^1Sarge^7 was railed\n'), null);
     const chars = quads().slice(-'Sargewasrailed'.length);
     expect(chars[0].color).toEqual([255, 0, 0, 255]);
     expect(chars[5].color).toEqual([255, 255, 255, 255]);
@@ -513,8 +519,34 @@ describe('HudScreen', () => {
     expect(chars[0].st).toEqual([3 / 16, 5 / 16, 4 / 16, 6 / 16]);
   });
 
+  it('draws the chat line last, on the grid from the left edge, each part shadowed first', () => {
+    app.graphicsDevice.resizeCanvas(1920, 1080);
+    // 's' of the prompt, a red 'h' typed, and the cursor's underline after it.
+    const chat: ChatRow = {
+      y: 15,
+      prompt: [{ x: 8, row: 7, col: 3, color: 7 }],
+      field: [{ x: 80, row: 6, col: 8, color: 1 }],
+      cursor: { x: 96, row: 0, col: 10, color: 7 }
+    };
+    hud.update(input(), printed('hi\n'), chat);
+    const [promptShadow, prompt, fieldShadow, field, cursorShadow, cursor] = quads().slice(-6);
+    for (const quad of [promptShadow, prompt, fieldShadow, field, cursorShadow, cursor]) {
+      expect(quad.image).toBe(CHARSET);
+    }
+    expectAt(promptShadow, { x: 10, y: 17, w: 16, h: 16 }, 'left');
+    expectAt(prompt, { x: 8, y: 15, w: 16, h: 16 }, 'left');
+    expectAt(field, { x: 80, y: 15, w: 16, h: 16 }, 'left');
+    expectAt(cursor, { x: 96, y: 15, w: 16, h: 16 }, 'left');
+    for (const shadow of [promptShadow, fieldShadow, cursorShadow]) {
+      expect(shadow.color).toEqual([0, 0, 0, 255]);
+    }
+    expect(prompt.color).toEqual([255, 255, 255, 255]);
+    expect(field.color).toEqual([255, 0, 0, 255]);
+    expect(cursor.st).toEqual([10 / 16, 0, 11 / 16, 1 / 16]);
+  });
+
   it('comes off the screen, the notify lines with it, while no match runs', () => {
-    hud.update(input(), printed('hello\n'));
+    hud.update(input(), printed('hello\n'), null);
     expect(rendered()).toBe(draws().length);
     hud.shown = false;
     expect(rendered()).toBe(0);
@@ -524,16 +556,17 @@ describe('HudScreen', () => {
 
   it("forgets the last match's frames as it goes, the speed graph's among them", async () => {
     await create({ speedometer: 1 });
-    for (const speed of [100, 200, 300]) hud.update(input({ speed }), []);
+    for (const speed of [100, 200, 300]) hud.update(input({ speed }), [], null);
     expect(columns()).toHaveLength(3);
     hud.clear();
-    hud.update(input({ speed: 100, time: 16 }), []);
+    hud.update(input({ speed: 100, time: 16 }), [], null);
     expect(columns()).toHaveLength(1);
   });
 
   it('keeps the right-hand groups to the right edge and the middle to the middle on a wide screen', () => {
     app.graphicsDevice.resizeCanvas(1920, 1080);
-    hud.update(input({ interrupted: true, time: 5120, localServer: false, scores1: 12, score: 9 }), []);
+    const lagging = { interrupted: true, time: 5120, localServer: false, scores1: 12, score: 9 };
+    hud.update(input(lagging), [], null);
     const [lagometer] = of('gfx/2d/lag.tga');
     expectAt(lagometer, { x: 592, y: 432, w: 48, h: 48 }, 'right');
     expect(lagometer.rect[0] + lagometer.rect[2]).toBeCloseTo(1920, 3);
@@ -549,7 +582,7 @@ describe('HudScreen', () => {
     app.graphicsDevice.resizeCanvas(1920, 1080);
     const teamChat = createTeamChat();
     addToTeamChat(teamChat, 'Hi', { teamChatHeight: 4, teamChatTime: 3000 }, 4000);
-    hud.update(input({ gametype: GT.TEAM, ownTeam: TEAM.RED, teamChat }), []);
+    hud.update(input({ gametype: GT.TEAM, ownTeam: TEAM.RED, teamChat }), [], null);
     const [band] = of('gfx/2d/colorbar.tga');
     expect(band.rect).toEqual([0, 412 * 2.25, 1920, 8 * 2.25]);
     const [first] = of(CHARSET).filter((char) => char.rect[1] === 412 * 2.25);
