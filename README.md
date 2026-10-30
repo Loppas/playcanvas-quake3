@@ -225,6 +225,14 @@ space after it. Several complete it as far as they agree and are listed under th
 with its value. A word after a `;` is completed as a command of its own. While `con_autochat` is 1,
 Tab gives the line its `\` first.
 
+Tab completes a command's arguments too, where Quake 3's does: a cvar's name after `set`, `seta`,
+`sets`, `setu`, `reset`, `unset`, `toggle` and `vstr`; a key's name after `bind` and `unbind`, and
+the command bound after the key; a map's after `map` and `devmap`; a cfg's after `exec`, `execq`
+and `writeconfig`, from the folder beside `q3config.cfg` and the presets; a `.txt` file's after
+`condump`; and a player's name after `sayto`, written as the console writes it, `\0x20` for each
+space. An empty name takes the first player, and Tab on a whole name moves on to the next, unless
+the name has a space, as in Quake 3.
+
 `writeconfig <name>` writes the config to `<name>.cfg` beside `q3config.cfg`, where `exec <name>`
 reads it back. `condump <name>` writes the console's text to `<name>.txt` there; a build in the
 browser keeps that folder in the browser's own storage, so it hands the file over as a download

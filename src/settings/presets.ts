@@ -43,12 +43,21 @@ export async function readCfg(name: string, home: HomeFolder): Promise<string | 
 }
 
 /**
+ * The cfgs Tab lists for `exec`, by the paths {@link readCfg} reads them by, as ioquake3 lists its
+ * search path's (`FS_ListFilteredFiles`, `files.c:2189–2322`): the home folder's directly in it,
+ * then the port's own, as a pak's are listed, with their folder.
+ */
+export async function listCfgs(home: Pick<HomeFolder, 'list'>): Promise<string[]> {
+  return [...(await home.list('', '.cfg')), ...SHIPPED_CFGS.keys()];
+}
+
+/**
  * The presets on offer, by their files' names without `.cfg`: the shipped ones in their order,
  * then the home folder's others, sorted.
  */
 export async function listPresets(home: HomeFolder): Promise<string[]> {
   const shipped = new Set(SHIPPED_PRESETS);
-  const own = (await home.list(PRESET_DIR))
+  const own = (await home.list(PRESET_DIR, '.cfg'))
     .map((file) => file.slice(0, -'.cfg'.length))
     .filter((name) => !shipped.has(name.toLowerCase()));
   return [...SHIPPED_PRESETS, ...own.sort()];

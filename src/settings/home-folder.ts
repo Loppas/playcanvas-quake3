@@ -12,15 +12,22 @@ import { downloadFile } from './config-file';
 /** The route to the folder (`scripts/home-cfg-route.mjs`). */
 export const HOME_ROUTE = '/homepath/';
 
+/** The files the folder lists: the cfgs `exec` reads, and the text `condump` writes. */
+export type HomeExtension = '.cfg' | '.txt';
+
+/** Whether a name ends in the extension, in any case. */
+export const hasExtension = (name: string, extension: HomeExtension) =>
+  name.toLowerCase().endsWith(extension);
+
 /** The home folder. No call throws. */
 export interface HomeFolder {
   /** A file's text by its path below the folder, or `undefined` if there is none or it can't be read. */
   read(path: string): Promise<string | undefined>;
   /**
-   * The names of the `.cfg` files directly in a folder below it, `''` being the folder itself, or
-   * none for a folder there is none of.
+   * The names of the files with the extension, in any case, directly in a folder below it, `''`
+   * being the folder itself, or none for a folder there is none of.
    */
-  list(dir: string): Promise<string[]>;
+  list(dir: string, extension: HomeExtension): Promise<string[]>;
   /**
    * Replace a file by its path below the folder, making the folders it is in.
    *
@@ -44,8 +51,6 @@ interface OpfsFolder {
   values(): AsyncIterable<{ readonly kind: 'file' | 'directory'; readonly name: string }>;
 }
 
-const isCfgName = (name: string) => /\.cfg$/i.test(name);
-
 /**
  * The folder below the build's folder in OPFS that `names` lead to, a name at a time. Rejects
  * where there is none, unless `create` makes it.
@@ -68,13 +73,13 @@ export const opfsHome: HomeFolder = {
       return undefined;
     }
   },
-  async list(dir) {
+  async list(dir, extension) {
     if (!opfsAvailable()) return [];
     try {
       const folder = await opfsFolder(dir === '' ? [] : dir.split('/'));
       const names: string[] = [];
       for await (const entry of folder.values()) {
-        if (entry.kind === 'file' && isCfgName(entry.name)) names.push(entry.name);
+        if (entry.kind === 'file' && hasExtension(entry.name, extension)) names.push(entry.name);
       }
       return names.sort();
     } catch {
@@ -117,14 +122,17 @@ export function routeHome(fetcher: typeof fetch = (...args) => fetch(...args)): 
         return undefined;
       }
     },
-    async list(dir) {
+    async list(dir, extension) {
       try {
         const url = dir === '' ? HOME_ROUTE : `${routePath(dir)}/`;
         const response = await fetcher(url, { cache: 'no-store' });
         if (response.status !== 200) return [];
         const names: unknown = await response.json();
         if (!Array.isArray(names)) return [];
-        return names.filter((name): name is string => typeof name === 'string');
+        // The route lists both kinds of file.
+        return names.filter(
+          (name): name is string => typeof name === 'string' && hasExtension(name, extension)
+        );
       } catch {
         return [];
       }
@@ -192,9 +200,11 @@ export function searchFolders(folders: readonly HomeFolder[]): HomeFolder {
       }
       return undefined;
     },
-    async list(dir) {
+    async list(dir, extension) {
       const names = new Set<string>();
-      for (const folder of folders) for (const name of await folder.list(dir)) names.add(name);
+      for (const folder of folders) {
+        for (const name of await folder.list(dir, extension)) names.add(name);
+      }
       return [...names].sort();
     },
     async write(path, text) {

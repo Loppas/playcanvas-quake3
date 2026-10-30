@@ -14,10 +14,11 @@ import {
 function memoryHome(files: Record<string, string>, writable = true): HomeFolder {
   return {
     read: async (path) => files[path],
-    list: async (dir) =>
+    list: async (dir, extension) =>
       Object.keys(files)
         .filter((path) => path.startsWith(`${dir}/`) && !path.slice(dir.length + 1).includes('/'))
         .map((path) => path.slice(dir.length + 1))
+        .filter((name) => name.endsWith(extension))
         .sort(),
     write: async (path, text) => {
       if (writable) files[path] = text;
@@ -85,20 +86,21 @@ describe('the home folder in OPFS', () => {
     expect(await opfsHome.read('missing/cpm.cfg')).toBeUndefined();
   });
 
-  it('lists the cfgs directly in a folder, and none for a folder there is none of', async () => {
+  it('lists the files with an extension directly in a folder, none in a missing one', async () => {
     fakeOpfs({
       files: { 'q3config.cfg': '' },
       folders: {
         presets: {
-          files: { 'pmc.cfg': '', 'Mine.CFG': '', 'notes.txt': '' },
+          files: { 'pmc.cfg': '', 'Mine.CFG': '', 'notes.txt': '', 'Dump.TXT': '' },
           folders: { old: { files: { 'vq3.cfg': '' } }, 'folder.cfg': {} }
         }
       }
     });
-    expect(await opfsHome.list('presets')).toEqual(['Mine.CFG', 'pmc.cfg']);
-    expect(await opfsHome.list('')).toEqual(['q3config.cfg']);
-    expect(await opfsHome.list('presets/old')).toEqual(['vq3.cfg']);
-    expect(await opfsHome.list('missing')).toEqual([]);
+    expect(await opfsHome.list('presets', '.cfg')).toEqual(['Mine.CFG', 'pmc.cfg']);
+    expect(await opfsHome.list('presets', '.txt')).toEqual(['Dump.TXT', 'notes.txt']);
+    expect(await opfsHome.list('', '.cfg')).toEqual(['q3config.cfg']);
+    expect(await opfsHome.list('presets/old', '.cfg')).toEqual(['vq3.cfg']);
+    expect(await opfsHome.list('missing', '.cfg')).toEqual([]);
   });
 
   it('writes a file, making the folders it is in, and replaces one that is there', async () => {
@@ -130,7 +132,7 @@ describe('the home folder in OPFS', () => {
   it('passes over OPFS where the browser has none', async () => {
     vi.stubGlobal('navigator', {});
     expect(await opfsHome.read('presets/cpm.cfg')).toBeUndefined();
-    expect(await opfsHome.list('presets')).toEqual([]);
+    expect(await opfsHome.list('presets', '.cfg')).toEqual([]);
     expect(await opfsHome.write('mine.cfg', '')).toBe(false);
   });
 
@@ -147,8 +149,8 @@ describe('the home folder in OPFS', () => {
     });
     try {
       expect(await opfsHome.read('q3config.cfg')).toBe('this build\n');
-      expect(await opfsHome.list('')).toEqual(['q3config.cfg']);
-      expect(await opfsHome.list('presets')).toEqual(['cpm.cfg']);
+      expect(await opfsHome.list('', '.cfg')).toEqual(['q3config.cfg']);
+      expect(await opfsHome.list('presets', '.cfg')).toEqual(['cpm.cfg']);
     } finally {
       vi.unstubAllEnvs();
     }
@@ -158,29 +160,34 @@ describe('the home folder in OPFS', () => {
 describe('the home folder over its route', () => {
   it('asks for a file and a listing by their paths, each name encoded', async () => {
     const fetcher = vi.fn(async (url: RequestInfo | URL) =>
-      String(url).endsWith('/') ? Response.json(['cpm.cfg', 'my rules.cfg']) : new Response('seta a "1"\n')
+      String(url).endsWith('/')
+        ? Response.json(['Dump.TXT', 'cpm.cfg', 'my rules.cfg'])
+        : new Response('seta a "1"\n')
     );
     const home = routeHome(fetcher);
     expect(await home.read('presets/my rules.cfg')).toBe('seta a "1"\n');
     expect(fetcher).toHaveBeenLastCalledWith('/homepath/presets/my%20rules.cfg', { cache: 'no-store' });
-    expect(await home.list('presets')).toEqual(['cpm.cfg', 'my rules.cfg']);
+    expect(await home.list('presets', '.cfg')).toEqual(['cpm.cfg', 'my rules.cfg']);
     expect(fetcher).toHaveBeenLastCalledWith('/homepath/presets/', { cache: 'no-store' });
-    await home.list('');
+    // The route lists both kinds of file, and the one asked for is kept.
+    expect(await home.list('presets', '.txt')).toEqual(['Dump.TXT']);
+    await home.list('', '.cfg');
     expect(fetcher).toHaveBeenLastCalledWith('/homepath/', { cache: 'no-store' });
   });
 
   it('reads nothing from a route with no file, or no route', async () => {
     const missing = routeHome(async () => new Response('not found', { status: 404 }));
     expect(await missing.read('presets/cpm.cfg')).toBeUndefined();
-    expect(await missing.list('presets')).toEqual([]);
+    expect(await missing.list('presets', '.cfg')).toEqual([]);
     // `q3config.cfg`'s own route answers 204 before there is one.
     expect(await routeHome(async () => new Response(null, { status: 204 })).read('q3config.cfg')).toBeUndefined();
     const offline = routeHome(async () => {
       throw new TypeError('Failed to fetch');
     });
     expect(await offline.read('presets/cpm.cfg')).toBeUndefined();
-    expect(await offline.list('presets')).toEqual([]);
-    expect(await routeHome(async () => Response.json({ paks: [] })).list('presets')).toEqual([]);
+    expect(await offline.list('presets', '.cfg')).toEqual([]);
+    const notAList = routeHome(async () => Response.json({ paks: [] }));
+    expect(await notAList.list('presets', '.cfg')).toEqual([]);
   });
 
   it('writes a file with a PUT of its text, by its path, each name encoded', async () => {
@@ -227,13 +234,14 @@ describe('the places the folder is kept', () => {
 
   it('reads a file from the first place that has it, and lists what any of them has', async () => {
     const home = searchFolders([
-      memoryHome({ 'presets/cpm.cfg': 'first', 'presets/mine.cfg': '' }),
-      memoryHome({ 'presets/cpm.cfg': 'second', 'presets/pmc.cfg': 'only' })
+      memoryHome({ 'presets/cpm.cfg': 'first', 'presets/mine.cfg': '', 'presets/a.txt': '' }),
+      memoryHome({ 'presets/cpm.cfg': 'second', 'presets/pmc.cfg': 'only', 'presets/b.txt': '' })
     ]);
     expect(await home.read('presets/cpm.cfg')).toBe('first');
     expect(await home.read('presets/pmc.cfg')).toBe('only');
     expect(await home.read('presets/vq3.cfg')).toBeUndefined();
-    expect(await home.list('presets')).toEqual(['cpm.cfg', 'mine.cfg', 'pmc.cfg']);
+    expect(await home.list('presets', '.cfg')).toEqual(['cpm.cfg', 'mine.cfg', 'pmc.cfg']);
+    expect(await home.list('presets', '.txt')).toEqual(['a.txt', 'b.txt']);
   });
 
   it('writes a file to every place, and has written it once every one has it', async () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { configCommands } from '../formats/q3config';
+import { autoComplete } from '../view/field-complete';
 import {
   CommandRouter,
   MAX_INSERT_DEPTH,
@@ -49,6 +50,7 @@ function setup(
       asked.push(path);
       return read(path);
     },
+    listCfgs: () => Promise.resolve(Object.keys(files)),
     print: (text) => void printed.push(text)
   });
   config.addCommands({
@@ -56,7 +58,8 @@ function setup(
       router.add(name, (argv) => {
         log.push(`config ${argv.join(' ')}`);
         return run?.(argv);
-      })
+      }),
+    setCompletion: (name, complete) => router.setCompletion(name, complete)
   });
   for (const name of ['connect', 'map', 'kick']) {
     router.add(name, (argv) => void log.push(`${name} ${argv.slice(1).join(' ')}`));
@@ -127,6 +130,7 @@ describe('the router', () => {
         return true;
       },
       readCfg: () => Promise.resolve(undefined),
+      listCfgs: () => Promise.resolve([]),
       print: () => {}
     });
     router.execute(['both']);
@@ -178,6 +182,7 @@ describe('the command table', () => {
         return true;
       },
       readCfg: () => Promise.resolve(undefined),
+      listCfgs: () => Promise.resolve([]),
       print: (text) => void printed.push(text)
     });
     for (const name of ['a', 'b', 'c']) router.add(name, () => void ran.push(name));
@@ -261,6 +266,34 @@ describe('the command table', () => {
     router.execute(['kill']);
     expect(ran).toEqual(['cgame kill', 'server "kill"']);
     expect(printed).toEqual(['Cmd_AddCommand: KILL already defined\n']);
+  });
+
+  it('gives a command its completer, found without regard to case (cmd.c:664–673)', () => {
+    const { router } = table();
+    const complete = () => {};
+    router.add('weapon');
+    router.setCompletion('WEAPON', complete);
+    // A name not added takes none.
+    router.setCompletion('nothing', complete);
+    expect(router.completer('Weapon')).toBe(complete);
+    expect(router.completer('a')).toBeUndefined();
+    expect(router.completer('nothing')).toBeUndefined();
+    // Finding it moves nothing.
+    expect(router.names().slice(0, 3)).toEqual(['weapon', 'c', 'b']);
+  });
+
+  it("completes exec's and execq's cfgs and vstr's cvar, as Cmd_Init has it", async () => {
+    const { router } = setup({ 'autoexec.cfg': '', 'presets/vq3.cfg': '' });
+    const names = {
+      commands: router.names(),
+      cvars: [{ name: 'cg_fov', value: '90' }],
+      completer: (name: string) => router.completer(name)
+    };
+    const tab = async (text: string) =>
+      (await autoComplete({ text, cursor: text.length, scroll: 0 }, names, false, () => {})).text;
+    expect(await tab('exec au')).toBe('exec autoexec.cfg ');
+    expect(await tab('EXECQ pre')).toBe('EXECQ presets/vq3.cfg ');
+    expect(await tab('vstr cg_f')).toBe('vstr cg_fov ');
   });
 });
 
@@ -443,6 +476,7 @@ function buffer(
       return true;
     },
     readCfg: () => Promise.resolve(undefined),
+    listCfgs: () => Promise.resolve([]),
     print: (text) => void printed.push(text)
   };
   // A program with no client half has nothing to forward to.

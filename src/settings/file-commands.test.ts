@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { ConsoleBuffer } from '../view/console-buffer';
+import { autoComplete } from '../view/field-complete';
 import { CommandRouter } from './command-router';
-import { addCondump, addWriteConfig, lineEndFor } from './file-commands';
+import { addCondump, addWriteConfig, lineEndFor, listTxts } from './file-commands';
 import { GameConfig } from './game-config';
 import type { HomeFolder } from './home-folder';
-import { readCfg } from './presets';
+import { listCfgs, readCfg } from './presets';
 
 const WRITECONFIG_USAGE = 'Usage: writeconfig <filename>\n';
 const CONDUMP_USAGE = 'usage: condump <filename>\n';
@@ -21,7 +22,10 @@ function setup(write?: (path: string, text: string) => Promise<boolean>) {
   const files: Record<string, string> = {};
   const home: HomeFolder = {
     read: async (path) => files[path],
-    list: async () => [],
+    list: async (dir, extension) =>
+      dir === ''
+        ? Object.keys(files).filter((path) => !path.includes('/') && path.endsWith(extension))
+        : [],
     write:
       write ??
       (async (path, text) => {
@@ -42,13 +46,39 @@ function setup(write?: (path: string, text: string) => Promise<boolean>) {
     cvarString: (name) => config.cvars.get(name),
     game: () => false,
     readCfg: (path) => readCfg(path, home),
+    listCfgs: () => listCfgs(home),
     print
   });
   config.addCommands(router);
-  addWriteConfig(router, { text: () => config.text(), home, print });
-  addCondump(router, { consoleText: buffer, dumps: home, lineEnd: '\r\n', print });
-  return { router, config, files, printed };
+  addWriteConfig(router, {
+    text: () => config.text(),
+    home,
+    listCfgs: () => listCfgs(home),
+    print
+  });
+  addCondump(router, {
+    consoleText: buffer,
+    dumps: home,
+    lineEnd: '\r\n',
+    listTxts: () => listTxts(home, PAKS),
+    print
+  });
+  /** The line Tab leaves, out of a match and without `con_autochat`. */
+  const tab = async (text: string) => {
+    const names = {
+      commands: router.names(),
+      cvars: [],
+      completer: (name: string) => router.completer(name)
+    };
+    return (await autoComplete({ text, cursor: text.length, scroll: 0 }, names, false, print)).text;
+  };
+  return { router, config, files, printed, tab };
 }
+
+/** The search path's `.txt` files: at its top, and one, two and three folders below it. */
+const PAKS = {
+  list: () => ['readme.txt', 'docs/guide.txt', 'docs/old/notes.txt', 'a/b/c/deep.txt']
+};
 
 /** A write that waits for `finish`, which says whether it was written. */
 function heldWrite() {
@@ -154,6 +184,14 @@ describe('writeconfig', () => {
     await router.settled();
     expect(printed).toEqual(['Writing mine.cfg.\n', "Couldn't write mine.cfg.\n"]);
   });
+
+  it("completes a cfg's name on Tab from those exec lists, one it wrote among them", async () => {
+    const { router, tab } = setup();
+    router.execute(['writeconfig', 'mine']);
+    await router.settled();
+    expect(await tab('writeconfig mi')).toBe('writeconfig mine.cfg ');
+    expect(await tab('writeconfig presets/v')).toBe('writeconfig presets/vq3.cfg ');
+  });
 });
 
 describe('condump', () => {
@@ -205,6 +243,33 @@ describe('condump', () => {
     router.execute(['condump', 'mine']);
     await router.settled();
     expect(printed).toEqual(['Dumped console text to mine.txt.\n', "ERROR: couldn't open mine.txt.\n"]);
+  });
+
+  it("completes a .txt file's name on Tab, the home folder's and the paks'", async () => {
+    const { router, tab, printed } = setup();
+    router.execute(['condump', 'dump']);
+    await router.settled();
+    expect(await tab('condump du')).toBe('condump dump.txt ');
+    printed.length = 0;
+    expect(await tab('condump d')).toBe('condump d');
+    expect(printed).toEqual([
+      ']condump d\n',
+      '    docs/guide.txt\n',
+      '    docs/old/notes.txt\n',
+      '    dump.txt\n'
+    ]);
+  });
+});
+
+describe('listTxts', () => {
+  it("lists the home folder's .txt files, then the paks' two folders down at most", async () => {
+    const home = { list: async () => ['Notes.txt'] };
+    expect(await listTxts(home, PAKS)).toEqual([
+      'Notes.txt',
+      'readme.txt',
+      'docs/guide.txt',
+      'docs/old/notes.txt'
+    ]);
   });
 });
 

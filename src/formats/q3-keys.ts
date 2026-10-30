@@ -126,7 +126,7 @@ const series = (prefix: string, first: number, count: number, from = 1) =>
   Array.from({ length: count }, (_, i) => [`${prefix}${i + from}`, first + i] as const);
 
 /** `keynames` (`cl_keys.c:56–327`), in its order. */
-const KEY_NAMES: readonly (readonly [string, number])[] = [
+export const KEY_NAMES: readonly (readonly [string, number])[] = [
   ['TAB', K.TAB],
   ['ENTER', K.ENTER],
   ['ESCAPE', K.ESCAPE],

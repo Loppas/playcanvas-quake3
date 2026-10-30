@@ -1,10 +1,13 @@
+import type { PakFileSystem } from '../pak/vfs';
 import type { ConsoleBuffer } from '../view/console-buffer';
+import { completeFileName } from '../view/field-complete';
 import { type CommandTable, compareExtension, defaultExtension } from './command-router';
 import { type HomeFolder, homePath } from './home-folder';
 
 /**
  * The console's commands that write a file to the home folder, as ioquake3's write one to
- * `fs_homepath`: the console's text, and the config.
+ * `fs_homepath`: the console's text, and the config. Tab completes each one's file name from the
+ * files of its kind there are.
  */
 
 /** Where a file is written, by its path below the home folder. */
@@ -59,6 +62,8 @@ export interface WriteConfigOptions {
   text(): string;
   /** The home folder. */
   home: FileWriter;
+  /** The cfgs Tab lists, as it lists them for `exec`. */
+  listCfgs(): Promise<readonly string[]>;
   print(text: string): void;
 }
 
@@ -88,6 +93,23 @@ export function addWriteConfig(table: CommandTable, options: WriteConfigOptions)
       if (!written) print(`Couldn't write ${name}.\n`);
     });
   });
+  // `Com_Init` (`common.c:2727`).
+  table.setCompletion('writeconfig', completeFileName(() => options.listCfgs()));
+}
+
+/**
+ * The `.txt` files Tab lists for `condump`, as ioquake3 lists its search path's
+ * (`FS_ListFilteredFiles`, `files.c:2189–2322`): the home folder's directly in it, then the paks'
+ * down to two folders below their top.
+ *
+ * @param paks - The search path.
+ */
+export async function listTxts(
+  home: Pick<HomeFolder, 'list'>,
+  paks: Pick<PakFileSystem, 'list'>
+): Promise<string[]> {
+  const inPaks = paks.list('', 'txt').filter((path) => path.split('/').length <= 3);
+  return [...(await home.list('', '.txt')), ...inPaks];
 }
 
 /**
@@ -108,6 +130,8 @@ export interface CondumpOptions {
   dumps: FileWriter;
   /** Each line's end ({@link lineEndFor}). */
   lineEnd: string;
+  /** The `.txt` files Tab lists ({@link listTxts}). */
+  listTxts(): Promise<readonly string[]>;
   print(text: string): void;
 }
 
@@ -138,4 +162,6 @@ export function addCondump(table: CommandTable, options: CondumpOptions): void {
       if (!written) print(`ERROR: couldn't open ${name}.\n`);
     });
   });
+  // `Con_Init` (`cl_console.c:392`).
+  table.setCompletion('condump', completeFileName(() => options.listTxts()));
 }

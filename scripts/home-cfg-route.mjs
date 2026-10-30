@@ -1,12 +1,13 @@
 /**
  * The pure parts of the home folder's cfg route, which the dev server (`vite.config.ts`) and the
  * shell's `app:` scheme both answer: the `.cfg` files in `fs_homepath` that `exec` reads, and the
- * `.cfg` and `.txt` files the console writes there.
+ * `.cfg` and `.txt` files the console writes there and Tab lists.
  *
  * `GET /homepath/<path>.cfg` answers a file's text, or 404. `GET /homepath/<dir>/` lists the
- * `.cfg` files directly in a folder as a JSON array of their names, `[]` for a folder there is
- * none of. `PUT /homepath/<path>.cfg` or `.txt` replaces a file, making its folders. The files the
- * game keeps there have their own route (`q3config-route.mjs`). No path leaves the home folder.
+ * `.cfg` and `.txt` files directly in a folder as a JSON array of their names, `[]` for a folder
+ * there is none of. `PUT /homepath/<path>.cfg` or `.txt` replaces a file, making its folders. The
+ * files the game keeps there have their own route (`q3config-route.mjs`). No path leaves the home
+ * folder.
  */
 
 import { readdir, readFile, stat } from 'node:fs/promises';
@@ -28,11 +29,12 @@ export function isCfgName(name) {
 }
 
 /**
- * Whether a path names a file the route may write: a cfg, or a `.txt`, in any case.
+ * Whether a name is one the route lists, and a path one it may write: a cfg, or a `.txt`, in any
+ * case.
  *
- * @param name - A path below the home folder.
+ * @param name - A path below the home folder, or a directory entry's name.
  */
-function isWritableName(name) {
+function isListedName(name) {
   return isCfgName(name) || /\.txt$/i.test(name);
 }
 
@@ -50,13 +52,13 @@ export function isHomePath(relative) {
 }
 
 /**
- * The names of the cfg files directly in `dir`, sorted. A directory named like a cfg is left out,
- * and so is anything in a subfolder. Rejects if `dir` cannot be read.
+ * The names of the cfg and `.txt` files directly in `dir`, sorted. A directory named like one is
+ * left out, and so is anything in a subfolder. Rejects if `dir` cannot be read.
  *
  * @param dir - A folder in the home folder.
  */
-export async function listCfgs(dir) {
-  const names = (await readdir(dir)).filter(isCfgName);
+export async function listFiles(dir) {
+  const names = (await readdir(dir)).filter(isListedName);
   const files = await Promise.all(
     names.map(async (name) => {
       // `stat` follows links, as the pak listing does.
@@ -88,7 +90,7 @@ export async function homeCfgResponse(method, encoded, home, body) {
 
   if (method === 'PUT') {
     const file =
-      isHomePath(relative) && isWritableName(relative) ? resolveInside(home, relative) : null;
+      isHomePath(relative) && isListedName(relative) ? resolveInside(home, relative) : null;
     if (!file) return notFound;
     await replaceFile(file, body ?? '');
     return { status: 204, headers };
@@ -99,7 +101,7 @@ export async function homeCfgResponse(method, encoded, home, body) {
     const folder =
       relative === '' ? nodePath.resolve(home) : isHomePath(dir) ? resolveInside(home, dir) : null;
     if (!folder) return notFound;
-    const body = JSON.stringify(await listCfgs(folder).catch(() => []));
+    const body = JSON.stringify(await listFiles(folder).catch(() => []));
     return {
       status: 200,
       headers: { ...headers, 'Content-Type': 'application/json; charset=utf-8' },

@@ -1,6 +1,7 @@
 import { DEBUG_MODE } from '../config';
 import { keyToString, stringToKey } from '../formats/q3-keys';
 import { configCommands, writeConfig } from '../formats/q3config';
+import { completeBind, completeCvarName, completeUnbind } from '../view/field-complete';
 import { BindTable, bindWarning, defaultBinds } from './binds';
 import { type CommandTable, unknownCommand } from './command-router';
 import { Cvars } from './cvars';
@@ -26,6 +27,9 @@ const CONFIG_COMMANDS = [
   'cvarlist',
   'cvar_restart'
 ] as const;
+
+/** The commands whose second word is a cvar's name. */
+const CVAR_NAME_COMMANDS = ['toggle', 'set', 'sets', 'setu', 'seta', 'reset', 'unset'] as const;
 
 export interface GameConfigOptions {
   /** The saved `q3config.cfg`, or nothing on a first run. */
@@ -97,9 +101,16 @@ export class GameConfig {
     return this.runCommand(argv, false);
   }
 
-  /** Put the settings' commands in the console's table. */
+  /**
+   * Put the settings' commands in the console's table, Tab completing a cvar's name after those
+   * that take one and a key's after `bind` and `unbind`, as `Cvar_Init` and `CL_InitKeyCommands`
+   * have it (`cvar.c:1447–1459`, `cl_keys.c:1151–1153`).
+   */
   addCommands(table: CommandTable): void {
     for (const name of CONFIG_COMMANDS) table.add(name, (argv) => void this.runCommand(argv, false));
+    for (const name of CVAR_NAME_COMMANDS) table.setCompletion(name, completeCvarName);
+    table.setCompletion('bind', completeBind);
+    table.setCompletion('unbind', completeUnbind);
   }
 
   /**

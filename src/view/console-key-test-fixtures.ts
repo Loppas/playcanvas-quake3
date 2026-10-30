@@ -314,7 +314,7 @@ export function runConsole(steps: readonly FieldStep[]): ConsoleRun {
     isDown: (key) => held.has(key),
     active: () => state.active,
     autochat: () => state.autochat,
-    names: () => ({ commands: [], cvars: [] }),
+    names: () => ({ commands: [], cvars: [], completer: () => undefined }),
     print,
     run: (text) => void (commands += `${text}\n`)
   };
