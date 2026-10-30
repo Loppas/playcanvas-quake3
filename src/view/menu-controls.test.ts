@@ -103,19 +103,23 @@ describe('Controls', () => {
   });
 
   it('keeps Misc for everyone, with show scores first as Q3 lists it, the collision overlay after', () => {
+    const chats = ['chat', 'chat - team', 'chat - target', 'chat - attacker'];
     const plain = controls({ debugMode: false }).menu;
     expect(labels(plain).slice(0, 4)).toEqual(['LOOK', 'MOVE', 'SHOOT', 'MISC']);
     section(plain, 'MISC');
-    expect(labels(plain).slice(4)).toEqual(['show scores', 'use item', 'BACK']);
+    expect(labels(plain).slice(4)).toEqual(['show scores', 'use item', ...chats, 'BACK']);
     expect(row(plain, 'show scores').value).toBe('TAB');
     // Q3's second Misc row is the holdable key, bound to Enter by pak0's `default.cfg:29`.
     expect(row(plain, 'use item').value).toBe('ENTER');
+    // The four chats, on `messagemode` to `messagemode4`; Q3 binds none but the first.
+    expect(chats.map((label) => row(plain, label).value)).toEqual(['T', 'Y', '???', '???']);
 
     const { menu } = controls();
     section(menu, 'MISC');
     expect(labels(menu).slice(4)).toEqual([
       'show scores',
       'use item',
+      ...chats,
       'collision overlay',
       'BACK'
     ]);
@@ -214,6 +218,24 @@ describe("Controls' capture (Controls_MenuKey)", () => {
     menu.key(K.BACKSPACE);
     expect(row(menu, 'show scores').value).toBe('???');
     expect([config.binds.get(K.TAB), config.binds.get(key('k'))]).toEqual([undefined, undefined]);
+  });
+
+  it('binds each chat row to its message mode, as Q3 names them (ui_controls2.c:262–265)', () => {
+    const { menu, config } = controls({ debugMode: false });
+    section(menu, 'MISC');
+    const chats = { chat: 'g', 'chat - team': 'h', 'chat - target': 'j', 'chat - attacker': 'k' };
+    for (const [label, pressed] of Object.entries(chats)) {
+      point(menu, label);
+      menu.key(K.ENTER);
+      menu.key(key(pressed));
+    }
+    expect(['g', 'h', 'j', 'k'].map((pressed) => config.binds.get(key(pressed)))).toEqual([
+      'messagemode',
+      'messagemode2',
+      'messagemode3',
+      'messagemode4'
+    ]);
+    expect(row(menu, 'chat').value).toBe('G or T');
   });
 
   it('warns of a key a browser keeps, on the row that has it, but not in the shell', () => {
