@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { TEAM_STATUS_BAR_SHADER, WEAPON_ASSETS } from '../formats/asset-manifest';
 import { MAX_POWERUPS } from '../net/protocol';
+import { KEYCATCH } from '../settings/client-input';
 import { GT, SCORE_NOT_PRESENT, TEAM } from '../sim/constants';
 import { ARMOR_TIER, findItem, itemIndex, PW } from '../sim/items';
 import {
@@ -14,9 +15,11 @@ import {
 import { centerPrint, createCenterPrint, USE_ITEM_CHAR_WIDTH, USE_ITEM_Y } from './center-print';
 import type { ClientInfo } from './client-info';
 import { ConsoleBuffer } from './console-buffer';
+import { EditField } from './edit-field';
 import { createHudState, hudFrame, type HudInput, type HudSettings } from './hud';
 import {
   CHARSET_SHADER,
+  drawChat,
   drawHud,
   drawNotify,
   SELECT_SHADER,
@@ -27,7 +30,7 @@ import {
 } from './hud-draw';
 import type { HudAnchor } from './hud-layout';
 import { Lagometer } from './lagometer';
-import { notifyRows } from './notify-lines';
+import { chatRow, notifyRows } from './notify-lines';
 import { REWARD_TIME, createRewardState, pushReward } from './rewards';
 import { createAttacker } from './attacker';
 import { createCrosshairPlayer } from './crosshair-player';
@@ -878,6 +881,64 @@ describe('drawNotify', () => {
   it('writes nothing with no lines', () => {
     const pics: Written[] = [];
     drawNotify([], SCALE, art(), writer(pics));
+    expect(pics).toEqual([]);
+  });
+});
+
+describe('drawChat', () => {
+  /** The chat line `say: a^1b` with the cursor after it, 15 down, as written. */
+  function chat(cursor = true): Written[] {
+    const field = new EditField({ overstrike: false }, 30);
+    for (const ch of 'a^1b') field.char(ch);
+    const row = chatRow([], { field, team: false }, KEYCATCH.MESSAGE, false, cursor ? 0 : 256, 960);
+    const pics: Written[] = [];
+    drawChat(row && { ...row, y: 15 }, art(), writer(pics));
+    return pics;
+  }
+
+  it('writes the prompt, the field and the cursor in turn, each shadowed first', () => {
+    const pics = chat();
+    // say: is 4, a^1b 4, the cursor 1, each twice.
+    expect(pics).toHaveLength(18);
+    const lefts = pics.map((pic) => pic.rect[0]);
+    expect(lefts.slice(0, 8)).toEqual([10, 26, 42, 58, 8, 24, 40, 56]);
+    expect(lefts.slice(8, 16)).toEqual([82, 98, 114, 130, 80, 96, 112, 128]);
+    expect(lefts.slice(16)).toEqual([146, 144]);
+    // The shadows 2 down, the characters on the row.
+    expect(pics.map((pic) => pic.rect[1])).toEqual(
+      [0, 1, 2].flatMap((part) => (part < 2 ? [17, 17, 17, 17, 15, 15, 15, 15] : [17, 15]))
+    );
+  });
+
+  it('writes big characters on the grid from the left edge, cut from their cells', () => {
+    const pics = chat();
+    expect(pics.every((pic) => pic.shader === CHARSET_SHADER && pic.anchor === 'left')).toBe(true);
+    expect(pics.every((pic) => pic.rect[2] === 16 && pic.rect[3] === 16)).toBe(true);
+    // 's' is 115: row 7, column 3; the cursor's underline is 10.
+    expect(pics[4].st).toEqual([3 / 16, 7 / 16, 4 / 16, 8 / 16]);
+    expect(pics[17].st).toEqual([10 / 16, 0, 11 / 16, 1 / 16]);
+  });
+
+  it('writes the shadows black and each character in its colour, all opaque', () => {
+    const pics = chat();
+    for (const shadow of [0, 1, 2, 3, 8, 9, 10, 11, 16]) {
+      expect(pics[shadow].color).toEqual([0, 0, 0, 1]);
+    }
+    expect(pics[4].color).toEqual([1, 1, 1, 1]);
+    // a, then ^1b in red from the ^.
+    expect(pics.slice(12, 16).map((pic) => pic.color)).toEqual([
+      [1, 1, 1, 1],
+      [1, 0, 0, 1],
+      [1, 0, 0, 1],
+      [1, 0, 0, 1]
+    ]);
+    expect(pics[17].color).toEqual([1, 1, 1, 1]);
+  });
+
+  it('writes no cursor while it blinks off, and nothing with no line', () => {
+    expect(chat(false)).toHaveLength(16);
+    const pics: Written[] = [];
+    drawChat(null, art(), writer(pics));
     expect(pics).toEqual([]);
   });
 });

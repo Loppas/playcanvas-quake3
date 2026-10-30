@@ -247,6 +247,31 @@ export function typedColors(text: string): number[] {
   });
 }
 
+/** A character a field's draw puts down: its column from the window's start, and its colour. */
+export interface FieldCell {
+  column: number;
+  ch: string;
+  color: number;
+}
+
+/**
+ * The characters `Field_VariableSizeDraw` puts down for a field's window (`:375–392`): the slice
+ * it shows, coloured from its first character as {@link typedColors} colours it, a space keeping
+ * its column and drawing nothing. A window starting before the line, which ioquake3 reads from
+ * outside its buffer, draws nothing there.
+ */
+export function fieldCells(text: string, window: FieldWindow): FieldCell[] {
+  const from = Math.max(0, window.start);
+  const shown = text.slice(from, window.start + window.length);
+  const colors = typedColors(shown);
+  const cells: FieldCell[] = [];
+  for (let at = 0; at < shown.length; at++) {
+    if (shown[at] === ' ') continue;
+    cells.push({ column: from - window.start + at, ch: shown[at], color: colors[at] });
+  }
+  return cells;
+}
+
 /** Whether a field's cursor shows at `realTime` milliseconds: 256 on, 256 off (`:396–398`). */
 export function cursorShown(realTime: number): boolean {
   return ((realTime >> 8) & 1) === 0;

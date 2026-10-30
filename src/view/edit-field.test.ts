@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { K } from '../formats/q3-keys';
-import { cursorShown, EditField, MAX_FIELD_LENGTH, typedColors } from './edit-field';
+import { cursorShown, EditField, fieldCells, MAX_FIELD_LENGTH, typedColors } from './edit-field';
 import { fieldCorpus, runField, type FieldRun } from './edit-field-test-fixtures';
 
 /**
@@ -434,5 +434,32 @@ describe('cursorShown', () => {
       false,
       true
     ]);
+  });
+});
+
+describe('fieldCells', () => {
+  /** Each cell as its column, character and colour. */
+  const cells = (text: string, start: number, length: number) =>
+    fieldCells(text, { start, length }).map(({ column, ch, color }) => `${column}${ch}${color}`);
+
+  it('puts down the window, each character in its column, coloured with its codes shown', () => {
+    expect(cells('say ^1hi', 0, 8)).toEqual(['0s7', '1a7', '2y7', '4^1', '511', '6h1', '7i1']);
+  });
+
+  it('reads the colours from the window, not the line, as the draw copies its slice', () => {
+    // The ^3 is scrolled off, so 'b' is white.
+    expect(cells('^3abcdef', 3, 3)).toEqual(['0b7', '1c7', '2d7']);
+  });
+
+  it('keeps the columns of spaces, which draw nothing', () => {
+    expect(cells(' a  b', 0, 5)).toEqual(['1a7', '4b7']);
+  });
+
+  it('draws nothing in the columns before the line where the window starts before it', () => {
+    expect(cells('abcdef', -2, 5)).toEqual(['2a7', '3b7', '4c7']);
+  });
+
+  it('puts nothing down for an empty line', () => {
+    expect(fieldCells('', { start: 0, length: 0 })).toEqual([]);
   });
 });

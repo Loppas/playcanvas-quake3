@@ -1,5 +1,5 @@
 import type { ConsoleText } from './console-print';
-import { typedColors, type FieldWindow } from './edit-field';
+import { fieldCells, type FieldWindow } from './edit-field';
 
 /**
  * Q3's console as ioquake3 slides it down (`Con_RunConsole`, `cl_console.c:805–827`) and draws its
@@ -88,21 +88,13 @@ export function colorLayers(text: ConsoleText, lines: readonly number[]): string
 }
 
 /**
- * The input line's characters as one text per colour, as {@link colorLayers} lays out a row: those
- * a field's window shows, each in its column from the window's start and in the colour it is drawn
- * in as typed (`Field_VariableSizeDraw`, `cl_keys.c:375–392`). A window starting before the line
- * draws nothing there.
+ * The input line's characters as one text per colour, as {@link colorLayers} lays out a row: the
+ * {@link fieldCells} of a field's window, each in its column from the window's start.
  */
 export function inputLayers(text: string, window: FieldWindow): string[] {
-  const from = Math.max(0, window.start);
-  const shown = text.slice(from, window.start + window.length);
-  const colors = typedColors(shown);
   const layers = new Array<string>(CONSOLE_COLORS).fill('');
-  for (let at = 0; at < shown.length; at++) {
-    if (shown[at] === ' ') continue;
-    const color = colors[at];
-    const column = from - window.start + at;
-    layers[color] += ' '.repeat(column - layers[color].length) + shown[at];
+  for (const { column, ch, color } of fieldCells(text, window)) {
+    layers[color] += ' '.repeat(column - layers[color].length) + ch;
   }
   return layers;
 }

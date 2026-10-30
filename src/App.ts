@@ -148,6 +148,13 @@ import type { Vec3 } from './sim/vec3';
 import type { WeaponId } from './sim/weapons/constants';
 import { brushModelsAtRest, type BrushModelPose } from './view/brush-models';
 import type { FirstPersonView } from './view/camera-feel';
+import {
+  CHAT_WIDTH,
+  messageKey,
+  messageMode,
+  type ChatLine,
+  type ChatMode
+} from './view/chat-line';
 import { DEFAULT_CONSOLE_WIDTH } from './view/console-buffer';
 import { ConsoleHistory } from './view/console-history';
 import { consoleKey, type ConsoleLine } from './view/console-key';
@@ -173,7 +180,7 @@ import { Marks } from './view/marks';
 import { errorPage, inGamePage, mainPage, setupPage } from './view/menu-pages';
 import { serversMenu } from './view/menu-servers';
 import { startServerPage } from './view/menu-start-server';
-import { notifyRows } from './view/notify-lines';
+import { chatRow, notifyRows } from './view/notify-lines';
 import { colorFromString } from './view/player-color';
 import {
   fragmentBounceMark,
@@ -269,6 +276,7 @@ const CGAME_COMMAND_NAMES: readonly string[] = [
   'weapnext',
   'weapprev',
   'weapon',
+  'tell_target',
   'tell_attacker',
   'loaddeferred',
   'kill',
@@ -493,6 +501,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   const editMode: EditMode = { overstrike: false };
   // `g_consoleField`: the line typed at the console, as wide as the console's lines.
   const consoleField = new EditField(editMode, DEFAULT_CONSOLE_WIDTH);
+  // `chatField`: the chat line, its width set as each `messagemode` opens it.
+  const chatField = new EditField(editMode, CHAT_WIDTH);
   // The lines entered at it, from their file, which is written again after each.
   const consoleHistory = new ConsoleHistory(print);
   consoleHistory.load(setup.history.saved);
@@ -898,6 +908,10 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
         scoresUp(scoreboardState, controller.time);
         return true;
       }
+      if (name === 'tell_target') {
+        controller.tellTarget(argv);
+        return true;
+      }
       if (name === 'tell_attacker') {
         controller.tellAttacker(argv);
         return true;
@@ -948,6 +962,19 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     consoleText.clearNotify();
     input.setCatcher(input.catchers ^ KEYCATCH.CONSOLE);
     keys?.followConsole();
+  });
+  // `Con_MessageMode_f` to `Con_MessageMode4_f` (`cl_console.c:104–158`): the chat line set up,
+  // and its catcher toggled. The two tells ask cgame whom, and with no match do nothing.
+  const toggleChat = (mode: ChatMode, target?: number) => {
+    if (messageMode(chatLine, mode, target)) input.setCatcher(input.catchers ^ KEYCATCH.MESSAGE);
+  };
+  commands.add('messagemode', () => toggleChat('say'));
+  commands.add('messagemode2', () => toggleChat('say_team'));
+  commands.add('messagemode3', () => {
+    if (controller) toggleChat('tell', controller.crosshairPlayer());
+  });
+  commands.add('messagemode4', () => {
+    if (controller) toggleChat('tell', controller.lastAttacker());
   });
   addCondump(commands, {
     consoleText,
@@ -1030,8 +1057,18 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
     print,
     run: (text) => commands.executeText(text)
   };
+  // What `Message_Key` reads and changes: the chat line, whom it goes to, and where it is sent.
+  const chatLine: ChatLine = {
+    field: chatField,
+    team: false,
+    playerNum: -1,
+    active: clientActive,
+    send: (command) => controller?.game.sendClientCommand(command),
+    close: () => input.setCatcher(input.catchers & ~KEYCATCH.MESSAGE)
+  };
   // The player's keys and mouse, through the binds, each bound command run as the console runs it;
-  // the console's while it is down, through `Console_Key`; and the menu's while it is up.
+  // the console's while it is down, through `Console_Key`; the menu's while it is up; and the chat
+  // line's while it is, through `Message_Key`.
   const input = new ClientInput(config.binds, {
     command: (argv) => commands.execute(argv),
     warn,
@@ -1048,6 +1085,14 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       char: (ch) => menu.char(ch),
       paste: (text) => menu.paste(text),
       open: () => openMenu(true)
+    },
+    chat: {
+      key: (key) => messageKey(key, chatLine),
+      char: (ch) => chatField.char(ch),
+      paste: (text) => {
+        chatField.paste(text);
+        return true;
+      }
     }
   });
   input.addCommands(commands);
@@ -1167,9 +1212,11 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       print(`Can't find map ${bspPath(name)}\n`);
       return;
     }
-    // `CL_MapLoading`'s `Con_Close` and `Key_SetCatcher( 0 )` (`cl_main.c:1292–1293`).
+    // `CL_MapLoading`'s `Con_Close` and `Key_SetCatcher( 0 )` (`cl_main.c:1292–1293`), which lets
+    // the chat line go as well.
     closeConsole();
     menu.forceOff();
+    input.setCatcher(0);
     // `CL_MapLoading` (`cl_main.c:1303–1306`): a client of a server elsewhere leaves it.
     closeConnectScreen();
     if (controller || mapPreview) leave();
@@ -1580,9 +1627,10 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
   const leaveFor = (finalMessage: string, server: string) => {
     closeConnectScreen();
     if (controller || mapPreview) leave(finalMessage);
-    // `Con_Close` and `Key_SetCatcher( 0 )`.
+    // `Con_Close` and `Key_SetCatcher( 0 )`, the chat line's catcher with the rest.
     closeConsole();
     menu.forceOff();
+    input.setCatcher(0);
     connectScreen = new ConnectScreen(setup.screens, server);
   };
   /**
@@ -2298,6 +2346,15 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
       performance.now(),
       consoleScreen.shown || (menu.isOpen && player.pmType !== PM_INTERMISSION)
     );
+    // The chat line under them, while it is up.
+    const chat = chatRow(
+      notify,
+      chatLine,
+      input.catchers,
+      consoleScreen.shown,
+      performance.now(),
+      app.graphicsDevice.height
+    );
     const frame = hud?.update(
       {
         health: player.stats[STAT.HEALTH],
@@ -2353,7 +2410,8 @@ export async function setupApp(setup: SetupOptions): Promise<AppHandle> {
         localServer: !controller.game.remote,
         lagometer: controller.lagometer
       },
-      notify
+      notify,
+      chat
     );
     // The announcer's voices: what the snapshots said and its queue let out, and the two the HUD
     // says as it draws — the countdown's second, and a reward as its medals come up.

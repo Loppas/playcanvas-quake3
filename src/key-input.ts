@@ -27,11 +27,14 @@ function controlChar(key: number, ctrl: boolean): string {
  * The browser's keys, buttons and mouse, handed to {@link ClientInput} as Q3's, which sends each
  * where the key catchers say.
  *
- * - A click on the canvas with nothing up captures the mouse, asking for raw input, free of the
- *   OS's acceleration, where the browser gives it. That click only captures; it doesn't fire.
+ * - The chat line keeps the mouse, as Q3's does; the console and the menu let it go.
+ * - A click on the canvas with nothing up but the chat line captures the mouse, asking for raw
+ *   input, free of the OS's acceleration, where the browser gives it. That click only captures; it
+ *   doesn't fire.
  * - Escape with the mouse free is Q3's Escape. With it captured, Escape is the browser's, which lets
- *   it go and never reaches the page, and the capture lost with nothing up opens the menu, or with
- *   Shift held drops the console, as Shift+Escape does.
+ *   it go and never reaches the page, so the capture lost is Escape: with nothing up it opens the
+ *   menu, with the chat line up it closes the line, and with Shift held it drops the console, as
+ *   Shift+Escape does.
  * - A key `cl_consoleKeys` names is the console key, which no bind can take and which types
  *   nothing, and a character it names presses and lets go the console key instead of being typed
  *   (`sdl_input.c:315–319, 1103–1106`). Mouse buttons and the wheel are never console keys.
@@ -118,7 +121,7 @@ export class KeyInput {
       this.input.keyUp(isConsoleKey(this.consoleKeys(), key, 0) ? K.CONSOLE : key);
     };
     const onMouseDown = (event: MouseEvent) => {
-      if (this.input.catchers === 0 && !this.locked) {
+      if (!this.locked && !this.freesMouse()) {
         if (this.match) this.capture();
         return;
       }
@@ -150,11 +153,15 @@ export class KeyInput {
       this.input.active = this.locked;
       if (!lost) return;
       this.unlockedAt = performance.now();
-      if (this.input.catchers !== 0) return;
+      if (this.freesMouse()) return;
       if (shifted) {
         // Shift+Escape, its Escape the browser's: the console key pressed and let go.
         this.input.keyDown(K.CONSOLE);
         this.input.keyUp(K.CONSOLE);
+      } else if (this.input.catchers & KEYCATCH.MESSAGE) {
+        // The browser's Escape, which closes the chat line.
+        this.input.keyDown(K.ESCAPE);
+        this.input.keyUp(K.ESCAPE);
       } else {
         // The game lost the mouse: the in-game menu opens over it.
         this.lost();
@@ -230,13 +237,18 @@ export class KeyInput {
 
   /**
    * The console has just dropped or lifted: the mouse is let go while it is down, and taken back
-   * as it lifts with nothing else up in a match. A browser gives it back unasked after the page let
-   * it go itself, but after its own Escape only to a click, or a key other than Escape a moment
-   * later; refused, it waits for a click on the view.
+   * as it lifts with nothing else up but the chat line, in a match. A browser gives it back unasked
+   * after the page let it go itself, but after its own Escape only to a click, or a key other than
+   * Escape a moment later; refused, it waits for a click on the view.
    */
   followConsole(): void {
     if (this.input.catchers & KEYCATCH.CONSOLE) this.release();
-    else if (this.input.catchers === 0 && this.match) this.capture();
+    else if (!this.freesMouse() && this.match) this.capture();
+  }
+
+  /** Whether a catcher that lets the mouse go is up: the console or the menu. */
+  private freesMouse(): boolean {
+    return (this.input.catchers & ~KEYCATCH.MESSAGE) !== 0;
   }
 
   /** Stop listening, and let every key go. */

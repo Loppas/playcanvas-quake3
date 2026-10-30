@@ -7,6 +7,7 @@ import { BUTTON_ATTACK, BUTTON_TALK } from './sim/constants';
 import { KEYCATCH, type ClientInput } from './settings/client-input';
 import { routedInput } from './settings/input-test-fixtures';
 import { DEFAULT_SETTINGS } from './settings/registry';
+import { CHAT_WIDTH, messageKey, messageMode, type ChatLine } from './view/chat-line';
 import { ConsoleHistory } from './view/console-history';
 import { consoleKey, type ConsoleLine } from './view/console-key';
 import { EditField } from './view/edit-field';
@@ -660,6 +661,122 @@ describe('the console key', () => {
     keyDown('Escape', { key: 'Escape', shiftKey: true });
     expect(input.catchers).toBe(0);
     now.mockRestore();
+  });
+});
+
+describe('the chat line', () => {
+  let line: ChatLine;
+  let sent: string[];
+  let lost: ReturnType<typeof vi.fn<() => void>>;
+  let exitPointerLock: ReturnType<typeof vi.fn<() => void>>;
+
+  beforeEach(() => {
+    keys.destroy();
+    sent = [];
+    line = {
+      field: new EditField({ overstrike: false }, CHAT_WIDTH),
+      team: false,
+      playerNum: -1,
+      active: () => true,
+      send: (command) => void sent.push(command),
+      close: () => input.setCatcher(input.catchers & ~KEYCATCH.MESSAGE)
+    };
+    lost = vi.fn(() => input.setCatcher(KEYCATCH.UI));
+    exitPointerLock = vi.fn();
+    document.exitPointerLock = exitPointerLock;
+    const binds = [
+      ['t'.charCodeAt(0), 'messagemode'],
+      [K.MOUSE1, '+attack']
+    ] as const;
+    const wired = routedInput(binds, undefined, {
+      chat: { key: (key) => messageKey(key, line), char: (ch) => line.field.char(ch) }
+    });
+    // As the client's own: the line set up and its catcher flipped; the console and the mouse.
+    wired.router.add('messagemode', () => {
+      if (messageMode(line, 'say')) input.setCatcher(input.catchers ^ KEYCATCH.MESSAGE);
+    });
+    wired.router.add('toggleconsole', () => {
+      input.setCatcher(input.catchers ^ KEYCATCH.CONSOLE);
+      keys.followConsole();
+    });
+    input = wired.input;
+    keys = new KeyInput(canvas, input, lost);
+  });
+
+  /** Letters typed a key at a time, each with its character. */
+  const type = (letters: string) =>
+    Array.from(letters, (ch) => keyDown(`Key${ch.toUpperCase()}`, { key: ch }));
+
+  it('opens on its bind, typing nothing into it, and keeps the mouse', () => {
+    lock();
+    type('t');
+    expect(input.catchers).toBe(KEYCATCH.MESSAGE);
+    expect(line.field.text).toBe('');
+    expect(exitPointerLock).not.toHaveBeenCalled();
+    expect(input.active).toBe(true);
+  });
+
+  it('types into the line and says it on Enter, stopping both defaults', () => {
+    lock();
+    type('t');
+    expect(type('hi').every((event) => event.defaultPrevented)).toBe(true);
+    expect(line.field.text).toBe('hi');
+    expect(keyDown('Enter', { key: 'Enter' }).defaultPrevented).toBe(true);
+    expect(sent).toEqual(['say "hi"\n']);
+    expect(input.catchers).toBe(0);
+  });
+
+  it('turns the view with the mouse while it is open, and fires nothing on a click', () => {
+    lock();
+    type('t');
+    const event = new MouseEvent('mousemove');
+    Object.defineProperties(event, { movementX: { value: 4 }, movementY: { value: -1 } });
+    document.dispatchEvent(event);
+    expect(input.takeMouse()).toEqual({ dx: 4, dy: -1 });
+    click();
+    expect(input.cmdButtons() & BUTTON_ATTACK).toBe(0);
+    expect(input.catchers).toBe(KEYCATCH.MESSAGE);
+    expect(requestPointerLock).not.toHaveBeenCalled();
+  });
+
+  it('closes, opening no menu, as the browser lets the mouse go; a click takes it back', () => {
+    lock();
+    type('tok');
+    lock(null);
+    expect(input.catchers).toBe(0);
+    expect(line.field.text).toBe('');
+    expect(sent).toEqual([]);
+    expect(lost).not.toHaveBeenCalled();
+    click();
+    expect(requestPointerLock).toHaveBeenCalledExactlyOnceWith({ unadjustedMovement: true });
+  });
+
+  it('drops the console over it when the browser lets the mouse go with Shift held', () => {
+    lock();
+    type('t');
+    keyDown('ShiftLeft', { key: 'Shift', shiftKey: true });
+    lock(null);
+    expect(input.catchers).toBe(KEYCATCH.MESSAGE | KEYCATCH.CONSOLE);
+    expect(lost).not.toHaveBeenCalled();
+  });
+
+  it('takes the mouse back as the console lifts over it, and on a click once free', () => {
+    input.setCatcher(KEYCATCH.CONSOLE | KEYCATCH.MESSAGE);
+    input.keyDown(K.CONSOLE);
+    expect(input.catchers).toBe(KEYCATCH.MESSAGE);
+    expect(requestPointerLock).toHaveBeenCalledExactlyOnceWith({ unadjustedMovement: true });
+    requestPointerLock.mockClear();
+    click();
+    expect(requestPointerLock).toHaveBeenCalledOnce();
+  });
+
+  it('leaves the mouse free under the menu, or with no match to play', () => {
+    input.setCatcher(KEYCATCH.UI | KEYCATCH.MESSAGE);
+    click();
+    input.setCatcher(KEYCATCH.MESSAGE);
+    keys.playing = false;
+    click();
+    expect(requestPointerLock).not.toHaveBeenCalled();
   });
 });
 

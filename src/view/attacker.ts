@@ -11,9 +11,6 @@ import type { HudInput } from './hud';
 /** `ATTACKER_HEAD_TIME` (`cg_local.h:53`): how long the attacker is kept once the player lives. */
 export const ATTACKER_HEAD_TIME = 10000;
 
-/** `CG_TellAttacker_f`'s buffers, the words' and the command's (`cg_consolecmds.c:200–201`). */
-const TELL_BUFFER = 128;
-
 /** `cg.attackerTime`. */
 export interface AttackerState {
   /** When the player was last hurt, in `cg.time`'s whole milliseconds; 0 for nobody to name. */
@@ -54,30 +51,4 @@ export function expireAttacker(
   if (!input.clientInfo(attackerNum) || Math.floor(input.time) - state.time > ATTACKER_HEAD_TIME) {
     state.time = 0;
   }
-}
-
-/**
- * `CG_TellAttacker_f`'s command: `tell` to the last attacker, with the words after
- * `tell_attacker` joined by spaces, as `trap_Args` joins them. The words and the command are each
- * cut to their 128-byte buffer, and the command's cut is said as `Com_sprintf` says it.
- *
- * @param attacker - {@link lastAttacker}'s answer.
- * @param argv - `tell_attacker` and its words.
- * @param print - cgame's `Com_Printf`.
- * @returns the command, or `null` with nobody to tell.
- */
-export function tellAttackerCommand(
-  attacker: number,
-  argv: readonly string[],
-  print: (text: string) => void
-): string | null {
-  if (attacker === -1) return null;
-  const message = argv.slice(1).join(' ').slice(0, TELL_BUFFER - 1);
-  const command = `tell ${attacker} ${message}`;
-  if (command.length >= TELL_BUFFER) {
-    print(
-      `Com_sprintf: Output length ${TELL_BUFFER} too short, require ${command.length + 1} bytes.\n`
-    );
-  }
-  return command.slice(0, TELL_BUFFER - 1);
 }
