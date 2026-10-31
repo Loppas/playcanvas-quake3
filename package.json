@@ -42,12 +42,12 @@
   },
   "dependencies": {
     "fflate": "^0.8.3",
-    "node-datachannel": "^0.33.4",
+    "node-datachannel": "^0.33.6",
     "playcanvas": "^2.23.3",
     "ws": "^8.22.0"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "^1.4.7",
+    "@cloudflare/vitest-plugin": "^1.4.9",
     "@cloudflare/workers-types": "^5.20261022.1",
     "@types/node": "^26.6.5",
     "@types/ws": "^8.18.2",
